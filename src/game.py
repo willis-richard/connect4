@@ -1,20 +1,30 @@
 import numpy as np
-#import prettytable
 
 
 class Board():
-    def __init__(self, height=6, width=7, win_length = 4):
+    def __init__(self,
+                 height=6,
+                 width=7,
+                 win_length=4,
+                 white_pieces=None,
+                 black_pieces=None):
+        # Check inputs are sane
         assert width >= win_length and height >= win_length
 
         self._width = width
         self._height = height
         self._win_length = win_length
-        # an example of decorating - here it can only be set to one of two values
-        self.white_pieces = np.zeros((self._height, self._width), dtype=np.bool_)
-        self.black_pieces = np.zeros((self._height, self._width), dtype=np.bool_)
-        #self.display = prettytable.PrettyTable()
-        self.player_to_move = 1
+        self.white_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if white_pieces is None else white_pieces
+        self.black_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if black_pieces is None else black_pieces
+        print(self.white_pieces)
+        print(self.black_pieces)
+        print("111111111111111111111111111", np.count_nonzero(self.white_pieces) - np.count_nonzero(self.black_pieces))
 
+        self.player_to_move = np.count_nonzero(self.white_pieces) - np.count_nonzero(self.black_pieces)
+
+        # Check members are sane
+        assert self.white_pieces.shape == (self._height, self._width)
+        assert self.black_pieces.shape == (self._height, self._width)
 
     @property
     def player_to_move(self):
@@ -22,12 +32,12 @@ class Board():
 
     @player_to_move.setter
     def player_to_move(self, player_to_move):
-        assert player_to_move in [0,1]
+        assert player_to_move in [0, 1]
         self.__player_to_move = player_to_move
 
     @player_to_move.getter
     def player_to_move(self):
-        return 'o' if self.__player_to_move == 1 else 'x'
+        return 'o' if self.__player_to_move == 0 else 'x'
 
     def display(self):
         display = np.chararray(self.white_pieces.shape)
@@ -35,8 +45,6 @@ class Board():
         display[self.white_pieces] = 'o'
         display[self.black_pieces] = 'x'
         print(display.decode('utf-8'))
-        #self.display = prettytable.PrettyTable(display)
-        #print(self.display)
 
     def _advance_player(self):
         self.player_to_move = (self.__player_to_move + 1) % 2
@@ -52,7 +60,7 @@ class Board():
         """Checks for horizontal wins"""
         for i in range(pieces.shape[1]):
             for j in range(pieces.shape[0] - self._win_length + 1):
-                if np.all(pieces[j:j+self._win_length,i]):
+                if np.all(pieces[j:j+self._win_length, i]):
                     return True
         return False
 
@@ -63,9 +71,9 @@ class Board():
                     return True
         return False
 
-    def check_for_winner(self, pieces = None):
+    def check_for_winner(self, pieces=None):
         if pieces is None:
-            pieces = self.white_pieces if self.__player_to_move == 1 else self.black_pieces
+            pieces = self.black_pieces if self.__player_to_move else self.white_pieces
 
         return \
             self._check_straight(pieces) or \
@@ -85,20 +93,32 @@ class Board():
     def make_move(self, move):
         board = self._get_pieces()
         idx = self._height - np.count_nonzero(board[:, move]) - 1
-        if self.__player_to_move == 1:
-            self.white_pieces[idx, move] = 1
-        else:
+        if self.__player_to_move:
             self.black_pieces[idx, move] = 1
+        else:
+            self.white_pieces[idx, move] = 1
         # FIXME: remove when working
         assert self.check_valid()
         self._advance_player()
 
     def check_valid(self):
+        no_gaps = True
+        for col in range(self._width):
+            board = self._get_pieces()
+            if not np.array_equal(board[:, col], np.sort(board[:, col])):
+                no_gaps = False
         return \
+            no_gaps and \
             not np.any(np.logical_and(self.white_pieces, self.black_pieces)) and \
-            not (self.check_for_winner(self.white_pieces) and self.check_for_winner(self.black_pieces)) and \
-            np.sum(self.white_pieces) - np.sum(self.black_pieces) in [0,1]
-            # FIXME:something for no spaces below inputs
+            np.sum(self.white_pieces) - np.sum(self.black_pieces) == self.__player_to_move
+
+
+class Player():
+    def __init__(self):
+        return
+
+    def make_move(self):
+        return
 
 
 if __name__ == "__main__":
