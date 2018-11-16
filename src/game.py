@@ -16,9 +16,6 @@ class Board():
         self._win_length = win_length
         self.white_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if white_pieces is None else white_pieces
         self.black_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if black_pieces is None else black_pieces
-        print(self.white_pieces)
-        print(self.black_pieces)
-        print("111111111111111111111111111", np.count_nonzero(self.white_pieces) - np.count_nonzero(self.black_pieces))
 
         self.player_to_move = np.count_nonzero(self.white_pieces) - np.count_nonzero(self.black_pieces)
 
