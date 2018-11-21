@@ -1,4 +1,4 @@
-from src.utils import advance_player
+from connect4.utils import advance_player
 
 import numpy as np
 

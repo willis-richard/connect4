@@ -1,6 +1,6 @@
 """Hi"""
 
-from src import game
+from connect4 import game
 
 if __name__ == "__main__":
     name_o = str(input("Enter player o's name: "))

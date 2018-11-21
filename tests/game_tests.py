@@ -1,4 +1,4 @@
-from src import board
+from connect4 import board
 
 import pytest
 

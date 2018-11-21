@@ -1,5 +1,5 @@
-from src import board
-from src import player
+from connect4 import board
+from connect4 import player
 
 
 class Connect4():

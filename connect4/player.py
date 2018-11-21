@@ -1,6 +1,9 @@
 import copy
 
+from connect4.utils import advance_player
+
 import numpy as np
+
 
 class BasePlayer():
     def __init__(self, name, side, board):
