@@ -5,21 +5,19 @@ import numpy as np
 
 class Board():
     def __init__(self,
+                 hash_value,
                  height=6,
                  width=7,
                  win_length=4,
-                 white_pieces=None,
-                 black_pieces=None):
-        # Check inputs are sane
-        assert width >= win_length and height >= win_length
-
+                 o_pieces=None,
+                 x_pieces=None):
         self._width = width
         self._height = height
         self._win_length = win_length
-        self.white_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if white_pieces is None else white_pieces
-        self.black_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if black_pieces is None else black_pieces
+        self.o_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if o_pieces is None else o_pieces
+        self.x_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if x_pieces is None else x_pieces
 
-        self.player_to_move = np.count_nonzero(self.white_pieces) - np.count_nonzero(self.black_pieces)
+        self.player_to_move = np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)
         self.result = None
 
         self._check_valid()
@@ -34,14 +32,14 @@ class Board():
         self._player_to_move = player_to_move
 
     def display(self):
-        display = np.chararray(self.white_pieces.shape)
+        display = np.chararray(self.o_pieces.shape)
         display[:] = ' '
-        display[self.white_pieces] = 'o'
-        display[self.black_pieces] = 'x'
+        display[self.o_pieces] = 'o'
+        display[self.x_pieces] = 'x'
         print(display.decode('utf-8'))
 
     def _get_pieces(self):
-        return self.white_pieces + self.black_pieces
+        return self.o_pieces + self.x_pieces
 
     def valid_moves(self):
         pieces = self._get_pieces()
@@ -67,7 +65,7 @@ class Board():
 
     def check_for_winner(self, pieces=None):
         if pieces is None:
-            pieces = self.black_pieces if self._player_to_move else self.white_pieces
+            pieces = self.x_pieces if self._player_to_move else self.o_pieces
 
         return \
             self._check_straight(pieces) + \
@@ -76,20 +74,20 @@ class Board():
             self._check_diagonal(np.fliplr(pieces))
 
     def check_terminal_position(self):
-        if self.check_for_winner(self.white_pieces):
-            self.result = 0
-        elif self.check_for_winner(self.black_pieces):
+        if self.check_for_winner(self.o_pieces):
             self.result = 1
+        elif self.check_for_winner(self.x_pieces):
+            self.result = -1
         elif np.all(self._get_pieces()):
-            self.result = 2
+            self.result = 1
 
     def make_move(self, move):
         board = self._get_pieces()
         idx = self._height - np.count_nonzero(board[:, move]) - 1
         if self._player_to_move:
-            self.black_pieces[idx, move] = 1
+            self.x_pieces[idx, move] = 1
         else:
-            self.white_pieces[idx, move] = 1
+            self.o_pieces[idx, move] = 1
         self.player_to_move = advance_player(self._player_to_move)
         # FIXME: remove when working
         self._check_valid()
@@ -103,10 +101,15 @@ class Board():
                 no_gaps = False
 
         assert no_gaps
-        assert not np.any(np.logical_and(self.white_pieces, self.black_pieces))
-        assert np.sum(self.white_pieces) - np.sum(self.black_pieces)  in [0, 1]
-        #assert self.check_for_winner(self.white_pieces) + self.check_for_winner(self.black_pieces) in [0,1]
-        assert (self.check_for_winner(self.white_pieces) == 0) or (self._player_to_move == 1)
-        assert (self.check_for_winner(self.black_pieces) == 0) or (self._player_to_move == 0)
-        assert self.white_pieces.shape == (self._height, self._width)
-        assert self.black_pieces.shape == (self._height, self._width)
+        assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
+        assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
+        #assert self.check_for_winner(self.o_pieces) + self.check_for_winner(self.x_pieces) in [0,1]
+        assert (self.check_for_winner(self.o_pieces) == 0) or (self._player_to_move == 1)
+        assert (self.check_for_winner(self.x_pieces) == 0) or (self._player_to_move == 0)
+        assert self.o_pieces.shape == (self._height, self._width)
+        assert self.x_pieces.shape == (self._height, self._width)
+
+    def __hash__(self):
+        o_hash = np.dot(np.concatenate(self.o_pieces), self.hash_value)
+        x_hash = np.dot(np.concatenate(self.x_pieces), self.hash_value)
+        return hash((o_hash, x_hash)

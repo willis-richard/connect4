@@ -9,7 +9,6 @@ class BasePlayer():
     def __init__(self, name, side, board):
         self.name = name
         self.side = side
-        self.enemy_side = advance_player(side)
         self._board = board
 
     def __str__(self):
@@ -62,7 +61,7 @@ class ComputerPlayer(BasePlayer):
             for enemy_move in enemy_moves:
                 new_enemy_board = copy.deepcopy(new_board)
                 new_enemy_board.make_move(enemy_move)
-                if new_enemy_board.result == self.enemy_side:
+                if new_enemy_board.result == self.aide * -1:
                     safe = False
                     to_print = True
                     break

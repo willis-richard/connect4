@@ -80,8 +80,8 @@ assert len(pieces_1) == len(pieces_2) == len(ans)
                          [(n, p1, p2, a) for n, p1, p2, a in zip(range(len(ans)), pieces_1, pieces_2, ans)])
 def test_check_valid(n, pieces_1, pieces_2, ans):
     print("test_check_valid", n)
-    board = board.Board(white_pieces=pieces_1,
-                       black_pieces=pieces_2)
+    board = board.Board(o_pieces=pieces_1,
+                       x_pieces=pieces_2)
 
     assert board.check_terminal_position() == ans
     return
