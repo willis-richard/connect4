@@ -1,6 +1,6 @@
-import copy
+from connect4 import tree
 
-from connect4.utils import advance_player
+import copy
 
 import numpy as np
 
@@ -35,11 +35,17 @@ class HumanPlayer(BasePlayer):
 class ComputerPlayer(BasePlayer):
     def __init__(self, name, side, board):
         super().__init__(name, side, board)
+        self.tree = tree.Connect4Tree(board)
 
     def make_move(self):
-        moves = self._board.valid_moves()
+        self.tree.update_root(self._board)
 
-        for move in moves:
+        self.tree.expand_tree(self.tree.root, 4)
+
+        self.tree.evaluate_tree(self.tree.root)
+
+        #####
+        for move in self.tree.root.data.valid_moves:
             new_board = copy.deepcopy(self._board)
             new_board.make_move(move)
             if new_board.result == self.side:
@@ -61,7 +67,7 @@ class ComputerPlayer(BasePlayer):
             for enemy_move in enemy_moves:
                 new_enemy_board = copy.deepcopy(new_board)
                 new_enemy_board.make_move(enemy_move)
-                if new_enemy_board.result == self.aide * -1:
+                if new_enemy_board.result == self.side * -1:
                     safe = False
                     to_print = True
                     break

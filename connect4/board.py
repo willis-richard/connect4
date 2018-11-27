@@ -18,9 +18,15 @@ class Board():
         self.x_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if x_pieces is None else x_pieces
 
         self.player_to_move = np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)
+        self.move_history = []
         self.result = None
 
         self._check_valid()
+
+    def __eq__(self, obj):
+        return isinstance(obj, Board) \
+            and obj.o_pieces == self.o_pieces \
+            and obj.x_pieces == self.x_pieces
 
     @property
     def player_to_move(self):
@@ -43,7 +49,10 @@ class Board():
 
     def valid_moves(self):
         pieces = self._get_pieces()
-        return [i for i in range(self._width) if not all(pieces[:,i])]
+        return set(i for i in range(self._width) if not all(pieces[:,i]))
+
+    def get_half_moves(self):
+        return np.sum(self._get_pieces())
 
     def _check_straight(self, pieces):
         """Returns the number of horizontal wins"""
@@ -112,4 +121,4 @@ class Board():
     def __hash__(self):
         o_hash = np.dot(np.concatenate(self.o_pieces), self.hash_value)
         x_hash = np.dot(np.concatenate(self.x_pieces), self.hash_value)
-        return hash((o_hash, x_hash)
+        return hash((o_hash, x_hash))
