@@ -39,46 +39,38 @@ class ComputerPlayer(BasePlayer):
 
     def make_move(self):
         self.tree.update_root(self._board)
+        self.tree.nega_max(self.tree.root, 2)
 
-        self.tree.expand_tree(self.tree.root, 4)
+        #self.tree.nega_max(self._board, 2)
 
-        self.tree.evaluate_tree(self.tree.root)
+        moves = {}
+        for node in self.tree.root.children:
+            move = node.name[0]
+            moves[move] = node.data.node_eval.tree_value
 
-        #####
-        for move in self.tree.root.data.valid_moves:
-            new_board = copy.deepcopy(self._board)
-            new_board.make_move(move)
-            if new_board.result == self.side:
-                print("Trash! I will crush you.")
-                self._board.make_move(move)
-                return
+        print("POSSIBLE MOVES: ", moves)
+        max = -2 * self.side
+        best_moves = []
+        for move, value in moves.items():
+            if value > max:
+                best_moves = [move]
+                max = value
+            elif value == max:
+                best_moves.append(move)
 
-        moves = np.array(moves)
-        distance_to_middle = np.abs(moves - self._board._width / 2.0)
+        best_moves = np.array(best_moves)
+        distance_to_middle = np.abs(best_moves - self._board._width / 2.0)
         idx = np.argsort(distance_to_middle)
-        moves = moves[idx]
+        best_move = moves[idx[0]]
 
-        to_print = False
-        for move in moves:
-            new_board = copy.deepcopy(self._board)
-            new_board.make_move(move)
-            enemy_moves = new_board.valid_moves()
-            safe = True
-            for enemy_move in enemy_moves:
-                new_enemy_board = copy.deepcopy(new_board)
-                new_enemy_board.make_move(enemy_move)
-                if new_enemy_board.result == self.side * -1:
-                    safe = False
-                    to_print = True
-                    break
-            if safe:
-                if to_print:
-                    print("zzz as if")
-                self._board.make_move(move)
-                return
+        if best_move == self.side:
+            print("Trash! I will crush you.")
+        elif best_move == -1 * self.side:
+            print("Ah fuck you lucky shit")
+        else:
+            print("zzz as if")
 
-        print("Ah fuck you lucky shit")
-        self._board.make_move(np.random.choice(moves))
+        self._board.make_move(best_move)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

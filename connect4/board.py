@@ -11,6 +11,7 @@ class Board():
                  win_length=4,
                  o_pieces=None,
                  x_pieces=None):
+        self.hash_value = hash_value
         self._width = width
         self._height = height
         self._win_length = win_length
@@ -25,8 +26,8 @@ class Board():
 
     def __eq__(self, obj):
         return isinstance(obj, Board) \
-            and obj.o_pieces == self.o_pieces \
-            and obj.x_pieces == self.x_pieces
+            and np.array_equal(obj.o_pieces, self.o_pieces) \
+            and np.array_equal(obj.x_pieces, self.x_pieces)
 
     @property
     def player_to_move(self):
@@ -84,11 +85,14 @@ class Board():
 
     def check_terminal_position(self):
         if self.check_for_winner(self.o_pieces):
+            print("o_winner detected")
             self.result = 1
         elif self.check_for_winner(self.x_pieces):
+            print("x_winner detected")
             self.result = -1
         elif np.all(self._get_pieces()):
-            self.result = 1
+            self.result = 0
+        return self.result
 
     def make_move(self, move):
         board = self._get_pieces()
@@ -101,6 +105,7 @@ class Board():
         # FIXME: remove when working
         self._check_valid()
         self.check_terminal_position()
+        self.move_history.insert(0, move)
 
     def _check_valid(self):
         no_gaps = True
