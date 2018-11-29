@@ -1,6 +1,6 @@
 from connect4 import tree
 
-import copy
+from anytree import RenderTree
 
 import numpy as np
 
@@ -33,15 +33,15 @@ class HumanPlayer(BasePlayer):
 
 
 class ComputerPlayer(BasePlayer):
-    def __init__(self, name, side, board):
+    def __init__(self, name, side, board, depth):
         super().__init__(name, side, board)
         self.tree = tree.Connect4Tree(board)
+        self.depth = depth
 
     def make_move(self):
         self.tree.update_root(self._board)
-        self.tree.nega_max(self.tree.root, 2)
-
-        #self.tree.nega_max(self._board, 2)
+        self.tree.expand_node(self.tree.root, self.depth)
+        self.tree.nega_max(self.tree.root, self.depth, self.side)
 
         moves = {}
         for node in self.tree.root.children:
@@ -49,28 +49,39 @@ class ComputerPlayer(BasePlayer):
             moves[move] = node.data.node_eval.tree_value
 
         print("POSSIBLE MOVES: ", moves)
-        max = -2 * self.side
-        best_moves = []
-        for move, value in moves.items():
-            if value > max:
-                best_moves = [move]
-                max = value
-            elif value == max:
-                best_moves.append(move)
+        # FIXME: same selection problem
+        if self.side == 1:
+            max = -2
+            best_moves = []
+            for move, value in moves.items():
+                if value > max:
+                    best_moves = [move]
+                    max = value
+                elif value == max:
+                    best_moves.append(move)
+        else:
+            max = 2
+            best_moves = []
+            for move, value in moves.items():
+                if value < max:
+                    best_moves = [move]
+                    max = value
+                elif value == max:
+                    best_moves.append(move)
 
         best_moves = np.array(best_moves)
         distance_to_middle = np.abs(best_moves - self._board._width / 2.0)
         idx = np.argsort(distance_to_middle)
-        best_move = moves[idx[0]]
+        best_move, best_move_value = best_moves[idx[0]], moves[best_moves[idx[0]]]
 
-        if best_move == self.side:
+        if best_move_value == self.side:
             print("Trash! I will crush you.")
-        elif best_move == -1 * self.side:
+        elif best_move_value == -1 * self.side:
             print("Ah fuck you lucky shit")
-        else:
-            print("zzz as if")
 
+        print("Best move selected: ", best_move)
         self._board.make_move(best_move)
+        return best_move # for testing
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

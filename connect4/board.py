@@ -18,7 +18,7 @@ class Board():
         self.o_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if o_pieces is None else o_pieces
         self.x_pieces = np.zeros((self._height, self._width), dtype=np.bool_) if x_pieces is None else x_pieces
 
-        self.player_to_move = np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)
+        self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
         self.move_history = []
         self.result = None
 
@@ -31,11 +31,11 @@ class Board():
 
     @property
     def player_to_move(self):
-        return 'o' if self._player_to_move == 0 else 'x'
+        return 'o' if self._player_to_move == 1 else 'x'
 
     @player_to_move.setter
     def player_to_move(self, player_to_move):
-        assert player_to_move in [0, 1]
+        assert player_to_move in [-1, 1]
         self._player_to_move = player_to_move
 
     def display(self):
@@ -73,10 +73,7 @@ class Board():
                     count += 1
         return count
 
-    def check_for_winner(self, pieces=None):
-        if pieces is None:
-            pieces = self.x_pieces if self._player_to_move else self.o_pieces
-
+    def check_for_winner(self, pieces):
         return \
             self._check_straight(pieces) + \
             self._check_straight(np.transpose(pieces)) + \
@@ -85,27 +82,27 @@ class Board():
 
     def check_terminal_position(self):
         if self.check_for_winner(self.o_pieces):
-            print("o_winner detected")
             self.result = 1
         elif self.check_for_winner(self.x_pieces):
-            print("x_winner detected")
             self.result = -1
         elif np.all(self._get_pieces()):
             self.result = 0
         return self.result
 
     def make_move(self, move):
+        assert move in self.valid_moves()
         board = self._get_pieces()
         idx = self._height - np.count_nonzero(board[:, move]) - 1
-        if self._player_to_move:
-            self.x_pieces[idx, move] = 1
-        else:
+        assert board[idx, move] == 0
+        if self._player_to_move == 1:
             self.o_pieces[idx, move] = 1
-        self.player_to_move = advance_player(self._player_to_move)
+        else:
+            self.x_pieces[idx, move] = 1
+        self.player_to_move = -1 * self._player_to_move
+        self.move_history.insert(0, move)
         # FIXME: remove when working
         self._check_valid()
-        self.check_terminal_position()
-        self.move_history.insert(0, move)
+        return self.check_terminal_position()
 
     def _check_valid(self):
         no_gaps = True
@@ -118,8 +115,8 @@ class Board():
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
         assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
         #assert self.check_for_winner(self.o_pieces) + self.check_for_winner(self.x_pieces) in [0,1]
-        assert (self.check_for_winner(self.o_pieces) == 0) or (self._player_to_move == 1)
-        assert (self.check_for_winner(self.x_pieces) == 0) or (self._player_to_move == 0)
+        assert not (self.check_for_winner(self.o_pieces) != 0 and self._player_to_move == 1) #player who has already one is to move
+        assert not (self.check_for_winner(self.x_pieces) != 0 and self._player_to_move == -1)
         assert self.o_pieces.shape == (self._height, self._width)
         assert self.x_pieces.shape == (self._height, self._width)
 

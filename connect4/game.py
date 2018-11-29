@@ -20,8 +20,8 @@ class Connect4():
         self.hash_value = np.array([2**x for x in range(height * width)])
 
         self._board = board.Board(self.hash_value, height, width, win_length)
-        self._player_o = player.HumanPlayer(player_o_name, 0, self._board) if player_o_human else player.ComputerPlayer(player_o_name, 0, self._board)
-        self._player_x = player.HumanPlayer(player_x_name, 1, self._board) if player_x_human else player.ComputerPlayer(player_x_name, 1, self._board)
+        self._player_o = player.HumanPlayer(player_o_name, 1, self._board) if player_o_human else player.ComputerPlayer(player_o_name, 1, self._board, 4)
+        self._player_x = player.HumanPlayer(player_x_name, -1, self._board) if player_x_human else player.ComputerPlayer(player_x_name, -1, self._board, 4)
 
     def play(self):
         print("Match between", self._player_o, " and ", self._player_x)
@@ -35,7 +35,7 @@ class Connect4():
 
         if self._board.result == 1:
             result = "o wins"
-        elif self._board.result == 2:
+        elif self._board.result == -1:
             result = "x wins"
         else:
             result = "draw"
