@@ -1,5 +1,3 @@
-from connect4.utils import advance_player
-
 import numpy as np
 
 
@@ -43,7 +41,9 @@ class Board():
         display[:] = ' '
         display[self.o_pieces] = 'o'
         display[self.x_pieces] = 'x'
+        print(np.array([range(self._width)]).astype(str))
         print(display.decode('utf-8'))
+        print(np.array([range(self._width)]).astype(str))
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces

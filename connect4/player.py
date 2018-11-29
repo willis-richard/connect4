@@ -20,7 +20,6 @@ class HumanPlayer(BasePlayer):
         super().__init__(name, side, board)
 
     def make_move(self):
-        print("FYI valid moves are: ", self._board.valid_moves())
         move = str(input("Enter player " + self._board.player_to_move + "'s move:"))
         while len(move) != 1 or int(move) not in self._board.valid_moves():
             print("Try again dipshit")

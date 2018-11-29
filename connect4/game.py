@@ -26,7 +26,7 @@ class Connect4():
     def play(self):
         print("Match between", self._player_o, " and ", self._player_x)
         self._board.display()
-        while not self._board.result:
+        while self._board.result is None:
             if self._board.player_to_move == 'o':
                 self._player_o.make_move()
             else:
