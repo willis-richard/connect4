@@ -59,7 +59,14 @@ def test_stop_winner():
 
     computer = player.ComputerPlayer("test_name", -1, board_, 2)
 
-    assert computer.make_move() == 1
+    board_.display()
+
+    move = computer.make_move()
+
+    for pre, fill, node in anytree.RenderTree(computer.tree.root):
+        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+
+    assert move == 1
     return
 
 def test_stop_winner_2():
@@ -87,7 +94,13 @@ def test_stop_winner_2():
 
     computer = player.ComputerPlayer("test_name", 1, board_, 2)
 
-    assert computer.make_move() == 1
+    move = computer.make_move()
+
+    for pre, fill, node in anytree.RenderTree(computer.tree.root):
+        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+
+    assert move == 1
+
     return
 
 def test_stop_winner_3():
@@ -121,7 +134,12 @@ def test_stop_winner_3():
 
     computer = player.ComputerPlayer("test_name", -1, board_, 4)
 
-#    assert computer.make_move() == 7
+    move = computer.make_move()
+
+    for pre, fill, node in anytree.RenderTree(computer.tree.root):
+        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+
+    assert move == 6
     return
 
 def test_stop_winner_4():

@@ -79,16 +79,16 @@ class Connect4Tree():
             #    return node.data.node_eval.tree_value
             evaluation = self.evaluate_position(node.data.board)
             node.data.node_eval = NodeEvaluation(evaluation, evaluation)
-            return side * evaluation
+            return evaluation
 
         if side == 1:
             value = -2
             for child in node.children:
-                value = max(value, -self.nega_max(child, half_moves - 1, -side))
+                value = max(value, self.nega_max(child, half_moves - 1, -side))
         else:
             value = 2
             for child in node.children:
-                value = min(value, -self.nega_max(child, half_moves - 1, -side))
+                value = min(value, self.nega_max(child, half_moves - 1, -side))
 
         node.data.node_eval.tree_value = value
         return value
