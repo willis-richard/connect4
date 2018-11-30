@@ -20,6 +20,7 @@ class Board():
         self.move_history = []
         self.result = None
 
+        self.straight_idxs = np.array([[j, j+self._win_length, i] for i in range(self.o_pieces.shape[0] - self._win_length + 1) for j in range(self.o_pieces.shape[1] - self._win_length + 1)])
         self._check_valid()
 
     def __eq__(self, obj):
@@ -62,6 +63,7 @@ class Board():
             for j in range(pieces.shape[0] - self._win_length + 1):
                 if np.all(pieces[j:j+self._win_length, i]):
                     count += 1
+        #count = np.sum(np.all(pieces[self.straight_idxs[0,:,:]:self.straight_idxs[:,0 j+self._win_length, i])
         return count
 
     def _check_diagonal(self, pieces):
