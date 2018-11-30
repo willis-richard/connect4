@@ -3,13 +3,14 @@ import numpy as np
 
 class Board():
     def __init__(self,
-                 hash_value,
                  height=6,
                  width=7,
                  win_length=4,
+                 hash_value=None,
+                 straight_idxs=None,
+                 straight_idxs_t=None,
                  o_pieces=None,
                  x_pieces=None):
-        self.hash_value = hash_value
         self._width = width
         self._height = height
         self._win_length = win_length
@@ -20,7 +21,21 @@ class Board():
         self.move_history = []
         self.result = None
 
-        self.straight_idxs = np.array([[j, j+self._win_length, i] for i in range(self.o_pieces.shape[0] - self._win_length + 1) for j in range(self.o_pieces.shape[1] - self._win_length + 1)])
+        if hash_value is None:
+            self.hash_value = np.array([2**x for x in range(height * width)])
+        else:
+            self.hash_value = hash_value
+
+        if straight_idxs is None:
+            self.straight_idxs = np.array([[i, i + win_length, j] for i in range(height - win_length + 1) for j in range(width)])
+        else:
+            self.straight_idxs = straight_idxs
+
+        if straight_idxs_t is None:
+            self.straight_idxs_t = np.array([[i, i+self._win_length, j] for i in range(width - self._win_length + 1) for j in range(height)])
+        else:
+            self.straight_idxs_t = straight_idxs_t
+
         self._check_valid()
 
     def __eq__(self, obj):
@@ -56,14 +71,17 @@ class Board():
     def get_half_moves(self):
         return np.sum(self._get_pieces())
 
-    def _check_straight(self, pieces):
+    def _check_straight(self, pieces, idx):
         """Returns the number of horizontal wins"""
         count = 0
-        for i in range(pieces.shape[1]):
-            for j in range(pieces.shape[0] - self._win_length + 1):
-                if np.all(pieces[j:j+self._win_length, i]):
-                    count += 1
-        #count = np.sum(np.all(pieces[self.straight_idxs[0,:,:]:self.straight_idxs[:,0 j+self._win_length, i])
+        #for i in range(pieces.shape[1]):
+        #    for j in range(pieces.shape[0] - self._win_length + 1):
+        #        if np.all(pieces[j:j+self._win_length, i]):
+        #            count += 1
+        for x in idx:
+            count = count + np.all(pieces[x[0]:x[1], x[2]])
+
+#        count = np.sum(np.all(pieces[self.straight_idxs[:,0]:self.straight_idxs[:,1], self.straight_idxs[:,2]]))
         return count
 
     def _check_diagonal(self, pieces):
@@ -77,8 +95,8 @@ class Board():
 
     def check_for_winner(self, pieces):
         return \
-            self._check_straight(pieces) + \
-            self._check_straight(np.transpose(pieces)) + \
+            self._check_straight(pieces, self.straight_idxs) + \
+            self._check_straight(np.transpose(pieces), self.straight_idxs_t) + \
             self._check_diagonal(pieces) + \
             self._check_diagonal(np.fliplr(pieces))
 
