@@ -24,9 +24,7 @@ def test_next_move_winner():
          [0, 1, 0, 0, 0, 0, 0],
          [0, 1, 1, 0, 1, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name", 1, board_, 1)
@@ -52,9 +50,7 @@ def test_stop_winner():
          [0, 1, 0, 0, 0, 0, 0],
          [0, 1, 1, 0, 0, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name", -1, board_, 2)
@@ -86,9 +82,7 @@ def test_stop_winner_2():
          [0, 1, 0, 0, 0, 0, 0],
          [0, 1, 0, 0, 0, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
     board_.display()
 
@@ -126,9 +120,7 @@ def test_stop_winner_3():
          [0, 0, 0, 1, 0, 0, 0],
          [0, 1, 0, 1, 0, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
     board_.display()
 
@@ -165,9 +157,7 @@ def test_stop_winner_4():
          [0, 0, 0, 1, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
     board_.display()
 
@@ -206,9 +196,7 @@ def test_stop_winner_5():
          [0, 0, 0, 1, 0, 0, 0],
          [0, 1, 0, 0, 1, 0, 0]], dtype=np.bool_)
 
-    hash_value = np.array([2**x for x in range(6 * 7)])
-    board_ = board.Board(hash_value,
-                        o_pieces=o_pieces,
+    board_ = board.Board(o_pieces=o_pieces,
                         x_pieces=x_pieces)
     board_.display()
 
