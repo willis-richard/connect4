@@ -74,12 +74,13 @@ class Board():
     def _check_straight(self, pieces, idx):
         """Returns the number of horizontal wins"""
         count = 0
-        #for i in range(pieces.shape[1]):
-        #    for j in range(pieces.shape[0] - self._win_length + 1):
-        #        if np.all(pieces[j:j+self._win_length, i]):
-        #            count += 1
-        for x in idx:
-            count = count + np.all(pieces[x[0]:x[1], x[2]])
+        for i in range(pieces.shape[1]):
+            for j in range(pieces.shape[0] - self._win_length + 1):
+                if np.all(pieces[j:j+self._win_length, i]):
+                    count += 1
+        #count = 0
+        #for x in idx:
+        #    count = count + np.all(pieces[x[0]:x[1], x[2]])
 
 #        count = np.sum(np.all(pieces[self.straight_idxs[:,0]:self.straight_idxs[:,1], self.straight_idxs[:,2]]))
         return count
@@ -120,9 +121,6 @@ class Board():
             self.x_pieces[idx, move] = 1
         self.player_to_move = -1 * self._player_to_move
         self.move_history.insert(0, move)
-        # FIXME: remove when working
-        self._check_valid()
-        return self.check_terminal_position()
 
     def _check_valid(self):
         no_gaps = True
