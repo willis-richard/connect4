@@ -19,15 +19,11 @@ class Connect4():
         assert height * width <= 64
 
         self.hash_value = np.array([2**x for x in range(height * width)])
-        self.straight_idxs = np.array([[i, i + win_length, j] for i in range(height - win_length + 1) for j in range(width)])
-        self.straight_idxs_t = np.array([[i, i + win_length, j] for i in range(width - win_length + 1) for j in range(height)])
 
         self._board = board.Board(height,
                                   width,
                                   win_length,
-                                  self.hash_value,
-                                  self.straight_idxs,
-                                  self.straight_idxs_t)
+                                  self.hash_value)
 
         self._player_o = player.HumanPlayer(player_o_name, 1, self._board) if player_o_human else player.ComputerPlayer(player_o_name, 1, self._board, 5)
         self._player_x = player.HumanPlayer(player_x_name, -1, self._board) if player_x_human else player.ComputerPlayer(player_x_name, -1, self._board, 5)

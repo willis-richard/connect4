@@ -7,8 +7,6 @@ class Board():
                  width=7,
                  win_length=4,
                  hash_value=None,
-                 straight_idxs=None,
-                 straight_idxs_t=None,
                  o_pieces=None,
                  x_pieces=None):
         self._width = width
@@ -25,16 +23,6 @@ class Board():
             self.hash_value = np.array([2**x for x in range(height * width)])
         else:
             self.hash_value = hash_value
-
-        if straight_idxs is None:
-            self.straight_idxs = np.array([[i, i + win_length, j] for i in range(height - win_length + 1) for j in range(width)])
-        else:
-            self.straight_idxs = straight_idxs
-
-        if straight_idxs_t is None:
-            self.straight_idxs_t = np.array([[i, i+self._win_length, j] for i in range(width - self._win_length + 1) for j in range(height)])
-        else:
-            self.straight_idxs_t = straight_idxs_t
 
         self._check_valid()
 
@@ -71,34 +59,22 @@ class Board():
     def get_half_moves(self):
         return np.sum(self._get_pieces())
 
-    def _check_straight(self, pieces, idx):
-        """Returns the number of horizontal wins"""
-        count = 0
-        for i in range(pieces.shape[1]):
-            for j in range(pieces.shape[0] - self._win_length + 1):
-                if np.all(pieces[j:j+self._win_length, i]):
-                    count += 1
-        #count = 0
-        #for x in idx:
-        #    count = count + np.all(pieces[x[0]:x[1], x[2]])
-
-#        count = np.sum(np.all(pieces[self.straight_idxs[:,0]:self.straight_idxs[:,1], self.straight_idxs[:,2]]))
-        return count
+    def _check_straight(self, pieces):
+        return np.any(np.all([pieces[i:i+self._win_length, j] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1])], axis=1))
 
     def _check_diagonal(self, pieces):
-        """Returns the number of diagonally down and right winners"""
-        count = 0
-        for i in range(pieces.shape[0] - self._win_length + 1):
-            for j in range(pieces.shape[1] - self._win_length + 1):
-                if np.count_nonzero([pieces[i+x, j+x] for x in range(self._win_length)]) == self._win_length:
-                    count += 1
-        return count
+        #for i in range(pieces.shape[0] - self._win_length + 1):
+        #    for j in range(pieces.shape[1] - self._win_length + 1):
+        #        if np.count_nonzero([pieces[i+x, j+x] for x in range(self._win_length)]) == self._win_length:
+        #            return True
+        #return False
+        return np.any(np.count_nonzero([[pieces[i+x, j+x] for x in range(self._win_length)] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1] - self._win_length + 1)], axis=1) == 4)
 
     def check_for_winner(self, pieces):
         return \
-            self._check_straight(pieces, self.straight_idxs) + \
-            self._check_straight(np.transpose(pieces), self.straight_idxs_t) + \
-            self._check_diagonal(pieces) + \
+            self._check_straight(pieces) or \
+            self._check_straight(np.transpose(pieces)) or \
+            self._check_diagonal(pieces) or \
             self._check_diagonal(np.fliplr(pieces))
 
     def check_terminal_position(self):
@@ -132,9 +108,8 @@ class Board():
         assert no_gaps
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
         assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
-        #assert self.check_for_winner(self.o_pieces) + self.check_for_winner(self.x_pieces) in [0,1]
-        assert not (self.check_for_winner(self.o_pieces) != 0 and self._player_to_move == 1) #player who has already one is to move
-        assert not (self.check_for_winner(self.x_pieces) != 0 and self._player_to_move == -1)
+        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == 1) #player who has already one is to move
+        assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == -1)
         assert self.o_pieces.shape == (self._height, self._width)
         assert self.x_pieces.shape == (self._height, self._width)
 
