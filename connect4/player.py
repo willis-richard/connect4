@@ -30,7 +30,6 @@ class HumanPlayer(BasePlayer):
         return super().__str__() + ", type: Human"
 
 
-
 class ComputerPlayer(BasePlayer):
     def __init__(self, name, side, board, depth):
         super().__init__(name, side, board)
@@ -45,7 +44,7 @@ class ComputerPlayer(BasePlayer):
         moves = {}
         for node in self.tree.root.children:
             move = node.name[0]
-            moves[move] = node.data.node_eval.tree_value
+            moves[move] = node.data.node_eval.get_value()
 
         print("POSSIBLE MOVES: ", moves)
         # FIXME: same selection problem

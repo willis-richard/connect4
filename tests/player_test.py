@@ -25,7 +25,7 @@ def test_next_move_winner():
          [0, 1, 1, 0, 1, 0, 0]], dtype=np.bool_)
 
     board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
+                         x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name", 1, board_, 1)
 

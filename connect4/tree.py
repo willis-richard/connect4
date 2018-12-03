@@ -6,15 +6,24 @@ class NodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self, board, node_eval=None):
         self.board = board
-        self.node_eval = NodeEvaluation() if node_eval is None else node_eval
+        self.node_eval = NodeEvaluation(board.check_terminal_position()) if node_eval is None else node_eval
 
 
 class NodeEvaluation():
-    def __init__(self, evaluation=None, tree_value=None):
+    def __init__(self, terminal_result=None, evaluation=None, tree_value=None):
+        self.terminal_result = terminal_result
         self.evaluation = evaluation
         self.tree_value = tree_value
         # self.visits = None
         # etc
+    def get_value(self):
+        if self.terminal_result is not None:
+            return self.terminal_result
+        elif self.tree_value is not None:
+            return self.tree_value
+        elif self.evaluation is not None:
+            return self.evaluation
+        raise RuntimeError("No NodeEvaluation value set")
 
 
 class Connect4Tree():
@@ -60,7 +69,7 @@ class Connect4Tree():
         #self.age_transition_tree()
 
     def expand_node(self, node, half_moves):
-        if half_moves == 0 or node.data.board.check_terminal_position():
+        if half_moves == 0 or node.data.node_eval.terminal_result:
             return
         # create new nodes for all unexplored moves
         actions_not_taken = node.data.board.valid_moves().difference([c.name[0] for c in node.children])
@@ -74,11 +83,13 @@ class Connect4Tree():
 
     def nega_max(self, node, half_moves, side):
         # https://en.wikipedia.org/wiki/Negamax
-        if half_moves == 0 or node.data.board.check_terminal_position() is not None:
+        if node.data.node_eval.terminal_result is not None:
+            return node.data.node_eval.terminal_result
             #if node.data.node_eval.tree_value:
             #    return node.data.node_eval.tree_value
+        if half_moves == 0:
             evaluation = self.evaluate_position(node.data.board)
-            node.data.node_eval = NodeEvaluation(evaluation, evaluation)
+            node.data.node_eval = NodeEvaluation(None, evaluation, None)
             return evaluation
 
         if side == 1:
@@ -97,8 +108,7 @@ class Connect4Tree():
         return
 
     def evaluate_position(self, board):
-        value = board.check_terminal_position()
-        return 0 if value is None else value
+        return 0
 
     def prune_old_tree(self):
         return

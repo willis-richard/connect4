@@ -63,11 +63,6 @@ class Board():
         return np.any(np.all([pieces[i:i+self._win_length, j] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1])], axis=1))
 
     def _check_diagonal(self, pieces):
-        #for i in range(pieces.shape[0] - self._win_length + 1):
-        #    for j in range(pieces.shape[1] - self._win_length + 1):
-        #        if np.count_nonzero([pieces[i+x, j+x] for x in range(self._win_length)]) == self._win_length:
-        #            return True
-        #return False
         return np.any(np.count_nonzero([[pieces[i+x, j+x] for x in range(self._win_length)] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1] - self._win_length + 1)], axis=1) == 4)
 
     def check_for_winner(self, pieces):
