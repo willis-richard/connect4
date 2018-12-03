@@ -41,6 +41,7 @@ class Connect4():
             else:
                 self._player_x.make_move()
             self._board.display()
+            self._board.check_terminal_position()
 
         if self._board.result == 1:
             result = "o wins"
