@@ -7,141 +7,36 @@ import pytest
 import numpy as np
 
 
-def test_next_move_winner():
-    o_pieces = np.array(
+o_pieces = [
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [1, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [1, 0, 1, 0, 0, 0, 0],
-         [1, 0, 0, 1, 0, 0, 0]], dtype=np.bool_)
-
-    x_pieces = np.array(
-        [[0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [1, 0, 0, 0, 0, 0, 0],
-         [0, 1, 0, 0, 0, 0, 0],
-         [0, 1, 1, 0, 1, 0, 0]], dtype=np.bool_)
-
-    board_ = board.Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
-
-    computer = player.ComputerPlayer("test_name", 1, board_, 1)
-
-    assert computer.make_move() == 1
-    return
-
-
-def test_stop_winner():
-    o_pieces = np.array(
+         [1, 0, 0, 1, 0, 0, 0]], dtype=np.bool_),
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [1, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [1, 0, 1, 0, 0, 0, 0],
-         [1, 0, 0, 1, 0, 0, 0]], dtype=np.bool_)
-
-    x_pieces = np.array(
-        [[0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [1, 0, 0, 0, 0, 0, 0],
-         [0, 1, 0, 0, 0, 0, 0],
-         [0, 1, 1, 0, 0, 0, 0]], dtype=np.bool_)
-
-    board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
-
-    computer = player.ComputerPlayer("test_name", -1, board_, 2)
-
-    board_.display()
-
-    move = computer.make_move()
-
-    for pre, fill, node in anytree.RenderTree(computer.tree.root):
-        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
-
-    assert move == 1
-    return
-
-def test_stop_winner_2():
-    o_pieces = np.array(
+         [1, 0, 0, 1, 0, 0, 0]], dtype=np.bool_),
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 1, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 1, 0, 0, 0],
          [0, 0, 0, 1, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0, 0]], dtype=np.bool_)
-
-    x_pieces = np.array(
-        [[0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0, 0],
-         [0, 1, 0, 0, 0, 0, 0],
-         [0, 1, 0, 0, 0, 0, 0],
-         [0, 1, 0, 0, 0, 0, 0]], dtype=np.bool_)
-
-    board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
-    board_.display()
-
-    computer = player.ComputerPlayer("test_name", 1, board_, 2)
-
-    move = computer.make_move()
-
-    for pre, fill, node in anytree.RenderTree(computer.tree.root):
-        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
-
-    assert move == 1
-
-    return
-
-def test_stop_winner_3():
-#[[' ' ' ' ' ' 'x' 'x' ' ' ' ']
-# [' ' ' ' ' ' 'x' 'x' 'x' ' ']
-# [' ' ' ' ' ' 'x' 'o' 'o' ' ']
-# [' ' ' ' ' ' 'o' 'x' 'x' 'o']
-# [' ' ' ' 'o' 'x' 'o' 'o' 'o']
-# [' ' 'x' 'o' 'x' 'o' 'o' 'o']]
-    o_pieces = np.array(
+         [0, 0, 0, 1, 0, 0, 0]], dtype=np.bool_),
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 1, 1, 0],
          [0, 0, 0, 1, 0, 0, 1],
          [0, 0, 1, 0, 1, 1, 1],
-         [0, 0, 1, 0, 1, 1, 1]], dtype=np.bool_)
-
-    x_pieces = np.array(
-        [[0, 0, 0, 1, 1, 0, 0],
-         [0, 0, 0, 1, 1, 1, 0],
-         [0, 0, 0, 1, 0, 0, 0],
-         [0, 0, 0, 0, 1, 1, 0],
-         [0, 0, 0, 1, 0, 0, 0],
-         [0, 1, 0, 1, 0, 0, 0]], dtype=np.bool_)
-
-    board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
-    board_.display()
-
-    computer = player.ComputerPlayer("test_name", -1, board_, 4)
-
-    move = computer.make_move()
-
-    for pre, fill, node in anytree.RenderTree(computer.tree.root):
-        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
-
-    assert move == 6
-    return
-
-def test_stop_winner_4():
-# [[' ' ' ' ' ' ' ' ' ' ' ' ' ']
-#  [' ' ' ' ' ' ' ' ' ' ' ' ' ']
-#  [' ' ' ' ' ' ' ' ' ' ' ' ' ']
-#  [' ' ' ' ' ' ' ' ' ' ' ' ' ']
-#  [' ' ' ' ' ' 'x' ' ' ' ' ' ']
-#  [' ' ' ' ' ' 'o' 'o' ' ' ' ']]
-    o_pieces = np.array(
+         [0, 0, 1, 0, 1, 1, 1]], dtype=np.bool_),
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
@@ -149,65 +44,86 @@ def test_stop_winner_4():
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 1, 1, 0, 0]], dtype=np.bool_)
 
-    x_pieces = np.array(
+]
+
+x_pieces = [
+    np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [1, 0, 0, 0, 0, 0, 0],
+         [0, 1, 0, 0, 0, 0, 0],
+         [0, 1, 1, 0, 1, 0, 0]], dtype=np.bool_),
+    np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [1, 0, 0, 0, 0, 0, 0],
+         [0, 1, 0, 0, 0, 0, 0],
+         [0, 1, 1, 0, 0, 0, 0]], dtype=np.bool_),
+    np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 1, 0, 0, 0],
+         [0, 1, 0, 0, 0, 0, 0],
+         [0, 1, 0, 0, 0, 0, 0],
+         [0, 1, 0, 0, 0, 0, 0]], dtype=np.bool_),
+    np.array(
+        [[0, 0, 0, 1, 1, 0, 0],
+         [0, 0, 0, 1, 1, 1, 0],
+         [0, 0, 0, 1, 0, 0, 0],
+         [0, 0, 0, 0, 1, 1, 0],
+         [0, 0, 0, 1, 0, 0, 0],
+         [0, 1, 0, 1, 0, 0, 0]], dtype=np.bool_),
+    np.array(
         [[0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 1, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
+]
 
+side = [1, -1, 1, -1, -1]
+depth = [1, 2, 2, 4, 4]
+ans = [[1], [1], [1], [6], [2,5]]
+
+assert len(o_pieces) == len(x_pieces) == len(side) == len(depth) == len(ans)
+
+
+@pytest.mark.parametrize("n,o_pieces,x_pieces,side,depth,ans",
+                         [(n, o, x, s, d, a) for n, o, x, s, d, a in zip(range(len(ans)), o_pieces, x_pieces, side, depth, ans)])
+def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
     board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
-    board_.display()
+                         x_pieces=x_pieces)
 
-    computer = player.ComputerPlayer("test_name", -1, board_, 4)
+    computer = player.ComputerPlayer("test_name", side, board_, depth)
+
+    board_.display()
 
     move = computer.make_move()
 
-    for pre, fill, node in anytree.RenderTree(computer.tree.root):
-        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+    if depth <= 2:
+        for pre, fill, node in anytree.RenderTree(computer.tree.root):
+            print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
 
-    assert move in [2,5]
-
+    assert move in ans
     return
 
-"""
-def test_stop_winner_5():
-#[[' ' ' ' ' ' 'x' ' ' ' ' ' ']
-# [' ' ' ' ' ' 'x' ' ' ' ' ' ']
-# [' ' ' ' 'x' 'x' ' ' ' ' ' ']
-# [' ' 'o' 'o' 'o' ' ' ' ' ' ']
-# [' ' 'o' 'o' 'x' ' ' ' ' ' ']
-# ['o' 'x' 'o' 'o' 'x' ' ' ' ']]
-    o_pieces = np.array(
-        [[0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 1, 1, 1, 0, 0, 0],
-         [0, 1, 1, 0, 0, 0, 0],
-         [1, 0, 1, 1, 0, 0, 0]], dtype=np.bool_)
 
-    x_pieces = np.array(
-        [[0, 0, 0, 1, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0, 0],
-         [0, 0, 1, 1, 0, 0, 0],
-         [0, 0, 0, 0, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0, 0],
-         [0, 1, 0, 0, 1, 0, 0]], dtype=np.bool_)
-
-    board_ = board.Board(o_pieces=o_pieces,
-                        x_pieces=x_pieces)
-    board_.display()
+def test_multiple_moves():
+    board_ = board.Board()
 
     computer = player.ComputerPlayer("test_name", -1, board_, 4)
 
-    move = computer.make_move()
+    board_.make_move(3)
 
-    for pre, fill, node in anytree.RenderTree(computer.tree.root):
-        print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+    assert computer.make_move() == 3
 
-    assert move not in [3,4]
+    board_.make_move(3)
 
-    return
-"""
+    assert computer.make_move() == 3
+
+    board_.make_move(4)
+
+    assert computer.make_move() == 2

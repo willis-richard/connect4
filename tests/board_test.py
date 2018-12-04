@@ -144,7 +144,7 @@ pieces_2 = [
               [0, 0, 0, 0, 1, 0, 0],
               [0, 0, 0, 1, 1, 0, 0]], dtype=np.bool_)
     ]
-ans = [1, 1, 1, 1, 1, 1, 1, -1, 0, -1,None]
+ans = [1, 1, 1, 1, 1, 1, 1, -1, 0, -1, None]
 
 assert len(pieces_1) == len(pieces_2) == len(ans)
 
