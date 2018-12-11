@@ -97,11 +97,11 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
     board_ = board.Board(o_pieces=o_pieces,
                          x_pieces=x_pieces)
 
-    computer = player.ComputerPlayer("test_name", side, board_, depth)
+    computer = player.ComputerPlayer("test_name", side, depth)
 
     board_.display()
 
-    move = computer.make_move()
+    move = computer.make_move(board_)
 
     if depth <= 2:
         for pre, fill, node in anytree.RenderTree(computer.tree.root):
@@ -114,16 +114,16 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
 def test_multiple_moves():
     board_ = board.Board()
 
-    computer = player.ComputerPlayer("test_name", -1, board_, 4)
+    computer = player.ComputerPlayer("test_name", -1, 4)
 
     board_.make_move(3)
 
-    assert computer.make_move() == 3
+    assert computer.make_move(board_) == 3
 
     board_.make_move(3)
 
-    assert computer.make_move() == 3
+    assert computer.make_move(board_) == 3
 
     board_.make_move(4)
 
-    assert computer.make_move() == 2
+    assert computer.make_move(board_) == 2
