@@ -3,7 +3,7 @@
 import cProfile
 import sys
 
-from connect4 import game
+from src.connect4 import game
 
 if __name__ == "__main__":
 #    name_o = str(input("Enter player o's name: "))

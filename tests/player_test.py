@@ -1,5 +1,5 @@
-from connect4 import board
-from connect4 import player
+from src.connect4 import board
+from src.connect4 import player
 
 import anytree
 import pytest

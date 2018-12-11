@@ -56,7 +56,7 @@ class Board():
         pieces = self._get_pieces()
         return set(i for i in range(self._width) if not all(pieces[:,i]))
 
-    def get_half_moves(self):
+    def get_plies(self):
         return np.sum(self._get_pieces())
 
     def _check_straight(self, pieces):
