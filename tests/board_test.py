@@ -158,3 +158,47 @@ def test_check_valid(n, pieces_1, pieces_2, ans):
     board_.display()
     assert board_.check_terminal_position() == ans
     return
+
+
+def test_valid_moves():
+    o_pieces = np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
+
+    x_pieces = np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
+
+    board_ = board.Board(o_pieces=o_pieces,
+                         x_pieces=x_pieces)
+
+    assert board_.valid_moves() == set(range(7))
+
+    o_pieces = np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1]], dtype=np.bool_)
+
+    x_pieces = np.array(
+        [[0, 0, 0, 0, 0, 0, 1],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 1],
+         [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
+
+    board_ = board.Board(o_pieces=o_pieces,
+                         x_pieces=x_pieces)
+
+    assert board_.valid_moves() == set(range(6))

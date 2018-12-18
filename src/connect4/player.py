@@ -25,6 +25,7 @@ class HumanPlayer(BasePlayer):
                 pass
             print("Try again dipshit")
         board.make_move(int(move))
+        return move
 
     def __str__(self):
         return super().__str__() + ", type: Human"
@@ -43,7 +44,7 @@ class ComputerPlayer(BasePlayer):
 
         moves = {}
         for node in self.tree.root.children:
-            move = node.name[0]
+            move = node.name
             moves[move] = node.data.node_eval.get_value()
 
         print("POSSIBLE MOVES: ", moves)
@@ -79,7 +80,8 @@ class ComputerPlayer(BasePlayer):
 
         print("Best move selected: ", best_move)
         board.make_move(best_move)
-        return best_move # for testing
+
+        return best_move
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

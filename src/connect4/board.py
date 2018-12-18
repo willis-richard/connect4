@@ -16,7 +16,7 @@ class Board():
         self.x_pieces = np.zeros((height, width), dtype=np.bool_) if x_pieces is None else x_pieces
 
         self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
-        self.move_history = []
+        self.move_history = np.empty((0,), dtype='uint8')
         self.result = None
 
         if hash_value is None:
@@ -54,7 +54,7 @@ class Board():
 
     def valid_moves(self):
         pieces = self._get_pieces()
-        return set(i for i in range(self._width) if not all(pieces[:,i]))
+        return set(i for i in range(self._width) if not all(pieces[:, i]))
 
     def get_plies(self):
         return np.sum(self._get_pieces())
@@ -91,7 +91,7 @@ class Board():
         else:
             self.x_pieces[idx, move] = 1
         self.player_to_move = -1 * self._player_to_move
-        self.move_history.insert(0, move)
+        self.move_history = np.append(self.move_history, move)
 
     def _check_valid(self):
         no_gaps = True

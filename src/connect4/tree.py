@@ -36,21 +36,21 @@ class Connect4Tree():
         # then delete the entire old tree?
         # if the positions live on in the transition table then is could be rosy
 
-    def create_node(self, board, parent=None):
-        # N.B. anytree.Node.name will be the move_history
-        # FIXME: to confirm that my eq operator gives us a cache hit and and the is operator isn't used
+    def create_node(self, name, board, parent=None):
+        # FIXME: to confirm that my eq operator gives us a cache hit and and the 'is' operator isn't used instead
         if board in self.transition_t:
             node_data = NodeData(board, self.transition_t[board])
         else:
             node_data = NodeData(board)
 
         self.transition_t[board] = node_data.node_eval
-        node = anytree.Node(board.move_history, parent=parent, data=node_data)
+        node = anytree.Node(name, parent=parent, data=node_data)
         return node
 
     def update_root(self, board):
-        self.root = self.create_node(copy.deepcopy(board))
-        """new_root = anytree.search.find(self.root, lambda n: n.name == board.move_history, maxlevel=2)
+        self.root = self.create_node('root', copy.deepcopy(board))
+        # Don't be silly - just walk the two last moves if they exist.
+        """new_root = anytree.search.find(self.root, lambda n: np.array_equal(n.name == board.move_history), maxlevel=2)
         if new_root:
             new_root.parent = None
         else:
@@ -65,11 +65,11 @@ class Connect4Tree():
         if plies == 0 or node.data.node_eval.terminal_result:
             return
         # create new nodes for all unexplored moves
-        actions_not_taken = node.data.board.valid_moves().difference([c.name[0] for c in node.children])
+        actions_not_taken = node.data.board.valid_moves().difference([c.name for c in node.children])
         for move in actions_not_taken:
             new_board = copy.deepcopy(node.data.board)
             new_board.make_move(move)
-            self.create_node(new_board, parent=node)
+            self.create_node(move, new_board, parent=node)
 
         for child in node.children:
             self.expand_node(child, plies - 1)
@@ -94,9 +94,6 @@ class Connect4Tree():
 
         node.data.node_eval.tree_value = value
         return value
-
-    def explore_move(move):
-        return
 
     def evaluate_position(self, board):
         return 0
