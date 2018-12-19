@@ -47,7 +47,7 @@ class Board():
         return \
             str(np.array([range(self._width)]).astype(str)) \
             + "\n" + str(display.decode('utf-8')) \
-            + "\n" + print(np.array([range(self._width)]).astype(str))
+            + "\n" + str(np.array([range(self._width)]).astype(str))
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces
