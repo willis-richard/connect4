@@ -1,25 +1,21 @@
 import numpy as np
 
+from src.connect4.utils import Connect4Stats as info
+
 
 class Board():
     def __init__(self,
-                 height=6,
-                 width=7,
-                 win_length=4,
                  hash_value=None,
                  o_pieces=None,
                  x_pieces=None):
-        self._width = width
-        self._height = height
-        self._win_length = win_length
-        self.o_pieces = np.zeros((height, width), dtype=np.bool_) if o_pieces is None else o_pieces
-        self.x_pieces = np.zeros((height, width), dtype=np.bool_) if x_pieces is None else x_pieces
+        self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if o_pieces is None else o_pieces
+        self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if x_pieces is None else x_pieces
 
         self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
         self.result = None
 
         if hash_value is None:
-            self.hash_value = np.array([2**x for x in range(height * width)])
+            self.hash_value = np.array([2**x for x in range(info.height * info.width)])
         else:
             self.hash_value = hash_value
 
@@ -45,25 +41,25 @@ class Board():
         display[self.o_pieces] = 'o'
         display[self.x_pieces] = 'x'
         return \
-            str(np.array([range(self._width)]).astype(str)) \
+            str(np.array([range(info.width)]).astype(str)) \
             + "\n" + str(display.decode('utf-8')) \
-            + "\n" + str(np.array([range(self._width)]).astype(str))
+            + "\n" + str(np.array([range(info.width)]).astype(str))
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces
 
     def valid_moves(self):
         pieces = self._get_pieces()
-        return set(i for i in range(self._width) if not all(pieces[:, i]))
+        return set(i for i in range(info.width) if not all(pieces[:, i]))
 
     def get_plies(self):
         return np.sum(self._get_pieces())
 
     def _check_straight(self, pieces):
-        return np.any(np.all([pieces[i:i+self._win_length, j] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1])], axis=1))
+        return np.any(np.all([pieces[i:i+info.win_length, j] for i in range(pieces.shape[0] - info.win_length + 1) for j in range(pieces.shape[1])], axis=1))
 
     def _check_diagonal(self, pieces):
-        return np.any(np.all(np.diagonal([pieces[i:i+self._win_length, j:j+self._win_length] for i in range(pieces.shape[0] - self._win_length + 1) for j in range(pieces.shape[1] - self._win_length + 1)], axis1=1, axis2=2), axis=1))
+        return np.any(np.all(np.diagonal([pieces[i:i+info.win_length, j:j+info.win_length] for i in range(pieces.shape[0] - info.win_length + 1) for j in range(pieces.shape[1] - info.win_length + 1)], axis1=1, axis2=2), axis=1))
 
     def check_for_winner(self, pieces):
         return \
@@ -84,7 +80,7 @@ class Board():
     def make_move(self, move):
         assert move in self.valid_moves()
         board = self._get_pieces()
-        idx = self._height - np.count_nonzero(board[:, move]) - 1
+        idx = info.height - np.count_nonzero(board[:, move]) - 1
         assert board[idx, move] == 0
         if self._player_to_move == 1:
             self.o_pieces[idx, move] = 1
@@ -94,7 +90,7 @@ class Board():
 
     def _check_valid(self):
         no_gaps = True
-        for col in range(self._width):
+        for col in range(info.width):
             board = self._get_pieces()
             if not np.array_equal(board[:, col], np.sort(board[:, col])):
                 no_gaps = False
@@ -104,8 +100,8 @@ class Board():
         assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
         assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == 1) #player who has already won is to move
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == -1)
-        assert self.o_pieces.shape == (self._height, self._width)
-        assert self.x_pieces.shape == (self._height, self._width)
+        assert self.o_pieces.shape == (info.height, info.width)
+        assert self.x_pieces.shape == (info.height, info.width)
 
     def __hash__(self):
         o_hash = np.dot(np.concatenate(self.o_pieces), self.hash_value)

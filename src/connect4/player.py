@@ -1,5 +1,7 @@
 from src.connect4 import tree
 
+from src.connect4.utils import Connect4Stats as info
+
 import numpy as np
 
 
@@ -34,44 +36,25 @@ class HumanPlayer(BasePlayer):
 class ComputerPlayer(BasePlayer):
     def __init__(self, name, side, depth):
         super().__init__(name, side)
-        self.tree = tree.Connect4Tree()
+        self.tree = tree.Connect4Tree(self.evaluate_position)
         self.depth = depth
+        # static member
 
     def make_move(self, board):
         self.tree.update_root(board)
         self.tree.expand_node(self.tree.root, self.depth)
         self.tree.nega_max(self.tree.root, self.depth, self.side)
 
-        moves = {}
-        for node in self.tree.root.children:
-            move = node.name
-            moves[move] = node.data.node_eval.get_value()
+        moves = np.array([(n.name) for n in self.tree.root.children])
+        values = np.array([(n.data.node_eval.get_value()) for n in self.tree.root.children])
+        idx = np.argmax(values * self.side)
+        best_moves = moves[values == values[idx]]
+        best_move_value = values[idx]
 
-        print("POSSIBLE MOVES: ", moves)
-        # FIXME: same selection problem
-        if self.side == 1:
-            max = -2
-            best_moves = []
-            for move, value in moves.items():
-                if value > max:
-                    best_moves = [move]
-                    max = value
-                elif value == max:
-                    best_moves.append(move)
-        else:
-            max = 2
-            best_moves = []
-            for move, value in moves.items():
-                if value < max:
-                    best_moves = [move]
-                    max = value
-                elif value == max:
-                    best_moves.append(move)
-
-        best_moves = np.array(best_moves)
-        distance_to_middle = np.abs(best_moves - board._width / 2.0)
-        idx = np.argsort(distance_to_middle)
-        best_move, best_move_value = best_moves[idx[0]], moves[best_moves[idx[0]]]
+        best_move = moves[idx]
+        #distance_to_middle = np.abs(best_moves - info.width / 2.0)
+        #idx = np.argsort(distance_to_middle)
+        #best_move = best_moves[idx[0]]
 
         if best_move_value == self.side:
             print("Trash! I will crush you.")
@@ -82,6 +65,11 @@ class ComputerPlayer(BasePlayer):
         board.make_move(best_move)
 
         return best_move
+
+    @staticmethod
+    def evaluate_position(board):
+        return np.sum(np.multiply(board.o_pieces * 1.0 - 1.0 * board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
+        #return np.einsum('ij,ij', board.o_pieces * 1.0 - 1.0 * board.x_pieces, info.value_grid_t, info.value_grid)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

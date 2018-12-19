@@ -7,30 +7,19 @@ from src.connect4 import game
 
 class Match():
     def __init__(self,
+                 display,
                  number_of_games,
                  player_1,
-                 player_2,
-                 height=6,
-                 width=7,
-                 win_length=4):
+                 player_2):
         self.n = number_of_games
         self._player_1 = player_1
         self._player_2 = player_2
 
-        # Check inputs are sane
-        assert width >= win_length and height >= win_length
-        # my has function converts to a u64
-        assert height * width <= 64
-
-        self.hash_value = np.array([2**x for x in range(height * width)])
-
         # FIXME: play both sides
-        self.games = np.array([game.Game(copy.deepcopy(player_1),
+        self.games = np.array([game.Game(display,
+                                         copy.deepcopy(player_1),
                                          copy.deepcopy(player_2),
-                                         board.Board(height,
-                                                     width,
-                                                     win_length,
-                                                     self.hash_value))
+                                         board.Board())
                                for i in range(self.n)])
 
     def play(self):
