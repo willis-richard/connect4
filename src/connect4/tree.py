@@ -30,7 +30,7 @@ class NodeEvaluation():
 class Connect4Tree():
     def __init__(self):
         """transition_t is a map from board to NodeEvaluation"""
-        self.transition_t = dict()
+        # self.transition_t = dict()
         # self.root = self.create_node(copy.deepcopy(board))
         # can I clear out the tree each move by setting the new node as the root (and it's parent to None)
         # then delete the entire old tree?

@@ -155,7 +155,7 @@ def test_check_valid(n, pieces_1, pieces_2, ans):
     board_ = board.Board(o_pieces=pieces_1,
                          x_pieces=pieces_2)
 
-    board_.display()
+    print(board_)
     assert board_.check_terminal_position() == ans
     return
 

@@ -13,13 +13,13 @@ class Game():
 
     def play(self):
         print("Game between", self._player_o, " and ", self._player_x)
-        self._board.display()
+        print(self._board)
         while self._board.result is None:
             if self._board.player_to_move == 'o':
                 move = self._player_o.make_move(self._board)
             else:
                 move = self._player_x.make_move(self._board)
             self.move_history = np.append(self.move_history, move)
-            self._board.display()
+            print(self._board)
             self._board.check_terminal_position()
         return self._board.result

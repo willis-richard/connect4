@@ -86,7 +86,7 @@ x_pieces = [
 
 side = [1, -1, 1, -1, -1]
 depth = [1, 2, 2, 4, 4]
-ans = [[1], [1], [1], [6], [2,5]]
+ans = [[1], [1], [1], [6], [2, 5]]
 
 assert len(o_pieces) == len(x_pieces) == len(side) == len(depth) == len(ans)
 
@@ -99,7 +99,7 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
 
     computer = player.ComputerPlayer("test_name", side, depth)
 
-    board_.display()
+    print(board_)
 
     move = computer.make_move(board_)
 

@@ -16,7 +16,6 @@ class Board():
         self.x_pieces = np.zeros((height, width), dtype=np.bool_) if x_pieces is None else x_pieces
 
         self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
-        self.move_history = np.empty((0,), dtype='uint8')
         self.result = None
 
         if hash_value is None:
@@ -40,14 +39,15 @@ class Board():
         assert player_to_move in [-1, 1]
         self._player_to_move = player_to_move
 
-    def display(self):
+    def __str__(self):
         display = np.chararray(self.o_pieces.shape)
         display[:] = ' '
         display[self.o_pieces] = 'o'
         display[self.x_pieces] = 'x'
-        print(np.array([range(self._width)]).astype(str))
-        print(display.decode('utf-8'))
-        print(np.array([range(self._width)]).astype(str))
+        return \
+            str(np.array([range(self._width)]).astype(str)) \
+            + "\n" + str(display.decode('utf-8')) \
+            + "\n" + print(np.array([range(self._width)]).astype(str))
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces
@@ -91,7 +91,6 @@ class Board():
         else:
             self.x_pieces[idx, move] = 1
         self.player_to_move = -1 * self._player_to_move
-        self.move_history = np.append(self.move_history, move)
 
     def _check_valid(self):
         no_gaps = True
@@ -103,7 +102,7 @@ class Board():
         assert no_gaps
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
         assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
-        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == 1) #player who has already one is to move
+        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == 1) #player who has already won is to move
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == -1)
         assert self.o_pieces.shape == (self._height, self._width)
         assert self.x_pieces.shape == (self._height, self._width)
