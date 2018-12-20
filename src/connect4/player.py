@@ -68,8 +68,8 @@ class ComputerPlayer(BasePlayer):
 
     @staticmethod
     def evaluate_position(board):
-        return np.sum(np.multiply(board.o_pieces * 1.0 - 1.0 * board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
-        #return np.einsum('ij,ij', board.o_pieces * 1.0 - 1.0 * board.x_pieces, info.value_grid_t, info.value_grid)
+        # return np.sum(np.multiply(board.o_pieces, info.value_grid) - np.multiply(board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
+        return (np.einsum('ij,ij', board.o_pieces, info.value_grid) - np.einsum('ij,ij', board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
