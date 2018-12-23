@@ -22,10 +22,10 @@ class HumanPlayer(BasePlayer):
         move = -1
         while move not in board.valid_moves():
             try:
-                move = int(input("Enter player " + board.player_to_move + "'s move:"))
+                move = int(input("Enter " + self.name + " (" + board.player_to_move + "'s) move:"))
             except ValueError:
+                print("Try again dipshit")
                 pass
-            print("Try again dipshit")
         board.make_move(int(move))
         return move
 
@@ -61,7 +61,7 @@ class ComputerPlayer(BasePlayer):
         elif best_move_value == -1 * self.side:
             print("Ah fuck you lucky shit")
 
-        print("Best move selected: ", best_move)
+        print(self.name + " selected move: ", best_move)
         board.make_move(best_move)
 
         return best_move
