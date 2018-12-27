@@ -34,16 +34,16 @@ class HumanPlayer(BasePlayer):
 
 
 class ComputerPlayer(BasePlayer):
-    def __init__(self, name, side, depth):
+    def __init__(self, name, side, search_fn, **args):
         super().__init__(name, side)
         self.tree = tree.Connect4Tree(self.evaluate_position)
-        self.depth = depth
+        self.search_fn = search_fn
+        self.args = args
         # static member
 
     def make_move(self, board):
         self.tree.update_root(board)
-        self.tree.expand_node(self.tree.root, self.depth)
-        self.tree.nega_max(self.tree.root, self.depth, self.side)
+        self.search_fn(tree=self.tree, board=board, side=self.side, **self.args)
 
         moves = np.array([(n.name) for n in self.tree.root.children])
         values = np.array([(n.data.node_eval.get_value()) for n in self.tree.root.children])
@@ -70,6 +70,15 @@ class ComputerPlayer(BasePlayer):
     def evaluate_position(board):
         # return np.sum(np.multiply(board.o_pieces, info.value_grid) - np.multiply(board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
         return (np.einsum('ij,ij', board.o_pieces, info.value_grid) - np.einsum('ij,ij', board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
+
+    @staticmethod
+    def gridsearch(tree, board, side, depth):
+        tree.expand_node(tree.root, depth)
+        tree.nega_max(tree.root, depth, side)
+
+    @staticmethod
+    def mcts(tree, board, side):
+        print("implement")
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
