@@ -8,6 +8,8 @@ class Game():
                  player_x,
                  board_):
         self.display = display
+        player_o.side = 1
+        player_x.side = -1
         self._player_o = player_o
         self._player_x = player_x
         self._board = board_

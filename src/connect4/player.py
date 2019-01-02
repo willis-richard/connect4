@@ -6,17 +6,25 @@ import numpy as np
 
 
 class BasePlayer():
-    def __init__(self, name, side):
+    def __init__(self, name):
         self.name = name
-        self.side = side
 
     def __str__(self):
         return "Player: " + self.name
 
+    @property
+    def side(self):
+        return self._side
+
+    @side.setter
+    def side(self, side):
+        assert side in [-1, 1]
+        self._side = side
+
 
 class HumanPlayer(BasePlayer):
-    def __init__(self, name, side):
-        super().__init__(name, side)
+    def __init__(self, name):
+        super().__init__(name)
 
     def make_move(self, board):
         move = -1
@@ -34,16 +42,15 @@ class HumanPlayer(BasePlayer):
 
 
 class ComputerPlayer(BasePlayer):
-    def __init__(self, name, side, search_fn, **args):
-        super().__init__(name, side)
+    def __init__(self, name, search_fn):
+        super().__init__(name)
         self.tree = tree.Connect4Tree(self.evaluate_position)
         self.search_fn = search_fn
-        self.args = args
         # static member
 
     def make_move(self, board):
         self.tree.update_root(board)
-        self.search_fn(tree=self.tree, board=board, side=self.side, **self.args)
+        self.search_fn(tree=self.tree, board=board, side=self.side)
 
         moves = np.array([(n.name) for n in self.tree.root.children])
         values = np.array([(n.data.node_eval.get_value()) for n in self.tree.root.children])

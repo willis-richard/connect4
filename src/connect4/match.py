@@ -20,7 +20,7 @@ class Match():
         self._player_2 = player_2
 
         # FIXME: play both sides
-        #self.games = np.array([game.Game(display,
+        # self.games = np.array([game.Game(display,
         #                                 copy.deepcopy(player_1),
         #                                 copy.deepcopy(player_2),
         #                                 board.Board())
@@ -31,26 +31,31 @@ class Match():
                                 board.Board())
                       for i in range(self.n)]
 
-    def play(self):
-        results = np.empty_like(self.games, dtype='i')
-        for i in range(self.n):
-            results[i] = self.games[i].play()
-
-        print("The results are:\nPlayer one: {} wins, {} draws and {} losses".format(np.sum(results == 1), np.sum(results == 0), np.sum(results == -1)))
+    def play(self, agents=1):
+        if agents == 1:
+            results = np.empty_like(self.games, dtype='i')
+            for i in range(self.n):
+                results[i] = self.games[i].play()
+            print("The results are:\nPlayer one: {} wins, {} draws, {} losses"
+                  .format(np.sum(results == 1),
+                          np.sum(results == 0),
+                          np.sum(results == -1)))
+        else:
+            results = self.play_parallel(agents)
+            print(results)
 
     def play_parallel(self, agents):
         from multiprocessing import Pool
 
         with Pool(processes=agents) as pool:
-            #results = pool.map(lambda x: x.play(), self.games)
+            # results = pool.map(lambda x: x.play(), self.games)
             results = pool.map(top_level_defined_play, self.games)
 
-        print(results)
-        #print("The results are:\nPlayer one: {} wins, {} draws and {} losses".format(np.sum(results == 1), np.sum(results == 0), np.sum(results == -1)))
+        return results
 
     def make_random_ips(self, ply):
         for i in range(ply):
-              print("nah")
-            #moves = self._board.get_valid_moves()
-            #move = np.random.choice(moves)
-            #self._board.make_move(move)
+            print("nah")
+            # moves = self._board.get_valid_moves()
+            # move = np.random.choice(moves)
+            # self._board.make_move(move)

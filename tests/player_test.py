@@ -6,6 +6,7 @@ import pytest
 
 import numpy as np
 
+from functools import partial
 
 o_pieces = [
     np.array(
@@ -97,7 +98,10 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
     board_ = board.Board(o_pieces=o_pieces,
                          x_pieces=x_pieces)
 
-    computer = player.ComputerPlayer("test_name", side, depth)
+    computer = player.ComputerPlayer("test_name",
+                                     partial(player.ComputerPlayer.gridsearch,
+                                             depth=depth))
+    computer.side = side
 
     print(board_)
 
@@ -114,7 +118,10 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
 def test_multiple_moves():
     board_ = board.Board()
 
-    computer = player.ComputerPlayer("test_name", -1, 4)
+    computer = player.ComputerPlayer("test_name",
+                                     partial(player.ComputerPlayer.gridsearch,
+                                             depth=4))
+    computer.side = -1
 
     board_.make_move(3)
 
