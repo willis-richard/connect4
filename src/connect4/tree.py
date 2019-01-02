@@ -52,7 +52,7 @@ class Connect4Tree():
 
     def update_root(self, board):
         self.root = self.create_node('root', copy.deepcopy(board))
-        self.transition_tree.age(board.num_moves_made)
+        self.transition_t.age(board.age)
 
     def take_action(self, action, node):
         new_board = copy.deepcopy(node.data.board)

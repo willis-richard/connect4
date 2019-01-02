@@ -8,7 +8,16 @@ class Entry():
         self.table[board] = node_data
 
     def __eq__(self, obj):
-        return self.age == obj.age
+        return self.age == obj
+
+    def __gt__(self, other):
+        return self.age > other
+
+    def __lt__(self, other):
+        return self.age < other
+
+    def __hash__(self):
+        return hash(self.age)
 
 
 class TransitionTable():
@@ -39,7 +48,7 @@ class TransitionTable():
             idx = self.entries.bisect_left(age)
             self.entries[idx].table[board] = node_data
         else:
-            self.entries[age] = Entry(board, node_data)
+            self.entries.add(Entry(board, node_data))
 
     def age(self, num_moves):
         idx = self.entries.bisect_left(num_moves - 1)

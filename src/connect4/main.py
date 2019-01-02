@@ -14,4 +14,4 @@ if __name__ == "__main__":
                                      partial(player.ComputerPlayer.grid_search,
                                              depth=4))
     match = match.Match(True, 24, player_1, player_2)
-    match.play(12)
+    match.play(1)

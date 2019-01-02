@@ -37,7 +37,7 @@ class Board():
 
     @property
     def age(self):
-        return np.sum(self._get_pieces)
+        return np.sum(self._get_pieces())
 
     def __str__(self):
         display = np.chararray(self.o_pieces.shape)
