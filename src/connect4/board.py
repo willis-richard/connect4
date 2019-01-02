@@ -35,6 +35,10 @@ class Board():
         assert player_to_move in [-1, 1]
         self._player_to_move = player_to_move
 
+    @property
+    def age(self):
+        return np.sum(self._get_pieces)
+
     def __str__(self):
         display = np.chararray(self.o_pieces.shape)
         display[:] = ' '

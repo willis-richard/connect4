@@ -99,7 +99,7 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
                          x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name",
-                                     partial(player.ComputerPlayer.gridsearch,
+                                     partial(player.ComputerPlayer.grid_search,
                                              depth=depth))
     computer.side = side
 
@@ -119,7 +119,7 @@ def test_multiple_moves():
     board_ = board.Board()
 
     computer = player.ComputerPlayer("test_name",
-                                     partial(player.ComputerPlayer.gridsearch,
+                                     partial(player.ComputerPlayer.grid_search,
                                              depth=4))
     computer.side = -1
 

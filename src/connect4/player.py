@@ -75,17 +75,35 @@ class ComputerPlayer(BasePlayer):
 
     @staticmethod
     def evaluate_position(board):
-        # return np.sum(np.multiply(board.o_pieces, info.value_grid) - np.multiply(board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
-        return (np.einsum('ij,ij', board.o_pieces, info.value_grid) - np.einsum('ij,ij', board.x_pieces, info.value_grid)) / float(info.value_grid_sum)
+        # return np.sum(np.multiply(board.o_pieces, info.value_grid) -
+        # np.multiply(board.x_pieces, info.value_grid)) \
+        # / float(info.value_grid_sum)
+        return (np.einsum('ij,ij', board.o_pieces, info.value_grid)
+                - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
+                / float(info.value_grid_sum)
 
     @staticmethod
-    def gridsearch(tree, board, side, depth):
-        tree.expand_node(tree.root, depth)
+    def grid_search(tree, board, side, depth):
+        tree.expand_tree(tree.root, depth)
         tree.nega_max(tree.root, depth, side)
 
     @staticmethod
-    def mcts(tree, board, side):
-        print("implement")
+    def mcts(tree, board, side, simulations):
+        def select_action(node):
+            # FIXME: implement
+            return 0
+
+        for _ in range(simulations):
+            node = tree.root
+            while node.expandable():
+                action = select_action(node)
+                actions_explored = [c.name for c in node.children]
+                if action in actions_explored:
+                    node = node.children[actions_explored == action]
+                else:
+                    break
+
+            node = tree.take_action(action, node)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

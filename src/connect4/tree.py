@@ -1,12 +1,17 @@
 import anytree
 import copy
 
+from src.connect4.transition_table import TransitionTable
 
 class NodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self, board, node_eval=None):
         self.board = board
-        self.node_eval = NodeEvaluation(board.check_terminal_position()) if node_eval is None else node_eval
+        self.node_eval = NodeEvaluation(board.check_terminal_position()) \
+            if node_eval is None else node_eval
+
+    def expandable(self):
+        return self.node_eval.terminal_result is None
 
 
 class NodeEvaluation():
@@ -28,14 +33,11 @@ class NodeEvaluation():
 
 
 class Connect4Tree():
-    def __init__(self, evaluate_fn):
+    def __init__(self, evaluate_fn, transition_t=None):
         """transition_t is a map from board to NodeEvaluation"""
-        self.transition_t = dict()
         self.evaluate_position = evaluate_fn
-        # self.root = self.create_node(copy.deepcopy(board))
-        # can I clear out the tree each move by setting the new node as the root (and it's parent to None)
-        # then delete the entire old tree?
-        # if the positions live on in the transition table then is could be rosy
+        self.transition_t = TransitionTable() \
+            if transition_t is None else transition_t
 
     def create_node(self, name, board, parent=None):
         # FIXME: to confirm that my eq operator gives us a cache hit and and the 'is' operator isn't used instead
@@ -50,30 +52,23 @@ class Connect4Tree():
 
     def update_root(self, board):
         self.root = self.create_node('root', copy.deepcopy(board))
-        # Don't be silly - just walk the two last moves if they exist.
-        """new_root = anytree.search.find(self.root, lambda n: np.array_equal(n.name == board.move_history), maxlevel=2)
-        if new_root:
-            new_root.parent = None
-        else:
-            # delete entire tree?
-            new_root = self.create_node(copy.deepcopy(board))
+        self.transition_tree.age(board.num_moves_made)
 
-        self.root = new_root"""
-        #self.prune_old_tree()
-        #self.age_transition_tree()
+    def take_action(self, action, node):
+        new_board = copy.deepcopy(node.data.board)
+        new_board.make_move(action)
+        return self.create_node(action, new_board, parent=node)
 
-    def expand_node(self, node, plies):
+    def expand_tree(self, node, plies):
         if plies == 0 or node.data.node_eval.terminal_result:
             return
         # create new nodes for all unexplored moves
         actions_not_taken = node.data.board.valid_moves().difference([c.name for c in node.children])
         for move in actions_not_taken:
-            new_board = copy.deepcopy(node.data.board)
-            new_board.make_move(move)
-            self.create_node(move, new_board, parent=node)
+            self.take_action(move, node)
 
         for child in node.children:
-            self.expand_node(child, plies - 1)
+            self.expand_tree(child, plies - 1)
 
     def nega_max(self, node, plies, side):
         # https://en.wikipedia.org/wiki/Negamax
@@ -95,9 +90,3 @@ class Connect4Tree():
 
         node.data.node_eval.tree_value = value
         return value
-
-    def prune_old_tree(self):
-        return
-
-    def age_transition_tree(self):
-        return
