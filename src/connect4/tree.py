@@ -3,6 +3,7 @@ import copy
 
 from src.connect4.transition_table import TransitionTable
 
+
 class NodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self, board, node_eval=None):

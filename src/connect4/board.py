@@ -39,7 +39,7 @@ class Board():
     def age(self):
         return np.sum(self._get_pieces())
 
-    def __str__(self):
+    def __repr__(self):
         display = np.chararray(self.o_pieces.shape)
         display[:] = ' '
         display[self.o_pieces] = 'o'

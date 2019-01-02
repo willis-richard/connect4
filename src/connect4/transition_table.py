@@ -19,6 +19,9 @@ class Entry():
     def __hash__(self):
         return hash(self.age)
 
+    def __repr__(self):
+        return str(self.age) + "\n" + str(self.table)
+
 
 class TransitionTable():
     def __init__(self):
@@ -55,3 +58,7 @@ class TransitionTable():
         if idx > 0:
             for _ in range(idx):
                 del self.entries[0]
+
+    def __repr__(self):
+        return repr(self.entries)
+        # return str([str(entry) for entry in self.entries])
