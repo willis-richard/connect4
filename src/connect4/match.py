@@ -56,6 +56,6 @@ class Match():
     def make_random_ips(self, ply):
         for i in range(ply):
             print("nah")
-            # moves = self._board.get_valid_moves()
+            # moves = self._board.valid_moves
             # move = np.random.choice(moves)
             # self._board.make_move(move)

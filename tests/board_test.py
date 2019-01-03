@@ -180,7 +180,7 @@ def test_valid_moves():
     board_ = board.Board(o_pieces=o_pieces,
                          x_pieces=x_pieces)
 
-    assert board_.valid_moves() == set(range(7))
+    assert board_.valid_moves == set(range(7))
 
     o_pieces = np.array(
         [[0, 0, 0, 0, 0, 0, 0],
@@ -201,4 +201,4 @@ def test_valid_moves():
     board_ = board.Board(o_pieces=o_pieces,
                          x_pieces=x_pieces)
 
-    assert board_.valid_moves() == set(range(6))
+    assert board_.valid_moves == set(range(6))

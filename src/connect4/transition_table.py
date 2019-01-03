@@ -1,3 +1,5 @@
+"""These classes are not currently used as a dict() is faster"""
+
 from sortedcontainers import SortedSet
 
 
@@ -25,8 +27,7 @@ class Entry():
 
 class TransitionTable():
     def __init__(self):
-        # table is a list of lists. The inner list is [age, dict()]
-        # where the dict holds the board evaluations
+        # sorted board evaluations by the number of pieces
         self.entries = SortedSet()
 
     def __contains__(self, board):
@@ -61,4 +62,37 @@ class TransitionTable():
 
     def __repr__(self):
         return repr(self.entries)
-        # return str([str(entry) for entry in self.entries])
+
+
+class TransitionTableDictOfDict():
+    def __init__(self):
+        # sorted board evaluations by the number of pieces
+        self.entries = dict()
+
+    def __contains__(self, board):
+        age = board.age
+        if age in self.entries:
+            return board in self.entries[age]
+
+        return False
+
+    def __getitem__(self, board):
+        age = board.age
+        if age in self.entries:
+            return self.entries[age][board]
+
+        raise KeyError("item not in TransitionTable")
+
+    def __setitem__(self, board, node_data):
+        age = board.age
+        if age in self.entries:
+            self.entries[age][board] = node_data
+        else:
+            self.entries[age] = dict()
+            self.entries[age][board] = node_data
+
+    def age(self, num_moves):
+        return
+
+    def __repr__(self):
+        return repr(self.entries)

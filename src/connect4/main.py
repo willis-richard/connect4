@@ -9,9 +9,9 @@ if __name__ == "__main__":
     # player_1 = player.HumanPlayer("player_1")
     player_1 = player.ComputerPlayer("player_1",
                                      partial(player.ComputerPlayer.grid_search,
-                                             depth=4))
+                                             depth=5))
     player_2 = player.ComputerPlayer("player_2",
                                      partial(player.ComputerPlayer.grid_search,
-                                             depth=4))
-    match = match.Match(True, 24, player_1, player_2)
+                                             depth=5))
+    match = match.Match(True, 1, player_1, player_2)
     match.play(1)

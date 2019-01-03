@@ -1,17 +1,17 @@
 import anytree
 import copy
 
-from src.connect4.transition_table import TransitionTable
-
 
 class NodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self, board, node_eval=None):
         self.board = board
+        self.terminal_children = set()
+        self.valid_moves = board.valid_moves
         self.node_eval = NodeEvaluation(board.check_terminal_position()) \
             if node_eval is None else node_eval
 
-    def expandable(self):
+    def evaluated(self):
         return self.node_eval.terminal_result is None
 
 
@@ -37,8 +37,11 @@ class Connect4Tree():
     def __init__(self, evaluate_fn, transition_t=None):
         """transition_t is a map from board to NodeEvaluation"""
         self.evaluate_position = evaluate_fn
-        self.transition_t = TransitionTable() \
-            if transition_t is None else transition_t
+        # at least while aging is not a problem, a dict() is
+        # faster than my other implementations
+        # self.transition_t = TransitionTableDictOfDict() \
+        #     if transition_t is None else transition_t
+        self.transition_t = dict()
 
     def create_node(self, name, board, parent=None):
         # FIXME: to confirm that my eq operator gives us a cache hit and and the 'is' operator isn't used instead
@@ -53,7 +56,7 @@ class Connect4Tree():
 
     def update_root(self, board):
         self.root = self.create_node('root', copy.deepcopy(board))
-        self.transition_t.age(board.age)
+        # self.transition_t.age(board.age)
 
     def take_action(self, action, node):
         new_board = copy.deepcopy(node.data.board)
@@ -64,7 +67,7 @@ class Connect4Tree():
         if plies == 0 or node.data.node_eval.terminal_result:
             return
         # create new nodes for all unexplored moves
-        actions_not_taken = node.data.board.valid_moves().difference([c.name for c in node.children])
+        actions_not_taken = node.data.board.valid_moves.difference([c.name for c in node.children])
         for move in actions_not_taken:
             self.take_action(move, node)
 

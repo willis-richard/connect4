@@ -28,9 +28,10 @@ class HumanPlayer(BasePlayer):
 
     def make_move(self, board):
         move = -1
-        while move not in board.valid_moves():
+        while move not in board.valid_moves:
             try:
-                move = int(input("Enter " + self.name + " (" + board.player_to_move + "'s) move:"))
+                move = int(input("Enter " + self.name + " (" +
+                                 board.player_to_move + "'s) move:"))
             except ValueError:
                 print("Try again dipshit")
                 pass
@@ -53,15 +54,16 @@ class ComputerPlayer(BasePlayer):
         self.search_fn(tree=self.tree, board=board, side=self.side)
 
         moves = np.array([(n.name) for n in self.tree.root.children])
-        values = np.array([(n.data.node_eval.get_value()) for n in self.tree.root.children])
+        values = np.array([(n.data.node_eval.get_value())
+                           for n in self.tree.root.children])
         idx = np.argmax(values * self.side)
-        best_moves = moves[values == values[idx]]
+        # best_moves = moves[values == values[idx]]
         best_move_value = values[idx]
 
         best_move = moves[idx]
-        #distance_to_middle = np.abs(best_moves - info.width / 2.0)
-        #idx = np.argsort(distance_to_middle)
-        #best_move = best_moves[idx[0]]
+        # distance_to_middle = np.abs(best_moves - info.width / 2.0)
+        # idx = np.argsort(distance_to_middle)
+        # best_move = best_moves[idx[0]]
 
         if best_move_value == self.side:
             print("Trash! I will crush you.")
@@ -89,21 +91,45 @@ class ComputerPlayer(BasePlayer):
 
     @staticmethod
     def mcts(tree, board, side, simulations):
-        def select_action(node):
-            # FIXME: implement
+        def ucb_score(node, child):
             return 0
+
+        def select_child(node):
+            # guaranteed at least one non-terminally forcing child
+            if not node.children:
+                tree.expand_tree(node, 1)
+
+            non_terminal_actions = set(node.data.valid_moves). \
+                                   difference(node.data.terminal_children)
+            non_terminal_children = [child for child in node.children if
+                                     child.name in non_terminal_actions]
+            _, child = max((ucb_score(node, child), child)
+                           for child in non_terminal_children)
+
+            return child
 
         for _ in range(simulations):
             node = tree.root
-            while node.expandable():
-                action = select_action(node)
-                actions_explored = [c.name for c in node.children]
-                if action in actions_explored:
-                    node = node.children[actions_explored == action]
-                else:
-                    break
+            while node.evaluated():
+                node = select_child(node)
 
-            node = tree.take_action(action, node)
+            if node.visited():
+                tree.expand_tree(node, 1)
+                action = select_action(node)
+                node = tree.take_action(action, node)
+
+            # while node.expandable():
+            #     action = select_action(node)
+            #     actions_explored = [c.name for c in node.children]
+            #     if action in actions_explored:
+            #         node = node.children[actions_explored == action]
+            #     else:
+            #         break
+
+            # node = tree.take_action(action, node)
+
+            node.evaluate()
+            tree.backpropagage(node)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

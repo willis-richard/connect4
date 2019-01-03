@@ -52,6 +52,7 @@ class Board():
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces
 
+    @property
     def valid_moves(self):
         pieces = self._get_pieces()
         return set(i for i in range(info.width) if not all(pieces[:, i]))
@@ -82,7 +83,7 @@ class Board():
         return self.result
 
     def make_move(self, move):
-        assert move in self.valid_moves()
+        assert move in self.valid_moves
         board = self._get_pieces()
         idx = info.height - np.count_nonzero(board[:, move]) - 1
         assert board[idx, move] == 0
