@@ -12,11 +12,16 @@ class NodeData():
     def unexplored_moves(self, children):
         return self.valid_moves.difference([c.name for c in children])
 
+    @property
+    def value(self):
+        if self.board.result is not None:
+            return self.board.result
+        return self.evaluation.value
+
 
 class Connect4Tree():
-    def __init__(self, evaluation_type, evaluate_fn, transition_t=None):
+    def __init__(self, evaluation_type, transition_t=None):
         self.evaluation_type = evaluation_type
-        self.evaluate_position = evaluate_fn
 
         # transition_t is a map from board to NodeEvaluation
         self.transition_t = dict()
@@ -27,11 +32,11 @@ class Connect4Tree():
 
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
-            node_data = NodeData(board, self.transition_t[board])
+            node_data = self.transition_t[board]
         else:
-            evaluation = self.evaluation_type(board.check_terminal_position())
-            node_data = NodeData(board, evaluation)
-            self.transition_t[board] = evaluation
+            board.check_terminal_position()
+            node_data = NodeData(board, self.evaluation_type())
+            self.transition_t[board] = node_data
 
         node = anytree.Node(name, parent=parent, data=node_data)
         return node

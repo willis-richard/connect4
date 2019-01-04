@@ -17,22 +17,16 @@ class GridSearch():
         return evaluate_position_centre
 
     class Evaluation():
-        def __init__(self,
-                     terminal_result=None,
-                     position_evaluation=None,
-                     tree_value=None):
-            self.terminal_result = terminal_result
-            self.position_evaluation = position_evaluation
-            self.tree_value = tree_value
+        def __init__(self):
+            self.tree_value = None
+            self.position_evaluation = None
 
         @property
         def value(self):
-            if self.terminal_result is not None:
-                return self.terminal_result
-            elif self.tree_value is not None:
+            if self.tree_value is not None:
                 return self.tree_value
-            elif self.evaluation is not None:
-                return self.evaluation
+            elif self.position_evaluation is not None:
+                return self.position_evaluation
             raise RuntimeError("No Evaluation value set")
 
 
@@ -54,6 +48,10 @@ class MCTS():
         def evaluated(self):
             return self.evaluation.terminal_result is None
 
+        @property
+        def value(self):
+            return self.Q
+
 
 def evaluate_position_centre(board):
     # return np.sum(np.multiply(board.o_pieces, info.value_grid) -
@@ -69,7 +67,7 @@ def grid_search(tree, board, side, depth):
     nega_max(tree.root, depth, side)
 
     moves = np.array([(n.name) for n in tree.root.children])
-    values = np.array([(n.data.evaluation.value)
+    values = np.array([(n.data.value)
                        for n in tree.root.children])
     idx = np.argmax(values * side)
     best_move_value = values[idx]
@@ -92,13 +90,10 @@ def expand_tree(tree, node, plies):
 def nega_max(node, plies, side):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
-        node.data.evaluation.terminal_result = node.data.board.result
         return node.data.board.result
     if plies == 0:
         position_evaluation = evaluate_position_centre(node.data.board)
-        node.data.evaluation = GridSearch.Evaluation(None,
-                                                     position_evaluation,
-                                                     None)
+        node.data.evaluation.position_evaluation = position_evaluation
         return position_evaluation
 
     if side == 1:
