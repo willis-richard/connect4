@@ -1,12 +1,11 @@
 from src.connect4 import board
 from src.connect4 import player
+from src.connect4 import searching
 
 import anytree
 import pytest
 
 import numpy as np
-
-from functools import partial
 
 o_pieces = [
     np.array(
@@ -99,8 +98,7 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
                          x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name",
-                                     partial(player.ComputerPlayer.grid_search,
-                                             depth=depth))
+                                     searching.GridSearch(depth=4))
     computer.side = side
 
     print(board_)
@@ -109,7 +107,8 @@ def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
 
     if depth <= 2:
         for pre, fill, node in anytree.RenderTree(computer.tree.root):
-            print("%s%s%s%s" % (pre, node.name, node.data.node_eval.tree_value, node.data.node_eval.evaluation))
+            print("%s%s%s" % (pre, node.name, node.data.evaluation))
+
 
     assert move in ans
     return
@@ -119,8 +118,7 @@ def test_multiple_moves():
     board_ = board.Board()
 
     computer = player.ComputerPlayer("test_name",
-                                     partial(player.ComputerPlayer.grid_search,
-                                             depth=4))
+                                     searching.GridSearch(depth=4))
     computer.side = -1
 
     board_.make_move(3)

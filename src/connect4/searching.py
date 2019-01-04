@@ -29,6 +29,10 @@ class GridSearch():
                 return self.position_evaluation
             raise RuntimeError("No Evaluation value set")
 
+        def __repr__(self):
+            return "tree_value: " + str(self.tree_value) + \
+                ",  position_evaluation: " + str(self.position_evaluation)
+
 
 class MCTS():
     def __init__(self, simulations):
