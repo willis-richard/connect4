@@ -1,9 +1,5 @@
 from src.connect4 import tree
 
-from src.connect4.utils import Connect4Stats as info
-
-import numpy as np
-
 
 class BasePlayer():
     def __init__(self, name):
@@ -46,7 +42,7 @@ class ComputerPlayer(BasePlayer):
     def __init__(self, name, strategy):
         super().__init__(name)
         self.tree = tree.Connect4Tree(strategy.Evaluation,
-                                      self.evaluate_position)
+                                      strategy.get_evaluate_position_fn())
         self.search_fn = strategy.get_search_fn()
 
     def make_move(self, board):
@@ -64,15 +60,6 @@ class ComputerPlayer(BasePlayer):
         board.make_move(move)
 
         return move
-
-    @staticmethod
-    def evaluate_position(board):
-        # return np.sum(np.multiply(board.o_pieces, info.value_grid) -
-        # np.multiply(board.x_pieces, info.value_grid)) \
-        # / float(info.value_grid_sum)
-        return (np.einsum('ij,ij', board.o_pieces, info.value_grid)
-                - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
-                / float(info.value_grid_sum)
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
