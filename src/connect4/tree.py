@@ -1,5 +1,5 @@
-import anytree
-import copy
+from anytree import Node
+from copy import deepcopy
 
 
 class NodeData():
@@ -8,12 +8,13 @@ class NodeData():
         self.board = board
         self.valid_moves = board.valid_moves
         self.evaluation = evaluation
-
-    def unexplored_moves(self, children):
-        return self.valid_moves.difference([c.name for c in children])
+        self.non_terminal_moves = self.valid_moves
 
     def evaluated(self):
         return self.evaluation.evaluated()
+
+    def add_terminal_move(self, move):
+        self.non_terminal_moves.remove(move)
 
     @property
     def value(self):
@@ -21,8 +22,12 @@ class NodeData():
             return self.board.result
         return self.evaluation.value
 
+    @property
+    def to_play(self):
+        return self.board._player_to_move
 
-class Connect4Tree():
+
+class Tree():
     def __init__(self, evaluation_type, transition_t=None):
         self.evaluation_type = evaluation_type
 
@@ -33,6 +38,22 @@ class Connect4Tree():
         # self.transition_t = TransitionTableDictOfDict() \
         #     if transition_t is None else transition_t
 
+    def update_root(self, board):
+        self.root = self.create_node('root', deepcopy(board))
+        # self.transition_t.age(board.age)
+
+    def take_action(self, action, node):
+        children = [c.name for c in node.children]
+        if action in children:
+            return node.children[children == action]
+
+        return self.create_child(action, node)
+
+    def create_child(self, action, node):
+        new_board = deepcopy(node.data.board)
+        new_board.make_move(action)
+        return self.create_node(action, new_board, parent=node)
+
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
             node_data = self.transition_t[board]
@@ -41,14 +62,5 @@ class Connect4Tree():
             node_data = NodeData(board, self.evaluation_type())
             self.transition_t[board] = node_data
 
-        node = anytree.Node(name, parent=parent, data=node_data)
+        node = Node(name, parent=parent, data=node_data)
         return node
-
-    def update_root(self, board):
-        self.root = self.create_node('root', copy.deepcopy(board))
-        # self.transition_t.age(board.age)
-
-    def take_action(self, action, node):
-        new_board = copy.deepcopy(node.data.board)
-        new_board.make_move(action)
-        return self.create_node(action, new_board, parent=node)

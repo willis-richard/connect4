@@ -1,9 +1,14 @@
+from src.connect4.board import Board
+from src.connect4.tree import Tree
+
 from src.connect4.utils import Connect4Stats as info
 
-import math
-import numpy as np
-
+from anytree import Node
 from functools import partial
+
+import math
+
+import numpy as np
 
 
 class GridSearch():
@@ -37,11 +42,17 @@ class GridSearch():
 
 class MCTS():
     def __init__(self, simulations):
-        self.simulations = simulations
+        self.config = MCTS.Config(simulations)
+
+    class Config():
+        def __init__(self, simulations):
+            self.simulations = simulations
+            self.pb_c_base = 0
+            self.pb_c_init = 0
 
     def get_search_fn(self):
         return partial(mcts_search,
-                       simulations=self.simulations)
+                       config=self.config)
 
     def get_evaluate_position_fn(self):
         return evaluate_position_centre
@@ -68,7 +79,11 @@ class MCTS():
 
         @property
         def value(self):
-            return self.prior
+            if self.visit_count:
+                return self.value_sum / self.visit_count
+            # return self.prior
+            # FIXME: confirm this behaviour
+            return 0
 
 
 def evaluate_position_centre(board):
@@ -97,9 +112,10 @@ def grid_search(tree, board, side, depth):
 def expand_tree(tree, node, plies):
     if plies == 0 or node.data.board.result:
         return
-    # create new nodes for all unexplored moves
-    for move in node.data.unexplored_moves(node.children):
-        tree.take_action(move, node)
+
+    if not node.children:
+        for move in node.data.valid_moves:
+            tree.create_child(move, node)
 
     for child in node.children:
         expand_tree(tree, child, plies - 1)
@@ -127,61 +143,49 @@ def nega_max(node, plies, side):
     return value
 
 
-def mcts_search(tree, board, side, simulations):
-    for _ in range(simulations):
-        # it is possible the root node has not been evaluated
-        if not tree.root.evaluated():
-            evaluate_nn(tree.root)
-
+def mcts_search(config: MCTS.Config, tree: Tree, board: Board, side):
+    for _ in range(config.simulations):
         node = tree.root
 
         while node.children:
-            node = select_child(tree, node)
+            node = select_child(config, tree, node)
 
-        evaluate_nn(node)
+        evaluate_nn(config, node)
+        set_child_priors(config, node)
 
-        tree.backpropagage(node)
+        tree.backpropagage(config, node)
 
-        set_child_priors(node)
-
-        # node = tree.take_action(action, node)
-
-        # while node.expandable():
-        #     action = select_action(node)
-        #     actions_explored = [c.name for c in node.children]
-        #     if action in actions_explored:
-        #         node = node.children[actions_explored == action]
-        #     else:
-        #         break
-
-        # node = tree.take_action(action, node)
-        return select_action(tree)
+        return select_action(config, tree)
 
 
-def evaluate_nn(node):
+def evaluate_nn(config: MCTS.Config, node: Node):
+    # FIXME: implement. N.B. google one is just some the expanding of the
+    # children
+
     return 0
 
 
-def ucb_score(node, child):
-    return 0
+def ucb_score(config: MCTS.Config, node: Node, child: Node):
+    pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
+                    config.pb_c_base) + config.pb_c_init
+    pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
+
+    prior_score = pb_c * child.prior
+    value_score = child.value
+    return prior_score + value_score
 
 
-def select_child(tree, node):
-    # guaranteed at least one non-terminally forcing child
-    if not node.children:
-        expand_tree(tree, node, 1)
-
-    non_terminal_actions = set(node.data.valid_moves).\
-        difference(node.data.terminal_children)
+def select_child(config: MCTS.Config, tree: Tree, node: Node):
     non_terminal_children = [child for child in node.children if
-                             child.name in non_terminal_actions]
+                             child.name in node.data.non_terminal_actions]
+
     _, child = max((MCTS.ucb_score(node, child), child)
                    for child in non_terminal_children)
 
     return child
 
 
-def set_child_priors(tree, node):
+def set_child_priors(config: MCTS.Config, tree: Tree, node: Node):
     expand_tree(tree, node, 1)
     policy = {a: math.exp(node.data.evaluation.policy_logits[a.name])
               for a in node.data.valid_moves}
@@ -190,9 +194,19 @@ def set_child_priors(tree, node):
         node.children[action].data.evaluation.prior = p / policy_sum
 
 
-def policy_logits(a):
+def policy_logits(config: MCTS.Config, a):
     return 0
 
 
-def select_action(tree):
-    return 0
+def select_action(config: MCTS.Config, tree: Tree):
+    # FIXME: removed softmax thing (would check game move history)
+    return max([(child.visit_count, action)
+                for action, child in tree.root.children])
+
+
+def backpropagate(node: Node, value: float, to_play):
+    while node.is_leaf():
+        node = node.parent
+        # FIXME: to confirm
+        node.value_sum += value if node.data.to_play == to_play else (1 - value)
+        node.visit_count += 1

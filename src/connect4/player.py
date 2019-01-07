@@ -41,7 +41,7 @@ class HumanPlayer(BasePlayer):
 class ComputerPlayer(BasePlayer):
     def __init__(self, name, strategy):
         super().__init__(name)
-        self.tree = tree.Connect4Tree(strategy.Evaluation,
+        self.tree = tree.Tree(strategy.Evaluation,
                                       strategy.get_evaluate_position_fn())
         self.search_fn = strategy.get_search_fn()
 
