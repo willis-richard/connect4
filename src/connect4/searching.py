@@ -1,5 +1,6 @@
 from src.connect4.utils import Connect4Stats as info
 
+import math
 import numpy as np
 
 from functools import partial
@@ -46,15 +47,28 @@ class MCTS():
         return evaluate_position_centre
 
     class Evaluation():
-        def __init__(self, board):
-            self.Q = board
+        def __init__(self):
+            self._prior = None
+            self.to_play = -1
+            self.value_sum = 0
+            self.visit_count = 0
 
         def evaluated(self):
-            return self.evaluation.terminal_result is None
+            return self.visit_count != 0
+
+        @property
+        def prior(self):
+            assert self._prior is not None
+            return self._prior
+
+        @prior.setter
+        def prior(self, prior):
+            assert self._prior is None
+            self._prior = prior
 
         @property
         def value(self):
-            return self.Q
+            return self.prior
 
 
 def evaluate_position_centre(board):
@@ -115,14 +129,22 @@ def nega_max(node, plies, side):
 
 def mcts_search(tree, board, side, simulations):
     for _ in range(simulations):
+        # it is possible the root node has not been evaluated
+        if not tree.root.evaluated():
+            evaluate_nn(tree.root)
+
         node = tree.root
-        while node.evaluated():
+
+        while node.children:
             node = select_child(tree, node)
 
-        if node.visited():
-            expand_tree(tree, node, 1)
-            # action = select_action(node)
-            # node = tree.take_action(action, node)
+        evaluate_nn(node)
+
+        tree.backpropagage(node)
+
+        set_child_priors(node)
+
+        # node = tree.take_action(action, node)
 
         # while node.expandable():
         #     action = select_action(node)
@@ -133,11 +155,7 @@ def mcts_search(tree, board, side, simulations):
         #         break
 
         # node = tree.take_action(action, node)
-
-        evaluate_nn(node)
-        tree.backpropagage(node)
-
-        return 0, 0
+        return select_action(tree)
 
 
 def evaluate_nn(node):
@@ -161,3 +179,20 @@ def select_child(tree, node):
                    for child in non_terminal_children)
 
     return child
+
+
+def set_child_priors(tree, node):
+    expand_tree(tree, node, 1)
+    policy = {a: math.exp(node.data.evaluation.policy_logits[a.name])
+              for a in node.data.valid_moves}
+    policy_sum = sum(policy.itervalues())
+    for action, p in policy.iteritems():
+        node.children[action].data.evaluation.prior = p / policy_sum
+
+
+def policy_logits(a):
+    return 0
+
+
+def select_action(tree):
+    return 0

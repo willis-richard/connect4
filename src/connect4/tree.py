@@ -12,6 +12,9 @@ class NodeData():
     def unexplored_moves(self, children):
         return self.valid_moves.difference([c.name for c in children])
 
+    def evaluated(self):
+        return self.evaluation.evaluated()
+
     @property
     def value(self):
         if self.board.result is not None:
