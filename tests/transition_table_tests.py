@@ -8,7 +8,7 @@ from functools import partial
 def test_transition_table():
     computer_1 = ComputerPlayer("test_name",
                                 partial(ComputerPlayer.grid_search,
-                                        depth=2))
+                                        plies=2))
     computer_1.side = 1
 
     board = Board()

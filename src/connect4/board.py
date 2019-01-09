@@ -8,8 +8,10 @@ class Board():
                  hash_value=None,
                  o_pieces=None,
                  x_pieces=None):
-        self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if o_pieces is None else o_pieces
-        self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if x_pieces is None else x_pieces
+        self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
+            o_pieces is None else o_pieces
+        self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
+            x_pieces is None else x_pieces
 
         self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
         self.result = None

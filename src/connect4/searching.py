@@ -5,6 +5,7 @@ from src.connect4.utils import Connect4Stats as info
 
 from anytree import Node
 from functools import partial
+from typing import Callable
 
 import math
 
@@ -12,15 +13,13 @@ import numpy as np
 
 
 class GridSearch():
-    def __init__(self, depth):
-        self.depth = depth
+    def __init__(self, plies):
+        self.plies = plies
 
     def get_search_fn(self):
         return partial(grid_search,
-                       depth=self.depth)
-
-    def get_evaluate_position_fn(self):
-        return evaluate_position_centre
+                       plies=self.plies,
+                       evaluate_fn=evaluate_position_centre)
 
     class Evaluation():
         def __init__(self):
@@ -52,10 +51,8 @@ class MCTS():
 
     def get_search_fn(self):
         return partial(mcts_search,
-                       config=self.config)
-
-    def get_evaluate_position_fn(self):
-        return evaluate_position_centre
+                       config=self.config,
+                       evaluate_fn=partial(evaluate_nn(config=self.config)))
 
     class Evaluation():
         def __init__(self):
@@ -63,6 +60,7 @@ class MCTS():
             self.to_play = -1
             self.value_sum = 0
             self.visit_count = 0
+            self.policy_logits = None
 
         def evaluated(self):
             return self.visit_count != 0
@@ -85,19 +83,31 @@ class MCTS():
             # FIXME: confirm this behaviour
             return 0
 
+        def __repr__(self):
+            return "prior: " + str(self.prior) + \
+                ",  to_play: " + str(self.to_play) + \
+                ",  value_sum: " + str(self.value_sum) + \
+                ",  visit_count: " + str(self.visit_count)
 
-def evaluate_position_centre(board):
+
+def evaluate_position_centre(node: Node):
     # return np.sum(np.multiply(board.o_pieces, info.value_grid) -
     # np.multiply(board.x_pieces, info.value_grid)) \
     # / float(info.value_grid_sum)
-    return (np.einsum('ij,ij', board.o_pieces, info.value_grid)
-            - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
-            / float(info.value_grid_sum)
+    board = node.data.board
+    node.data.evaluation.position_evaluation = \
+        (np.einsum('ij,ij', board.o_pieces, info.value_grid)
+         - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
+        / float(info.value_grid_sum)
 
 
-def grid_search(tree, board, side, depth):
-    expand_tree(tree, tree.root, depth)
-    nega_max(tree.root, depth, side)
+def grid_search(tree: Tree,
+                board: Board,
+                side,
+                plies,
+                evaluate_fn: Callable[[Node], None]):
+    expand_tree(tree, tree.root, plies)
+    nega_max(tree.root, plies, side, evaluate_fn)
 
     moves = np.array([(n.name) for n in tree.root.children])
     values = np.array([(n.data.value)
@@ -109,7 +119,9 @@ def grid_search(tree, board, side, depth):
     return best_move, best_move_value
 
 
-def expand_tree(tree, node, plies):
+def expand_tree(tree: Tree,
+                node: Node,
+                plies):
     if plies == 0 or node.data.board.result:
         return
 
@@ -121,36 +133,41 @@ def expand_tree(tree, node, plies):
         expand_tree(tree, child, plies - 1)
 
 
-def nega_max(node, plies, side):
+def nega_max(node: Node,
+             plies,
+             side,
+             evaluate_fn: Callable[[Node], None]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
         return node.data.board.result
     if plies == 0:
-        position_evaluation = evaluate_position_centre(node.data.board)
-        node.data.evaluation.position_evaluation = position_evaluation
-        return position_evaluation
+        evaluate_fn(node)
+        return node.data.evaluation.position_evaluation
 
     if side == 1:
         value = -2
         for child in node.children:
-            value = max(value, nega_max(child, plies - 1, -side))
+            value = max(value, nega_max(child, plies - 1, -side, evaluate_fn))
     else:
         value = 2
         for child in node.children:
-            value = min(value, nega_max(child, plies - 1, -side))
+            value = min(value, nega_max(child, plies - 1, -side, evaluate_fn))
 
     node.data.evaluation.tree_value = value
     return value
 
 
-def mcts_search(config: MCTS.Config, tree: Tree, board: Board, side):
+def mcts_search(config: MCTS.Config,
+                evaluate_fn: Callable[[Node], None],
+                tree: Tree,
+                board: Board, side):
     for _ in range(config.simulations):
         node = tree.root
 
         while node.children:
             node = select_child(config, tree, node)
 
-        evaluate_nn(config, node)
+        value, priors = evaluate_nn(config, node)
         set_child_priors(config, node)
 
         tree.backpropagage(config, node)
@@ -161,8 +178,9 @@ def mcts_search(config: MCTS.Config, tree: Tree, board: Board, side):
 def evaluate_nn(config: MCTS.Config, node: Node):
     # FIXME: implement. N.B. google one is just some the expanding of the
     # children
-
-    return 0
+    node.data.evaluation.value_sum += evaluate_position_centre(node.data.board)
+    node.data.evaluation.visit_count += 1
+    node.data.evaluation.policy_logits = {a: 0 for a in range(info.width)}
 
 
 def ucb_score(config: MCTS.Config, node: Node, child: Node):
@@ -185,17 +203,15 @@ def select_child(config: MCTS.Config, tree: Tree, node: Node):
     return child
 
 
-def set_child_priors(config: MCTS.Config, tree: Tree, node: Node):
+def set_child_priors(config: MCTS.Config,
+                     tree: Tree,
+                     node: Node):
     expand_tree(tree, node, 1)
     policy = {a: math.exp(node.data.evaluation.policy_logits[a.name])
               for a in node.data.valid_moves}
     policy_sum = sum(policy.itervalues())
     for action, p in policy.iteritems():
         node.children[action].data.evaluation.prior = p / policy_sum
-
-
-def policy_logits(config: MCTS.Config, a):
-    return 0
 
 
 def select_action(config: MCTS.Config, tree: Tree):

@@ -85,27 +85,27 @@ x_pieces = [
 ]
 
 side = [1, -1, 1, -1, -1]
-depth = [1, 2, 2, 4, 4]
+plies = [1, 2, 2, 4, 4]
 ans = [[1], [1], [1], [6], [2, 5]]
 
-assert len(o_pieces) == len(x_pieces) == len(side) == len(depth) == len(ans)
+assert len(o_pieces) == len(x_pieces) == len(side) == len(plies) == len(ans)
 
 
-@pytest.mark.parametrize("n,o_pieces,x_pieces,side,depth,ans",
-                         [(n, o, x, s, d, a) for n, o, x, s, d, a in zip(range(len(ans)), o_pieces, x_pieces, side, depth, ans)])
-def test_next_move(n, o_pieces, x_pieces, side, depth, ans):
+@pytest.mark.parametrize("n,o_pieces,x_pieces,side,plies,ans",
+                         [(n, o, x, s, d, a) for n, o, x, s, d, a in zip(range(len(ans)), o_pieces, x_pieces, side, plies, ans)])
+def test_next_move(n, o_pieces, x_pieces, side, plies, ans):
     board_ = board.Board(o_pieces=o_pieces,
                          x_pieces=x_pieces)
 
     computer = player.ComputerPlayer("test_name",
-                                     searching.GridSearch(depth=4))
+                                     searching.GridSearch(plies=4))
     computer.side = side
 
     print(board_)
 
     move = computer.make_move(board_)
 
-    if depth <= 2:
+    if plies <= 2:
         for pre, fill, node in anytree.RenderTree(computer.tree.root):
             print("%s%s%s" % (pre, node.name, node.data.evaluation))
 
@@ -118,7 +118,7 @@ def test_multiple_moves():
     board_ = board.Board()
 
     computer = player.ComputerPlayer("test_name",
-                                     searching.GridSearch(depth=4))
+                                     searching.GridSearch(plies=4))
     computer.side = -1
 
     board_.make_move(3)

@@ -28,7 +28,9 @@ class NodeData():
 
 
 class Tree():
-    def __init__(self, evaluation_type, transition_t=None):
+    def __init__(self,
+                 evaluation_type):
+                 # transition_t=None):
         self.evaluation_type = evaluation_type
 
         # transition_t is a map from board to NodeEvaluation
