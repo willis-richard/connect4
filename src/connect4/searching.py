@@ -2,6 +2,7 @@ from src.connect4.board import Board
 from src.connect4.tree import Tree
 
 from src.connect4.utils import Connect4Stats as info
+from src.connect4.utils import Side
 
 from anytree import Node
 from functools import partial
@@ -103,7 +104,7 @@ def evaluate_position_centre(node: Node):
 
 def grid_search(tree: Tree,
                 board: Board,
-                side,
+                side: Side,
                 plies,
                 evaluate_fn: Callable[[Node], None]):
     expand_tree(tree, tree.root, plies)
@@ -135,7 +136,7 @@ def expand_tree(tree: Tree,
 
 def nega_max(node: Node,
              plies,
-             side,
+             side: Side,
              evaluate_fn: Callable[[Node], None]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
@@ -144,7 +145,7 @@ def nega_max(node: Node,
         evaluate_fn(node)
         return node.data.evaluation.position_evaluation
 
-    if side == 1:
+    if side == side.o:
         value = -2
         for child in node.children:
             value = max(value, nega_max(child, plies - 1, -side, evaluate_fn))
@@ -160,7 +161,8 @@ def nega_max(node: Node,
 def mcts_search(config: MCTS.Config,
                 evaluate_fn: Callable[[Node], None],
                 tree: Tree,
-                board: Board, side):
+                board: Board,
+                side: Side):
     for _ in range(config.simulations):
         node = tree.root
 

@@ -1,5 +1,7 @@
 import numpy as np
 
+from enum import IntEnum
+
 
 class Connect4Stats():
     height = 6
@@ -19,7 +21,12 @@ class Connect4Stats():
     value_grid_t = np.transpose(value_grid)
     value_grid_sum = np.sum(value_grid)
 
-    # my has function converts to a u64
+    # my hash function converts to a u64
     assert height * width <= 64
 
     hash_value = np.array([2**x for x in range(height * width)])
+
+
+class Side(IntEnum):
+    o = 1
+    x = -1

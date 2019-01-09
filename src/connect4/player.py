@@ -1,4 +1,5 @@
 from src.connect4 import tree
+from src.connect4.utils import Side
 
 
 class BasePlayer():
@@ -9,12 +10,11 @@ class BasePlayer():
         return "Player: " + self.name
 
     @property
-    def side(self):
+    def side(self) -> Side:
         return self._side
 
     @side.setter
-    def side(self, side):
-        assert side in [-1, 1]
+    def side(self, side: Side):
         self._side = side
 
 

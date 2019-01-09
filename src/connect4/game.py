@@ -1,3 +1,5 @@
+from src.connect4.utils import Side
+
 import numpy as np
 
 
@@ -8,8 +10,8 @@ class Game():
                  player_x,
                  board_):
         self.display = display
-        player_o.side = 1
-        player_x.side = -1
+        player_o.side = Side.o
+        player_x.side = Side.x
         self._player_o = player_o
         self._player_x = player_x
         self._board = board_
