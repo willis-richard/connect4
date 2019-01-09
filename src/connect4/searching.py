@@ -145,7 +145,7 @@ def nega_max(node: Node,
         evaluate_fn(node)
         return node.data.evaluation.position_evaluation
 
-    if side == side.o:
+    if side == Side.o:
         value = -2
         for child in node.children:
             value = max(value, nega_max(child, plies - 1, -side, evaluate_fn))
