@@ -1,6 +1,7 @@
-import numpy as np
-
 from src.connect4.utils import Connect4Stats as info
+from src.connect4.utils import Side
+
+import numpy as np
 
 
 class Board():
@@ -33,8 +34,7 @@ class Board():
         return 'o' if self._player_to_move == 1 else 'x'
 
     @player_to_move.setter
-    def player_to_move(self, player_to_move):
-        assert player_to_move in [-1, 1]
+    def player_to_move(self, player_to_move: Side):
         self._player_to_move = player_to_move
 
     @property

@@ -53,10 +53,12 @@ class MCTS():
     def get_search_fn(self):
         return partial(mcts_search,
                        config=self.config,
-                       evaluate_fn=partial(evaluate_nn(config=self.config)))
+                       evaluate_fn=partial(evaluate_nn, config=self.config))
 
     class Evaluation():
         def __init__(self):
+            # FIXME: how do transpositions impact prior? Different parents will
+            # give different priors...
             self._prior = None
             self.to_play = -1
             self.value_sum = 0
@@ -77,12 +79,11 @@ class MCTS():
             self._prior = prior
 
         @property
-        def value(self):
+        def value(self) -> float:
             if self.visit_count:
                 return self.value_sum / self.visit_count
-            # return self.prior
             # FIXME: confirm this behaviour
-            return 0
+            return self.prior
 
         def __repr__(self):
             return "prior: " + str(self.prior) + \
@@ -166,23 +167,28 @@ def mcts_search(config: MCTS.Config,
     for _ in range(config.simulations):
         node = tree.root
 
+        # FIXME: node.data.evaluated() ?
         while node.children:
             node = select_child(config, tree, node)
 
-        value, priors = evaluate_nn(config, node)
+        value = evaluate_nn(config, node)
         set_child_priors(config, node)
 
-        tree.backpropagage(config, node)
+        backpropagate(value, node, side)
 
         return select_action(config, tree)
 
 
 def evaluate_nn(config: MCTS.Config, node: Node):
+    # FIXME: remove when sure positions aren't evaluated multiple times
+    assert not node.data.evaluated()
     # FIXME: implement. N.B. google one is just some the expanding of the
     # children
-    node.data.evaluation.value_sum += evaluate_position_centre(node.data.board)
+    value = evaluate_position_centre(node)
+    node.data.evaluation.value_sum += value
     node.data.evaluation.visit_count += 1
     node.data.evaluation.policy_logits = {a: 0 for a in range(info.width)}
+    return value
 
 
 def ucb_score(config: MCTS.Config, node: Node, child: Node):
@@ -222,9 +228,11 @@ def select_action(config: MCTS.Config, tree: Tree):
                 for action, child in tree.root.children])
 
 
-def backpropagate(node: Node, value: float, to_play):
+def backpropagate(node: Node,
+                  value: float,
+                  side: Side):
     while node.is_leaf():
         node = node.parent
         # FIXME: to confirm
-        node.value_sum += value if node.data.to_play == to_play else (1 - value)
+        node.value_sum += value if node.data.board._player_to_move == side else (1 - value)
         node.visit_count += 1
