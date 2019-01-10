@@ -6,7 +6,7 @@ from src.connect4.utils import Side
 
 from anytree import Node
 from functools import partial
-from typing import Callable
+from typing import Callable, Dict, Tuple
 
 import math
 
@@ -41,14 +41,15 @@ class GridSearch():
 
 
 class MCTS():
-    def __init__(self, simulations):
-        self.config = MCTS.Config(simulations)
-
     class Config():
-        def __init__(self, simulations):
+        def __init__(self, simulations, cpuct=None):
             self.simulations = simulations
             self.pb_c_base = 0
             self.pb_c_init = 0
+            self.cpuct = 2.4 if cpuct is None else cpuct
+
+    def __init__(self, config: Config):
+        self.config = config
 
     def get_search_fn(self):
         return partial(mcts_search,
@@ -60,21 +61,24 @@ class MCTS():
             # FIXME: how do transpositions impact prior? Different parents will
             # give different priors...
             self._prior = None
-            self.to_play = -1
-            self.value_sum = 0
+            self.value_sum = float(0)
             self.visit_count = 0
             self.policy_logits = None
 
         def evaluated(self):
             return self.visit_count != 0
 
+        def add_value(self, value: float):
+            self.value_sum += value
+            self.visit_count += 1
+
         @property
-        def prior(self):
+        def prior(self) -> float:
             assert self._prior is not None
             return self._prior
 
         @prior.setter
-        def prior(self, prior):
+        def prior(self, prior: float):
             assert self._prior is None
             self._prior = prior
 
@@ -86,10 +90,10 @@ class MCTS():
             return self.prior
 
         def __repr__(self):
-            return "prior: " + str(self.prior) + \
-                ",  to_play: " + str(self.to_play) + \
+            return "prior: " + str(self._prior) + \
                 ",  value_sum: " + str(self.value_sum) + \
-                ",  visit_count: " + str(self.visit_count)
+                ",  visit_count: " + str(self.visit_count) + \
+                ", policy_logits: " + str(self.policy_logits)
 
 
 def evaluate_position_centre(node: Node):
@@ -97,7 +101,7 @@ def evaluate_position_centre(node: Node):
     # np.multiply(board.x_pieces, info.value_grid)) \
     # / float(info.value_grid_sum)
     board = node.data.board
-    node.data.evaluation.position_evaluation = \
+    return \
         (np.einsum('ij,ij', board.o_pieces, info.value_grid)
          - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
         / float(info.value_grid_sum)
@@ -107,7 +111,7 @@ def grid_search(tree: Tree,
                 board: Board,
                 side: Side,
                 plies,
-                evaluate_fn: Callable[[Node], None]):
+                evaluate_fn: Callable[[Node], float]):
     expand_tree(tree, tree.root, plies)
     nega_max(tree.root, plies, side, evaluate_fn)
 
@@ -138,29 +142,32 @@ def expand_tree(tree: Tree,
 def nega_max(node: Node,
              plies,
              side: Side,
-             evaluate_fn: Callable[[Node], None]):
+             evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
         return node.data.board.result
     if plies == 0:
-        evaluate_fn(node)
-        return node.data.evaluation.position_evaluation
+        value = evaluate_fn(node)
+        node.data.evaluation.position_evaluation = value
+        return value
 
     if side == Side.o:
         value = -2
         for child in node.children:
-            value = max(value, nega_max(child, plies - 1, -side, evaluate_fn))
+            value = max(value,
+                        nega_max(child, plies - 1, Side(-side), evaluate_fn))
     else:
         value = 2
         for child in node.children:
-            value = min(value, nega_max(child, plies - 1, -side, evaluate_fn))
+            value = min(value,
+                        nega_max(child, plies - 1, Side(-side), evaluate_fn))
 
     node.data.evaluation.tree_value = value
     return value
 
 
 def mcts_search(config: MCTS.Config,
-                evaluate_fn: Callable[[Node], None],
+                evaluate_fn: Callable[[Node], Tuple[float, Dict[int, float]]],
                 tree: Tree,
                 board: Board,
                 side: Side):
@@ -171,12 +178,14 @@ def mcts_search(config: MCTS.Config,
         while node.children:
             node = select_child(config, tree, node)
 
-        value = evaluate_nn(config, node)
-        set_child_priors(config, node)
+        value, policy_logits = evaluate_nn(config, node)
+        node.data.evaluation.add_value(value)
+        node.data.evaluation.policy_logits = policy_logits
+        set_child_priors(tree, node)
 
-        backpropagate(value, node, side)
+        backpropagate(node, value, side)
 
-        return select_action(config, tree)
+    return select_action(config, tree)
 
 
 def evaluate_nn(config: MCTS.Config, node: Node):
@@ -185,54 +194,52 @@ def evaluate_nn(config: MCTS.Config, node: Node):
     # FIXME: implement. N.B. google one is just some the expanding of the
     # children
     value = evaluate_position_centre(node)
-    node.data.evaluation.value_sum += value
-    node.data.evaluation.visit_count += 1
-    node.data.evaluation.policy_logits = {a: 0 for a in range(info.width)}
-    return value
+    print ("posn value: ", value)
+    policy_logits = {a: 1 for a in range(info.width)}
+    return value, policy_logits
 
 
 def ucb_score(config: MCTS.Config, node: Node, child: Node):
-    pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
-                    config.pb_c_base) + config.pb_c_init
-    pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
+    # pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
+    #                 config.pb_c_base) + config.pb_c_init
+    # pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
+    pb_c = config.cpuct
 
-    prior_score = pb_c * child.prior
-    value_score = child.value
+    prior_score = pb_c * child.data.evaluation.prior
+    value_score = child.data.evaluation.value
     return prior_score + value_score
 
 
 def select_child(config: MCTS.Config, tree: Tree, node: Node):
     non_terminal_children = [child for child in node.children if
-                             child.name in node.data.non_terminal_actions]
-
-    _, child = max((MCTS.ucb_score(node, child), child)
-                   for child in non_terminal_children)
+                             child.name in node.data.non_terminal_moves]
+    _, child_name = max((ucb_score(config, node, child), child.name)
+                        for child in non_terminal_children)
+    child = node.children[[c.name for c in node.children].index(child_name)]
 
     return child
 
 
-def set_child_priors(config: MCTS.Config,
-                     tree: Tree,
-                     node: Node):
+def set_child_priors(tree: Tree, node: Node):
     expand_tree(tree, node, 1)
-    policy = {a: math.exp(node.data.evaluation.policy_logits[a.name])
+    policy = {a: math.exp(node.data.evaluation.policy_logits[a])
               for a in node.data.valid_moves}
-    policy_sum = sum(policy.itervalues())
-    for action, p in policy.iteritems():
+    policy_sum = sum(policy.values())
+    for action, p in policy.items():
         node.children[action].data.evaluation.prior = p / policy_sum
 
 
 def select_action(config: MCTS.Config, tree: Tree):
     # FIXME: removed softmax thing (would check game move history)
-    return max([(child.visit_count, action)
-                for action, child in tree.root.children])
+    return max([(c.data.evaluation.visit_count, c.name)
+                for c in tree.root.children])
 
 
 def backpropagate(node: Node,
                   value: float,
                   side: Side):
-    while node.is_leaf():
+    while not node.is_root:
         node = node.parent
         # FIXME: to confirm
-        node.value_sum += value if node.data.board._player_to_move == side else (1 - value)
-        node.visit_count += 1
+        node.data.evaluation.add_value(value)
+            # value if node.data.board._player_to_move == side else (1 - value))

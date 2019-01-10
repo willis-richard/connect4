@@ -45,9 +45,9 @@ class Tree():
         # self.transition_t.age(board.age)
 
     def take_action(self, action, node):
-        children = [c.name for c in node.children]
-        if action in children:
-            return node.children[children == action]
+        child_names = [c.name for c in node.children]
+        if action in child_names:
+            return node.children[child_names.index(action)]
 
         return self.create_child(action, node)
 
