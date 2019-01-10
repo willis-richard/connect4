@@ -61,7 +61,7 @@ class MCTS():
             # FIXME: how do transpositions impact prior? Different parents will
             # give different priors...
             self._prior = None
-            self.value_sum = float(0)
+            self.value_sum = 0.0
             self.visit_count = 0
             self.policy_logits = None
 
@@ -84,10 +84,9 @@ class MCTS():
 
         @property
         def value(self) -> float:
-            if self.visit_count:
-                return self.value_sum / self.visit_count
-            # FIXME: confirm this behaviour
-            return self.prior
+            assert self.evaluated()
+            # FIXME: responsibility of the node to know who's turn it is
+            return self.value_sum / self.visit_count
 
         def __repr__(self):
             return "prior: " + str(self._prior) + \
@@ -207,6 +206,7 @@ def ucb_score(config: MCTS.Config, node: Node, child: Node):
 
     prior_score = pb_c * child.data.evaluation.prior
     value_score = child.data.evaluation.value
+    print("child, prior, value, total:  ", child.name, prior_score, value_score, prior_score + value_score)
     return prior_score + value_score
 
 
@@ -231,8 +231,11 @@ def set_child_priors(tree: Tree, node: Node):
 
 def select_action(config: MCTS.Config, tree: Tree):
     # FIXME: removed softmax thing (would check game move history)
-    return max([(c.data.evaluation.visit_count, c.name)
-                for c in tree.root.children])
+    _, action = max(((c.data.evaluation.visit_count, c.name)
+                    for c in tree.root.children))
+
+    # FIXME: what is the value of that child? avg value_sum?
+    return action, 0
 
 
 def backpropagate(node: Node,
