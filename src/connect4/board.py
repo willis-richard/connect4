@@ -1,12 +1,11 @@
 from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import Side
+from src.connect4.utils import Side, Result
 
 import numpy as np
 
 
 class Board():
     def __init__(self,
-                 hash_value=None,
                  o_pieces=None,
                  x_pieces=None):
         self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
@@ -14,13 +13,8 @@ class Board():
         self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
             x_pieces is None else x_pieces
 
-        self.player_to_move = (np.count_nonzero(self.x_pieces) - np.count_nonzero(self.o_pieces)) * 2 + 1
+        self.player_to_move = Side(1 - (np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)))
         self.result = None
-
-        if hash_value is None:
-            self.hash_value = np.array([2**x for x in range(info.height * info.width)])
-        else:
-            self.hash_value = hash_value
 
         self._check_valid()
 
@@ -31,7 +25,7 @@ class Board():
 
     @property
     def player_to_move(self):
-        return 'o' if self._player_to_move == 1 else 'x'
+        return 'o' if self._player_to_move == Side.o else 'x'
 
     @player_to_move.setter
     def player_to_move(self, player_to_move: Side):
@@ -56,6 +50,8 @@ class Board():
 
     @property
     def valid_moves(self):
+        if self.result is not None:
+            return set()
         pieces = self._get_pieces()
         return set(i for i in range(info.width) if not all(pieces[:, i]))
 
@@ -77,11 +73,11 @@ class Board():
 
     def check_terminal_position(self):
         if self.check_for_winner(self.o_pieces):
-            self.result = 1
+            self.result = Result.o_win
         elif self.check_for_winner(self.x_pieces):
-            self.result = -1
+            self.result = Result.x_win
         elif np.all(self._get_pieces()):
-            self.result = 0
+            self.result = Result.draw
         return self.result
 
     def make_move(self, move):
@@ -89,11 +85,11 @@ class Board():
         board = self._get_pieces()
         idx = info.height - np.count_nonzero(board[:, move]) - 1
         assert board[idx, move] == 0
-        if self._player_to_move == 1:
+        if self._player_to_move == Side.o:
             self.o_pieces[idx, move] = 1
         else:
             self.x_pieces[idx, move] = 1
-        self.player_to_move = -1 * self._player_to_move
+        self.player_to_move = Side(1 - self._player_to_move)
 
     def _check_valid(self):
         no_gaps = True
@@ -105,12 +101,12 @@ class Board():
         assert no_gaps
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
         assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
-        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == 1) #player who has already won is to move
-        assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == -1)
+        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o) #player who has already won is to move
+        assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == Side.x)
         assert self.o_pieces.shape == (info.height, info.width)
         assert self.x_pieces.shape == (info.height, info.width)
 
     def __hash__(self):
-        o_hash = np.dot(np.concatenate(self.o_pieces), self.hash_value)
-        x_hash = np.dot(np.concatenate(self.x_pieces), self.hash_value)
+        o_hash = np.dot(np.concatenate(self.o_pieces), info.hash_value)
+        x_hash = np.dot(np.concatenate(self.x_pieces), info.hash_value)
         return hash((o_hash, x_hash))

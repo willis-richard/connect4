@@ -1,8 +1,8 @@
-import copy
-import numpy as np
-
 from src.connect4 import board
 from src.connect4 import game
+
+import copy
+import numpy as np
 
 
 def top_level_defined_play(x):
@@ -33,13 +33,13 @@ class Match():
 
     def play(self, agents=1):
         if agents == 1:
-            results = np.empty_like(self.games, dtype='i')
+            results = np.empty_like(self.games, dtype='f')
             for i in range(self.n):
-                results[i] = self.games[i].play()
+                results[i] = self.games[i].play().value
             print("The results are:\nPlayer one: {} wins, {} draws, {} losses"
                   .format(np.sum(results == 1),
-                          np.sum(results == 0),
-                          np.sum(results == -1)))
+                          np.sum(results == 0.5),
+                          np.sum(results == 0)))
         else:
             results = self.play_parallel(agents)
             print(results)

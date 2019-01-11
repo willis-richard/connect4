@@ -9,7 +9,7 @@ def test_mcts():
     board_ = Board()
 
     computer = ComputerPlayer("test_name",
-                              MCTS(MCTS.Config(simulations=3)))
+                              MCTS(MCTS.Config(simulations=4)))
     computer.side = 1
 
     # assert computer.make_move(board_) == 0

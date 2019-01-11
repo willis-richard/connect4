@@ -1,6 +1,6 @@
 import numpy as np
 
-from enum import IntEnum
+from enum import Enum, IntEnum
 
 
 class Connect4Stats():
@@ -30,4 +30,17 @@ class Connect4Stats():
 
 class Side(IntEnum):
     o = 1
-    x = -1
+    x = 0
+
+
+class Result(Enum):
+    o_win = 1
+    x_win = 0
+    draw = 0.5
+
+def same_side(result: Result, side: Side):
+    if result == Result.o_win and side == Side.o:
+        return True
+    elif result == Result.x_win and side == Side.x:
+        return True
+    return False

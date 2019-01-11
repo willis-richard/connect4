@@ -50,9 +50,10 @@ class ComputerPlayer(BasePlayer):
                                      board=board,
                                      side=self.side)
 
+        print(move, value)
         if value == self.side:
             print("Trash! I will crush you.")
-        elif value == -1 * self.side:
+        elif value == Side(1 - self.side):
             print("Ah fuck you lucky shit")
 
         print(self.name + " selected move: ", move)

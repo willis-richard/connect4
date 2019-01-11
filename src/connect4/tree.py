@@ -1,3 +1,5 @@
+from src.connect4.utils import Side, Result
+
 from anytree import Node
 from copy import deepcopy
 
@@ -16,10 +18,13 @@ class NodeData():
     def add_terminal_move(self, move):
         self.non_terminal_moves.remove(move)
 
-    @property
-    def value(self):
+    def set_child_map(self, children):
+        self.child_map = {c.name: c for c in children}
+
+    def get_value(self, side) -> float:
         if self.board.result is not None:
-            return self.board.result
+            return self.board.result.value if side == Side.o else \
+                (1 - self.board.result.value)
         return self.evaluation.value
 
     @property
@@ -57,7 +62,7 @@ class Tree():
         return self.create_node(action, new_board, parent=node)
 
     def create_node(self, name, board, parent=None):
-        if board in self.transition_t:
+        if False: #board in self.transition_t:
             node_data = self.transition_t[board]
         else:
             board.check_terminal_position()

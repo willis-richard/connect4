@@ -2,7 +2,7 @@ from src.connect4.board import Board
 from src.connect4.tree import Tree
 
 from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import Side
+from src.connect4.utils import same_side, Side, Result
 
 from anytree import Node
 from functools import partial
@@ -46,7 +46,7 @@ class MCTS():
             self.simulations = simulations
             self.pb_c_base = 0
             self.pb_c_init = 0
-            self.cpuct = 2.4 if cpuct is None else cpuct
+            self.cpuct = 3.4 if cpuct is None else cpuct
 
     def __init__(self, config: Config):
         self.config = config
@@ -84,9 +84,9 @@ class MCTS():
 
         @property
         def value(self) -> float:
-            assert self.evaluated()
-            # FIXME: responsibility of the node to know who's turn it is
-            return self.value_sum / self.visit_count
+            if self.visit_count != 0:
+                return self.value_sum / self.visit_count
+            return 0
 
         def __repr__(self):
             return "prior: " + str(self._prior) + \
@@ -100,7 +100,7 @@ def evaluate_position_centre(node: Node):
     # np.multiply(board.x_pieces, info.value_grid)) \
     # / float(info.value_grid_sum)
     board = node.data.board
-    return \
+    return 0.5 + \
         (np.einsum('ij,ij', board.o_pieces, info.value_grid)
          - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
         / float(info.value_grid_sum)
@@ -109,7 +109,7 @@ def evaluate_position_centre(node: Node):
 def grid_search(tree: Tree,
                 board: Board,
                 side: Side,
-                plies,
+                plies: int,
                 evaluate_fn: Callable[[Node], float]):
     expand_tree(tree, tree.root, plies)
     nega_max(tree.root, plies, side, evaluate_fn)
@@ -117,7 +117,10 @@ def grid_search(tree: Tree,
     moves = np.array([(n.name) for n in tree.root.children])
     values = np.array([(n.data.value)
                        for n in tree.root.children])
-    idx = np.argmax(values * side)
+    if side == Side.o:
+        idx = np.argmax(values)
+    else:
+        idx = np.argmin(values)
     best_move_value = values[idx]
 
     best_move = moves[idx]
@@ -127,19 +130,20 @@ def grid_search(tree: Tree,
 def expand_tree(tree: Tree,
                 node: Node,
                 plies):
-    if plies == 0 or node.data.board.result:
+    if plies == 0 or node.data.board.result is not None:
         return
 
     if not node.children:
         for move in node.data.valid_moves:
             tree.create_child(move, node)
+        node.data.set_child_map(node.children)
 
     for child in node.children:
         expand_tree(tree, child, plies - 1)
 
 
 def nega_max(node: Node,
-             plies,
+             plies: int,
              side: Side,
              evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
@@ -154,12 +158,12 @@ def nega_max(node: Node,
         value = -2
         for child in node.children:
             value = max(value,
-                        nega_max(child, plies - 1, Side(-side), evaluate_fn))
+                        nega_max(child, plies - 1, Side.x, evaluate_fn))
     else:
         value = 2
         for child in node.children:
             value = min(value,
-                        nega_max(child, plies - 1, Side(-side), evaluate_fn))
+                        nega_max(child, plies - 1, Side.o, evaluate_fn))
 
     node.data.evaluation.tree_value = value
     return value
@@ -177,14 +181,19 @@ def mcts_search(config: MCTS.Config,
         while node.children:
             node = select_child(config, tree, node)
 
-        value, policy_logits = evaluate_nn(config, node)
+        if node.data.board.result is not None:
+            value = node.data.board.result.value
+            node = backpropagate_terminal(node, node.data.board.result)
+        else:
+            value, policy_logits = evaluate_nn(config, node)
+            node.data.evaluation.policy_logits = policy_logits
+            set_child_priors(tree, node)
+        value = value if side == Side.o else (1 - value)
         node.data.evaluation.add_value(value)
-        node.data.evaluation.policy_logits = policy_logits
-        set_child_priors(tree, node)
 
-        backpropagate(node, value, side)
+        backpropagate(node, value)
 
-    return select_action(config, tree)
+    return select_action_not_stupid(config, tree)
 
 
 def evaluate_nn(config: MCTS.Config, node: Node):
@@ -193,8 +202,9 @@ def evaluate_nn(config: MCTS.Config, node: Node):
     # FIXME: implement. N.B. google one is just some the expanding of the
     # children
     value = evaluate_position_centre(node)
-    print ("posn value: ", value)
-    policy_logits = {a: 1 for a in range(info.width)}
+    # print ("posn value: ", value)
+    policy_logits = {a: 1.0 + (1.0 / info.width) / (1 + np.abs(((info.width - 1) / 2.0) - a))
+                     for a in range(info.width)}
     return value, policy_logits
 
 
@@ -202,20 +212,23 @@ def ucb_score(config: MCTS.Config, node: Node, child: Node):
     # pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
     #                 config.pb_c_base) + config.pb_c_init
     # pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
-    pb_c = config.cpuct
+    # pb_c = config.cpuct
+    pb_c = config.cpuct * math.sqrt(node.data.evaluation.visit_count) \
+           / (child.data.evaluation.visit_count + 1)
 
     prior_score = pb_c * child.data.evaluation.prior
     value_score = child.data.evaluation.value
-    print("child, prior, value, total:  ", child.name, prior_score, value_score, prior_score + value_score)
+    # print("child, prior, value, total:  ", child.name, prior_score, value_score, prior_score + value_score)
     return prior_score + value_score
 
 
 def select_child(config: MCTS.Config, tree: Tree, node: Node):
     non_terminal_children = [child for child in node.children if
                              child.name in node.data.non_terminal_moves]
+    # print([[ucb_score(config, node, child), child.name] for child in non_terminal_children])
     _, child_name = max((ucb_score(config, node, child), child.name)
                         for child in non_terminal_children)
-    child = node.children[[c.name for c in node.children].index(child_name)]
+    child = node.data.child_map[child_name]
 
     return child
 
@@ -226,7 +239,7 @@ def set_child_priors(tree: Tree, node: Node):
               for a in node.data.valid_moves}
     policy_sum = sum(policy.values())
     for action, p in policy.items():
-        node.children[action].data.evaluation.prior = p / policy_sum
+        node.data.child_map[action].data.evaluation.prior = p / policy_sum
 
 
 def select_action(config: MCTS.Config, tree: Tree):
@@ -235,14 +248,40 @@ def select_action(config: MCTS.Config, tree: Tree):
                     for c in tree.root.children))
 
     # FIXME: what is the value of that child? avg value_sum?
-    return action, 0
+    return action, tree.root.data.child_map[action].data.value
+
+
+def select_action_not_stupid(config: MCTS.Config, tree: Tree):
+    # FIXME: removed softmax thing (would check game move history)
+    _, action = max(((c.data.evaluation.value, c.name)
+                    for c in tree.root.children))
+
+    # FIXME: what is the value of that child? avg value_sum?
+    return action, tree.root.data.child_map[action].data.value
+
+
+def backpropagate_terminal(node: Node, result: Result):
+    if node.is_root:
+        return node
+    node.parent.data.add_terminal_move(node.name)
+
+    if result == Result.draw:
+        return node
+    # The side who just moved can choose a win - assume that they will
+    if same_side(result, Side(1 - node.data.board._player_to_move)):
+        return backpropagate_terminal(node.parent, result)
+    # Only non-terminal move is losing so all other terminal moves (if any) are
+    # also losing and player is forced to lose
+    elif (node.data.non_terminal_moves) == 1:
+        return backpropagate_terminal(node.parent, result)
+
+    # nothing to do
+    return node
 
 
 def backpropagate(node: Node,
-                  value: float,
-                  side: Side):
+                  value: float):
     while not node.is_root:
         node = node.parent
         # FIXME: to confirm
         node.data.evaluation.add_value(value)
-            # value if node.data.board._player_to_move == side else (1 - value))
