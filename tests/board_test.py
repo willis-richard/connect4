@@ -1,4 +1,5 @@
 from src.connect4 import board
+from src.connect4.utils import Result, Side
 
 import pytest
 
@@ -144,7 +145,7 @@ pieces_2 = [
               [0, 0, 0, 0, 1, 0, 0],
               [0, 0, 0, 1, 1, 0, 0]], dtype=np.bool_)
     ]
-ans = [1, 1, 1, 1, 1, 1, 1, -1, 0, -1, None]
+ans = [1, 1, 1, 1, 1, 1, 1, 0, 0.5, 0, None]
 
 assert len(pieces_1) == len(pieces_2) == len(ans)
 
@@ -156,7 +157,7 @@ def test_check_valid(n, pieces_1, pieces_2, ans):
                          x_pieces=pieces_2)
 
     print(board_)
-    assert board_.check_terminal_position() == ans
+    assert board_.check_terminal_position() == (Result(ans) if ans is not None else None)
     return
 
 
@@ -202,3 +203,24 @@ def test_valid_moves():
                          x_pieces=x_pieces)
 
     assert board_.valid_moves == set(range(6))
+
+    o_pieces = np.array(
+        [[1, 1, 0, 0, 1, 1, 0],
+         [0, 0, 1, 1, 0, 0, 1],
+         [1, 1, 1, 0, 1, 1, 0],
+         [0, 0, 0, 1, 0, 0, 1],
+         [0, 1, 0, 0, 1, 1, 0],
+         [0, 1, 1, 1, 0, 0, 1]], dtype=np.bool_)
+
+    x_pieces = np.array(
+        [[0, 0, 1, 1, 0, 0, 0],
+         [1, 1, 0, 0, 1, 1, 0],
+         [0, 0, 0, 1, 0, 0, 1],
+         [1, 1, 1, 0, 1, 1, 0],
+         [1, 0, 1, 1, 0, 0, 1],
+         [1, 0, 0, 0, 1, 1, 0]], dtype=np.bool_)
+
+    board_ = board.Board(o_pieces=o_pieces,
+                         x_pieces=x_pieces)
+
+    assert board_.valid_moves == set([6])

@@ -10,7 +10,8 @@ class NodeData():
         self.board = board
         self.valid_moves = board.valid_moves
         self.evaluation = evaluation
-        self.non_terminal_moves = self.valid_moves
+        self.non_terminal_moves = self.valid_moves.copy()
+        self.terminal_value = None
 
     def evaluated(self):
         return self.evaluation.evaluated()
@@ -21,15 +22,22 @@ class NodeData():
     def set_child_map(self, children):
         self.child_map = {c.name: c for c in children}
 
-    def get_value(self, side) -> float:
-        if self.board.result is not None:
-            return self.board.result.value if side == Side.o else \
-                (1 - self.board.result.value)
+    def get_value(self, side):
+        if self.terminal_value is not None:
+            return self.terminal_value
         return self.evaluation.value
 
     @property
     def to_play(self):
         return self.board._player_to_move
+
+    def __repr__(self):
+        return \
+            "board: " + str(self.board) + \
+            ",  valid_moves: " + str(self.valid_moves) + \
+            ",  evaluation: (" + str(self.evaluation) + ")" + \
+            ",  non_terminal_moves: " + str(self.non_terminal_moves) + \
+            ",  terminal_value: " + str(self.terminal_value)
 
 
 class Tree():
