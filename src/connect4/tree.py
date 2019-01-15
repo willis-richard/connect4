@@ -1,57 +1,66 @@
-from src.connect4.utils import Side, Result
+from src.connect4.board import Board
+from src.connect4.utils import Side
 
+from abc import ABC, abstractmethod
 from anytree import Node
 from copy import deepcopy
 
 
-class NodeData():
+class BaseNodeData():
     """Node data is a pair of a board and some evaluation data"""
-    def __init__(self, board, evaluation):
+    def __init__(self,
+                 board: Board,
+                 board_result,
+                 position_evaluation,
+                 search_evaluation):
         self.board = board
+        self.board_result = board_result
         self.valid_moves = board.valid_moves
-        self.evaluation = evaluation
-        self.non_terminal_moves = self.valid_moves.copy()
-        self.terminal_value = None
+        self.position_evaluation = position_evaluation
+        self.search_evaluation = search_evaluation
 
-    def evaluated(self):
-        return self.evaluation.evaluated()
+    def update_position_value(self, value):
+        self.position_evaluation.update_value(value)
 
-    def add_terminal_move(self, move):
-        self.non_terminal_moves.remove(move)
+    def update_search_value(self, value):
+        self.search_evaluation.update_value(value)
+
+    def get_value(self, side: Side):
+        if self.board_result is not None:
+            value = self.board_result
+        elif self.search_evaluation.value is not None:
+            value = self.search_evaluation.value
+        elif self.position_evaluation.value is not None:
+            value = self.position_evaluation.value
+        else:
+            # position is unknown - assume lost
+            value = 0
+        return value if side == Side.x else (1 - value)
 
     def set_child_map(self, children):
         self.child_map = {c.name: c for c in children}
-
-    def get_value(self, side):
-        if self.terminal_value is not None:
-            return self.terminal_value
-        return self.evaluation.value
-
-    @property
-    def to_play(self):
-        return self.board._player_to_move
 
     def __repr__(self):
         return \
             "board: " + str(self.board) + \
             ",  valid_moves: " + str(self.valid_moves) + \
-            ",  evaluation: (" + str(self.evaluation) + ")" + \
-            ",  non_terminal_moves: " + str(self.non_terminal_moves) + \
-            ",  terminal_value: " + str(self.terminal_value)
+            ",  value: " + str(self.value) + \
+            ",  (board_result: " + str(self.board_result) + \
+            ",  position_evaluation: (" + str(self.evaluation) + ")" + \
+            ",  search_evaluation: (" + str(self.terminal_value) + "))"
 
 
 class Tree():
     def __init__(self,
+                 node_data_type,
                  evaluation_type):
-                 # transition_t=None):
+        self.node_data_type = node_data_type
         self.evaluation_type = evaluation_type
 
         # transition_t is a map from board to NodeEvaluation
+        # Ideally it would be to NodeData, but I have not solved the
+        # transposition problem in my search tree yet
         self.transition_t = dict()
-        # at least while aging is not a problem, a dict() is
-        # faster than my other implementations
-        # self.transition_t = TransitionTableDictOfDict() \
-        #     if transition_t is None else transition_t
 
     def update_root(self, board):
         self.root = self.create_node('root', deepcopy(board))
@@ -70,12 +79,29 @@ class Tree():
         return self.create_node(action, new_board, parent=node)
 
     def create_node(self, name, board, parent=None):
-        if False: #board in self.transition_t:
-            node_data = self.transition_t[board]
+        if board in self.transition_t:
+            board_result, node_evaluation = self.transition_t[board]
         else:
-            board.check_terminal_position()
-            node_data = NodeData(board, self.evaluation_type())
-            self.transition_t[board] = node_data
+            board_result = board.check_terminal_position()
+            node_evaluation = self.evaluation_type()
+            self.transition_t[board] = (board.result, node_evaluation)
+        node_data = self.node_data_type(board,
+                                        board_result,
+                                        node_evaluation)
 
         node = Node(name, parent=parent, data=node_data)
         return node
+
+    def expand_node(self,
+                    node: Node,
+                    plies: int):
+        if plies == 0 or node.data.board.result is not None:
+            return
+
+        if not node.children:
+            for move in node.data.valid_moves:
+                self.create_child(move, node)
+            node.data.set_child_map(node.children)
+
+        for child in node.children:
+            self.expand_node(child, plies - 1)
