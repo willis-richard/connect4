@@ -27,7 +27,7 @@ class BaseNodeData():
 
     def get_value(self, side: Side):
         if self.board_result is not None:
-            value = self.board_result
+            value = self.board_result.value
         elif self.search_evaluation.value is not None:
             value = self.search_evaluation.value
         elif self.position_evaluation.value is not None:
@@ -35,7 +35,7 @@ class BaseNodeData():
         else:
             # position is unknown - assume lost
             value = 0
-        return value if side == Side.x else (1 - value)
+        return value if side == Side.o else (1 - value)
 
     def set_child_map(self, children):
         self.child_map = {c.name: c for c in children}
@@ -44,10 +44,9 @@ class BaseNodeData():
         return \
             "board: " + str(self.board) + \
             ",  valid_moves: " + str(self.valid_moves) + \
-            ",  value: " + str(self.value) + \
             ",  (board_result: " + str(self.board_result) + \
-            ",  position_evaluation: (" + str(self.evaluation) + ")" + \
-            ",  search_evaluation: (" + str(self.terminal_value) + "))"
+            ",  position_evaluation: (" + str(self.position_evaluation) + ")" + \
+            ",  search_evaluation: (" + str(self.search_evaluation) + "))"
 
 
 class Tree():

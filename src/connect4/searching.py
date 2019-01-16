@@ -71,22 +71,16 @@ class MCTS():
                        evaluate_fn=evaluate_nn)
 
     class PositionEvaluation():
-        class Value():
-            def __init__(self,
-                         value: float,
-                         policy_logits: Dict):
-                self.value = value
-                self.policy_logits = policy_logits
-
         def __init__(self):
             self.value = None
+            self.policy_logits = None
 
         def update_value(self, value):
-            self.value = value
+            self.value, self.policy_logits = value
 
         def __repr__(self):
-            return "position_value: " + str(self.value.value) + \
-                ", policy_logits: " + str(self.value.policy_logits)
+            return "position_value: " + str(self.value) + \
+                ", policy_logits: " + str(self.policy_logits)
 
     class SearchEvaluation():
         def __init__(self):
@@ -128,7 +122,7 @@ class MCTS():
             self.non_terminal_moves.remove(move)
 
         def __repr__(self):
-            return super().__repr__(self) + \
+            return super().__repr__() + \
                 ",  non_terminal_moves: " + str(self.non_terminal_moves)
 
 
@@ -154,10 +148,8 @@ def grid_search(tree: t.Tree,
     moves = np.array([(n.name) for n in tree.root.children])
     values = np.array([(n.data.get_value(side))
                        for n in tree.root.children])
-    if side == Side.o:
-        idx = np.argmax(values)
-    else:
-        idx = np.argmin(values)
+    print("HAHAHA\n", moves, values)
+    idx = np.argmax(values)
     best_move_value = values[idx]
 
     best_move = moves[idx]
@@ -214,9 +206,11 @@ def mcts_search(config: MCTS.Config,
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
             value, prior = evaluate_fn(config, node)
+            print((value, prior))
             prior = set_prior(node.data.valid_moves, prior)
             node.data.update_position_value((value, prior))
-        value, _ = node.data.position_evaluation.value
+            print(node.data.position_evaluation)
+        value = node.data.position_evaluation.value
 
         backpropagate(node, value)
 
@@ -240,8 +234,10 @@ def ucb_score(config: MCTS.Config, node: Node, child: Node):
     pb_c = config.cpuct * math.sqrt(node.data.search_evaluation.visit_count) \
            / (child.data.search_evaluation.visit_count + 1)
 
-    prior_score = pb_c * node.data.position_evaluation.value[1][child.name]
-    value_score = child.data.position_evaluation.value[0]
+    prior_score = pb_c * node.data.position_evaluation.policy_logits[child.name]
+    value_score = child.data.position_evaluation.value
+    if value_score is None:
+        print(node, "\n", child)
     return prior_score + value_score
 
 

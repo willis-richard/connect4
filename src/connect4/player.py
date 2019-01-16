@@ -9,6 +9,9 @@ class BasePlayer():
     def __str__(self):
         return "Player: " + self.name
 
+    def make_move(self, board):
+        assert self.side == board._player_to_move
+
     @property
     def side(self) -> Side:
         return self._side
@@ -23,6 +26,7 @@ class HumanPlayer(BasePlayer):
         super().__init__(name)
 
     def make_move(self, board):
+        super().make_move(board)
         move = -1
         while move not in board.valid_moves:
             try:
@@ -46,6 +50,7 @@ class ComputerPlayer(BasePlayer):
         self.search_fn = strategy.get_search_fn()
 
     def make_move(self, board):
+        super().make_move(board)
         self.tree.update_root(board)
         move, value = self.search_fn(tree=self.tree,
                                      board=board,
