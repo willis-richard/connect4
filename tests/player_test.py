@@ -112,7 +112,7 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
                 node.data.board_result,
                 node.data.position_evaluation,
                 node.data.search_evaluation,
-                node.data.get_value(Side.x)))
+                node.data.get_value(computer.side)))
 
 
     assert move in ans

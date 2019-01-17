@@ -1,5 +1,5 @@
 from src.connect4.board import Board
-from src.connect4.utils import Side
+from src.connect4.utils import Side, value_to_side
 
 from abc import ABC, abstractmethod
 from anytree import Node
@@ -25,7 +25,8 @@ class BaseNodeData():
     def update_search_value(self, value):
         self.search_evaluation.update_value(value)
 
-    def get_value(self, side: Side):
+    @property
+    def value(self):
         if self.board_result is not None:
             value = self.board_result.value
         elif self.search_evaluation.value is not None:
@@ -35,7 +36,7 @@ class BaseNodeData():
         else:
             # position is unknown - assume lost
             value = 0
-        return value if side == Side.o else (1 - value)
+        return value
 
     def set_child_map(self, children):
         self.child_map = {c.name: c for c in children}

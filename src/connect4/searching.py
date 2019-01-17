@@ -3,7 +3,7 @@ import src.connect4.tree as t
 from src.connect4.board import Board
 
 from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import same_side, Side, Result
+from src.connect4.utils import same_side, Side, Result, value_to_side
 
 from anytree import Node
 from functools import partial
@@ -84,7 +84,6 @@ class MCTS():
 
     class SearchEvaluation():
         def __init__(self):
-            super().__init__()
             self.terminal_value = None
             self.value_sum = 0.0
             self.visit_count = 0
@@ -200,16 +199,15 @@ def mcts_search(config: MCTS.Config,
 
         if node.data.terminal_value is not None:
             node = backpropagate_terminal(node, side)
-            return
+            break
 
         tree.expand_node(node, 1)
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
             value, prior = evaluate_fn(config, node)
-            print((value, prior))
-            prior = set_prior(node.data.valid_moves, prior)
+            value = value_to_side(value, side)
+            prior = normalise_prior(node.data.valid_moves, prior)
             node.data.update_position_value((value, prior))
-            print(node.data.position_evaluation)
         value = node.data.position_evaluation.value
 
         backpropagate(node, value)
@@ -235,13 +233,11 @@ def ucb_score(config: MCTS.Config, node: Node, child: Node):
            / (child.data.search_evaluation.visit_count + 1)
 
     prior_score = pb_c * node.data.position_evaluation.policy_logits[child.name]
-    value_score = child.data.position_evaluation.value
-    if value_score is None:
-        print(node, "\n", child)
+    value_score = child.data.value
     return prior_score + value_score
 
 
-def set_prior(valid_moves, policy_logits):
+def normalise_prior(valid_moves, policy_logits):
     policy = {a: math.exp(policy_logits[a])
               for a in valid_moves}
     policy_sum = sum(policy.values())
@@ -276,7 +272,7 @@ def select_action(config: MCTS.Config,
 def select_action_not_stupid(config: MCTS.Config,
                              tree: t.Tree):
     # FIXME: removed softmax thing (would check game move history)
-    _, action = max(((c.data.evaluation.value, c.name)
+    _, action = max(((c.data.value, c.name)
                     for c in tree.root.children))
 
     # FIXME: what is the value of that child? avg value_sum?
@@ -311,4 +307,4 @@ def backpropagate(node: Node,
     while not node.is_root:
         node = node.parent
         # FIXME: to confirm
-        node.data.evaluation.add_value(value)
+        node.data.update_search_value(value)

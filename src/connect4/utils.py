@@ -49,3 +49,7 @@ def same_side(result: Result, side: Side):
 
 def value_to_side(value: float, side: Side):
     return value if side == Side.o else (1.0 - value)
+
+
+def result_to_side(result: Result, side: Side):
+    return value_to_side(result.value, side)
