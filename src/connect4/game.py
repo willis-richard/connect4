@@ -27,7 +27,7 @@ class Game():
             else:
                 move = self._player_x.make_move(self._board)
             self.move_history = np.append(self.move_history, move)
+            self._board.make_move(move)
             if self.display:
                 print(self._board)
-            self._board.check_terminal_position()
         return self._board.result

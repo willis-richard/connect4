@@ -46,10 +46,8 @@ class GridSearch():
     class NodeData(t.BaseNodeData):
         def __init__(self,
                      board: Board,
-                     board_result,
                      position_evaluation):#: GridSearch.PositionEvaluation):
             super().__init__(board,
-                             board_result,
                              position_evaluation,
                              GridSearch.SearchEvaluation())
 
@@ -108,10 +106,8 @@ class MCTS():
     class NodeData(t.BaseNodeData):
         def __init__(self,
                      board: Board,
-                     board_result,
                      position_evaluation):#: MCTS.PositionEvaluation):
             super().__init__(board,
-                             board_result,
                              position_evaluation,
                              MCTS.SearchEvaluation())
             self.non_terminal_moves = self.valid_moves.copy()
@@ -145,10 +141,8 @@ def grid_search(tree: t.Tree,
     nega_max(tree.root, plies, side, evaluate_fn)
 
     moves = np.array([(n.name) for n in tree.root.children])
-    values = np.array([(n.data.get_value(side))
-                       for n in tree.root.children])
-    print("HAHAHA\n", moves, values)
-    idx = np.argmax(values)
+    values = np.array([n.data.value for n in tree.root.children])
+    idx = np.argmax(values) if side == Side.o else np.argmin(values)
     best_move_value = values[idx]
 
     best_move = moves[idx]
@@ -160,8 +154,9 @@ def nega_max(node: Node,
              side: Side,
              evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
-    if node.data.board_result is not None:
-        return node.data.board_result.value
+    if node.data.board.result is not None:
+        node.data.update_position_value(node.data.board.result.value)
+        return node.data.position_evaluation.value
     if plies == 0:
         node.data.update_position_value(evaluate_fn(node))
         return node.data.position_evaluation.value

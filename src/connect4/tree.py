@@ -1,20 +1,17 @@
 from src.connect4.board import Board
-from src.connect4.utils import Side, value_to_side
+from src.connect4.utils import Side, result_to_side
 
-from abc import ABC, abstractmethod
 from anytree import Node
-from copy import deepcopy
+from copy import copy
 
 
 class BaseNodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self,
                  board: Board,
-                 board_result,
                  position_evaluation,
                  search_evaluation):
         self.board = board
-        self.board_result = board_result
         self.valid_moves = board.valid_moves
         self.position_evaluation = position_evaluation
         self.search_evaluation = search_evaluation
@@ -27,9 +24,7 @@ class BaseNodeData():
 
     @property
     def value(self):
-        if self.board_result is not None:
-            value = self.board_result.value
-        elif self.search_evaluation.value is not None:
+        if self.search_evaluation.value is not None:
             value = self.search_evaluation.value
         elif self.position_evaluation.value is not None:
             value = self.position_evaluation.value
@@ -63,7 +58,7 @@ class Tree():
         self.transition_t = dict()
 
     def update_root(self, board):
-        self.root = self.create_node('root', deepcopy(board))
+        self.root = self.create_node('root', copy(board))
         # self.transition_t.age(board.age)
 
     def take_action(self, action, node):
@@ -74,19 +69,17 @@ class Tree():
         return self.create_child(action, node)
 
     def create_child(self, action, node):
-        new_board = deepcopy(node.data.board)
+        new_board = copy(node.data.board)
         new_board.make_move(action)
         return self.create_node(action, new_board, parent=node)
 
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
-            board_result, node_evaluation = self.transition_t[board]
+            node_evaluation = self.transition_t[board]
         else:
-            board_result = board.check_terminal_position()
             node_evaluation = self.evaluation_type()
-            self.transition_t[board] = (board.result, node_evaluation)
+            self.transition_t[board] = node_evaluation
         node_data = self.node_data_type(board,
-                                        board_result,
                                         node_evaluation)
 
         node = Node(name, parent=parent, data=node_data)

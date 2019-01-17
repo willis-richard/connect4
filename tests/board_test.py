@@ -157,7 +157,7 @@ def test_check_valid(n, pieces_1, pieces_2, ans):
                          x_pieces=pieces_2)
 
     print(board_)
-    assert board_.check_terminal_position() == (Result(ans) if ans is not None else None)
+    assert board_.result == (Result(ans) if ans is not None else None)
     return
 
 

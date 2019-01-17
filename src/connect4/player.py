@@ -1,5 +1,4 @@
 from src.connect4 import tree
-from src.connect4.utils import Side
 
 
 class BasePlayer():
@@ -8,17 +7,6 @@ class BasePlayer():
 
     def __str__(self):
         return "Player: " + self.name
-
-    def make_move(self, board):
-        assert self.side == board._player_to_move
-
-    @property
-    def side(self) -> Side:
-        return self._side
-
-    @side.setter
-    def side(self, side: Side):
-        self._side = side
 
 
 class HumanPlayer(BasePlayer):
@@ -49,21 +37,25 @@ class ComputerPlayer(BasePlayer):
                               strategy.PositionEvaluation)
         self.search_fn = strategy.get_search_fn()
 
-    def make_move(self, board):
-        super().make_move(board)
+    def get_move(self, board):
+        side = board._player_to_move
         self.tree.update_root(board)
         move, value = self.search_fn(tree=self.tree,
                                      board=board,
-                                     side=self.side)
+                                     side=side)
 
-        if value == self.side:
+        if value == side.value:
             print("Trash! I will crush you.")
-        elif value == Side(1 - self.side):
+        elif value == (1 - side.value):
             print("Ah fuck you lucky shit")
 
         print(self.name + " selected move: ", move)
-        board.make_move(move)
 
+        return move
+
+    def make_move(self, board):
+        move = self.get_move(board)
+        board.make_move(move)
         return move
 
     def __str__(self):

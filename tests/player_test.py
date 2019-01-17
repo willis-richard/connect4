@@ -99,7 +99,6 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
 
     computer = player.ComputerPlayer("test_name",
                                      searching.GridSearch(plies=4))
-    computer.side = board_._player_to_move
 
     print(board_)
 
@@ -109,10 +108,10 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
         for pre, fill, node in anytree.RenderTree(computer.tree.root):
             print("%s%s, %s, %s, %s, %s" % (pre,
                 node.name,
-                node.data.board_result,
+                node.data.board.result,
                 node.data.position_evaluation,
                 node.data.search_evaluation,
-                node.data.get_value(computer.side)))
+                node.data.value))
 
 
     assert move in ans
@@ -124,8 +123,6 @@ def test_multiple_moves():
 
     computer = player.ComputerPlayer("test_name",
                                      searching.GridSearch(plies=4))
-    computer.side = Side.x
-
     board_.make_move(3)
 
     assert computer.make_move(board_) == 3

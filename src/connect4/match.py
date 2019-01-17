@@ -21,13 +21,13 @@ class Match():
 
         # FIXME: play both sides
         # self.games = np.array([game.Game(display,
-        #                                 copy.deepcopy(player_1),
-        #                                 copy.deepcopy(player_2),
+        #                                 copy.copy(player_1),
+        #                                 copy.copy(player_2),
         #                                 board.Board())
         #                       for i in range(self.n)])
         self.games = [game.Game(display,
-                                copy.deepcopy(player_1),
-                                copy.deepcopy(player_2),
+                                copy.copy(player_1),
+                                copy.copy(player_2),
                                 board.Board())
                       for i in range(self.n)]
 

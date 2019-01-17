@@ -3,6 +3,8 @@ from src.connect4.utils import Side, Result
 
 import numpy as np
 
+from copy import copy
+
 
 class Board():
     def __init__(self,
@@ -12,11 +14,22 @@ class Board():
             o_pieces is None else o_pieces
         self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
             x_pieces is None else x_pieces
-
-        self.player_to_move = Side(1 - (np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)))
         self.result = None
 
-        self._check_valid()
+        if o_pieces is None and x_pieces is None:
+            self._player_to_move = Side.o
+        else:
+            self.player_to_move = Side(1 - (np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)))
+            self._check_valid()
+            self.check_terminal_position()
+
+    def __copy__(self):
+        new_board = Board()
+        new_board.o_pieces = copy(self.o_pieces)
+        new_board.x_pieces = copy(self.x_pieces)
+        new_board._player_to_move = copy(self._player_to_move)
+        new_board.result = copy(self.result)
+        return new_board
 
     def __eq__(self, obj):
         return isinstance(obj, Board) \
@@ -89,9 +102,13 @@ class Board():
             self.o_pieces[idx, move] = 1
         else:
             self.x_pieces[idx, move] = 1
-        self.player_to_move = Side(1 - self._player_to_move)
+        self.player_to_move = Side(1 - self._player_to_move.value)
+        return self.check_terminal_position()
 
     def _check_valid(self):
+        assert self.o_pieces.shape == (info.height, info.width)
+        assert self.x_pieces.shape == (info.height, info.width)
+
         no_gaps = True
         for col in range(info.width):
             board = self._get_pieces()
@@ -100,11 +117,10 @@ class Board():
 
         assert no_gaps
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
-        assert np.sum(self.o_pieces) - np.sum(self.x_pieces)  in [0, 1]
-        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o) #player who has already won is to move
+        assert np.sum(self.o_pieces) - np.sum(self.x_pieces) == (1 - self._player_to_move.value)
+        # check the player to move has not already won
+        assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o)
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == Side.x)
-        assert self.o_pieces.shape == (info.height, info.width)
-        assert self.x_pieces.shape == (info.height, info.width)
 
     def __hash__(self):
         o_hash = np.dot(np.concatenate(self.o_pieces), info.hash_value)
