@@ -1,16 +1,12 @@
 from src.connect4.board import Board
 from src.connect4.player import ComputerPlayer
+from src.connect4.searching import GridSearch
 # from src.connect4 import transition_table
 
-from functools import partial
 
-
-def test_transition_table():
+def disabled_test_transition_table():
     computer_1 = ComputerPlayer("test_name",
-                                partial(ComputerPlayer.grid_search,
-                                        plies=2))
-    computer_1.side = 1
-
+                                GridSearch(plies=2))
     board = Board()
 
     computer_1.make_move(board)
