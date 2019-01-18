@@ -10,8 +10,6 @@ class Game():
                  player_x,
                  board_):
         self.display = display
-        player_o.side = Side.o
-        player_x.side = Side.x
         self._player_o = player_o
         self._player_x = player_x
         self._board = board_
@@ -27,7 +25,6 @@ class Game():
             else:
                 move = self._player_x.make_move(self._board)
             self.move_history = np.append(self.move_history, move)
-            self._board.make_move(move)
             if self.display:
                 print(self._board)
         return self._board.result

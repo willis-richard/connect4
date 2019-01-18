@@ -40,7 +40,7 @@ class BaseNodeData():
         return \
             "board: " + str(self.board) + \
             ",  valid_moves: " + str(self.valid_moves) + \
-            ",  (board_result: " + str(self.board_result) + \
+            ",  (board_result: " + str(self.board.result) + \
             ",  position_evaluation: (" + str(self.position_evaluation) + ")" + \
             ",  search_evaluation: (" + str(self.search_evaluation) + "))"
 

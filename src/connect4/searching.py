@@ -3,7 +3,7 @@ import src.connect4.tree as t
 from src.connect4.board import Board
 
 from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import same_side, Side, Result, value_to_side
+from src.connect4.utils import same_side, Side, Result, result_to_side, value_to_side
 
 from anytree import Node
 from functools import partial
@@ -82,6 +82,8 @@ class MCTS():
 
     class SearchEvaluation():
         def __init__(self):
+            # Although this is known at construction, I don't think the MCTS
+            # wants to know this ahead of time
             self.terminal_value = None
             self.value_sum = 0.0
             self.visit_count = 0
@@ -93,7 +95,7 @@ class MCTS():
         @property
         def value(self):
             if self.terminal_value is not None:
-                return self.terminal_value.value
+                return self.terminal_value
             if self.visit_count == 0:
                 return 0
             return self.value_sum / self.visit_count
@@ -111,7 +113,6 @@ class MCTS():
                              position_evaluation,
                              MCTS.SearchEvaluation())
             self.non_terminal_moves = self.valid_moves.copy()
-            self.terminal_value = board.result
 
         def add_terminal_move(self, move):
             self.non_terminal_moves.remove(move)
@@ -192,18 +193,21 @@ def mcts_search(config: MCTS.Config,
         while node.children:
             node = select_child(config, tree, node)
 
-        if node.data.terminal_value is not None:
-            node = backpropagate_terminal(node, side)
-            break
+        if node.data.board.result is not None:
+            node = backpropagate_terminal(node,
+                                          node.data.board.result,
+                                          side)
+            continue
 
-        tree.expand_node(node, 1)
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
             value, prior = evaluate_fn(config, node)
             value = value_to_side(value, side)
             prior = normalise_prior(node.data.valid_moves, prior)
             node.data.update_position_value((value, prior))
+            node.data.update_search_value(value)
         value = node.data.position_evaluation.value
+        tree.expand_node(node, 1)
 
         backpropagate(node, value)
 
@@ -261,37 +265,41 @@ def select_action(config: MCTS.Config,
                     for c in tree.root.children))
 
     # FIXME: what is the value of that child? avg value_sum?
-    return action, tree.root.data.child_map[action].data.get_value(tree.root.data.board._player_to_move)
+    return action, tree.root.data.child_map[action].data.value
 
 
 def select_action_not_stupid(config: MCTS.Config,
                              tree: t.Tree):
+    print("ROOT:  ", tree.root)
     # FIXME: removed softmax thing (would check game move history)
     _, action = max(((c.data.value, c.name)
                     for c in tree.root.children))
 
     # FIXME: what is the value of that child? avg value_sum?
-    return action, tree.root.data.child_map[action].data.get_value(tree.root.data.board._player_to_move)
+    return action, tree.root.data.child_map[action].data.value
 
 
 def backpropagate_terminal(node: Node,
+                           result: Result,
                            side: Side):
-    node.data.terminal_value = result
+    node.data.search_evaluation.terminal_value = result_to_side(result, side)
 
     if node.is_root:
         return node
-    node.parent.data.add_terminal_move(node.name)
 
-    # The side who just moved can choose a win - assume that they will
-    if same_side(result, Side(1 - node.data.board._player_to_move)):
-        return backpropagate_terminal(node.parent, result, value)
+    node.parent.data.add_terminal_move(node.name)
+    node = node.parent
+
+    # The side to move can choose a win - assume that they will
+    if same_side(result, node.data.board._player_to_move):
+        return backpropagate_terminal(node, result, side)
     # The parent has only continuations that lead to terminal results
-    elif len(node.parent.data.non_terminal_moves) == 0:
+    elif not node.data.non_terminal_moves:
         # the parent will now choose a draw if possible
-        choices = [c.data.terminal_value for c in node.parent.children]
-        value = 0.5 if 0.5 in choices else value
-        result = Result.draw if 0.5 in choices else result
-        return backpropagate_terminal(node.parent, result, value)
+        choices = [c.data.search_evaluation.terminal_value for c in node.children]
+        result = Result.draw if 0.5 in choices else Result(1 - node.data.board._player_to_move)
+        assert not same_side(result, node.data.board._player_to_move)
+        return backpropagate_terminal(node, result, side)
 
     # nothing to do
     return node
@@ -301,5 +309,4 @@ def backpropagate(node: Node,
                   value: float):
     while not node.is_root:
         node = node.parent
-        # FIXME: to confirm
         node.data.update_search_value(value)
