@@ -93,7 +93,7 @@ class Board():
             self.result = Result.draw
         return self.result
 
-    def make_move(self, move):
+    def _make_move(self, move):
         assert move in self.valid_moves
         board = self._get_pieces()
         idx = info.height - np.count_nonzero(board[:, move]) - 1
@@ -103,6 +103,9 @@ class Board():
         else:
             self.x_pieces[idx, move] = 1
         self.player_to_move = Side(1 - self._player_to_move.value)
+
+    def make_move(self, move):
+        self._make_move(move)
         return self.check_terminal_position()
 
     def _check_valid(self):

@@ -18,7 +18,7 @@ class Connect4Stats():
     # wtf centre not recognised as a variable...
     #value_grid = np.stack([np.concatenate((np.arange(centre[1]), np.flip(np.arange(int(centre[1]))))) for i in range(height)])
     #    + np.transpose(np.stack([np.concatenate((np.arange(centre[0]), np.flip(np.arange(int(centre[0]))))) for i in range(width)]))
-    #value_grid = np.zeros((6,7))
+    # value_grid = np.zeros((6,7))
     value_grid_t = np.transpose(value_grid)
     value_grid_sum = np.sum(value_grid)
 

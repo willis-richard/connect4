@@ -99,7 +99,7 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
                                 GridSearch(plies=plies)),
                  ComputerPlayer("mcts_test",
                                 MCTS(MCTS.Config(simulations=7**plies,
-                                                 cpuct = 9999)))]
+                                                 cpuct=9999)))]
     for computer in computers:
         board = Board(o_pieces=copy(o_pieces),
                       x_pieces=copy(x_pieces))

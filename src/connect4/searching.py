@@ -270,7 +270,6 @@ def select_action(config: MCTS.Config,
 
 def select_action_not_stupid(config: MCTS.Config,
                              tree: t.Tree):
-    print("ROOT:  ", tree.root)
     # FIXME: removed softmax thing (would check game move history)
     _, action = max(((c.data.value, c.name)
                     for c in tree.root.children))

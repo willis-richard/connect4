@@ -70,15 +70,17 @@ class Tree():
 
     def create_child(self, action, node):
         new_board = copy(node.data.board)
-        new_board.make_move(action)
+        new_board._make_move(action)
         return self.create_node(action, new_board, parent=node)
 
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
-            node_evaluation = self.transition_t[board]
+            board_result, node_evaluation = self.transition_t[board]
+            board.result = board_result
         else:
+            board_result = board.check_terminal_position()
             node_evaluation = self.evaluation_type()
-            self.transition_t[board] = node_evaluation
+            self.transition_t[board] = (board_result, node_evaluation)
         node_data = self.node_data_type(board,
                                         node_evaluation)
 
