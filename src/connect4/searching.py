@@ -73,7 +73,8 @@ class MCTS():
             self.value = None
             self.policy_logits = None
 
-        def update_value(self, value):
+        def update_value(self,
+                         value: Tuple[float, Dict]):
             self.value, self.policy_logits = value
 
         def __repr__(self):
@@ -113,9 +114,22 @@ class MCTS():
                              position_evaluation,
                              MCTS.SearchEvaluation())
             self.non_terminal_moves = self.valid_moves.copy()
+            # Necessary to stop mcts 'cheating' and knowing the value of nodes from
+            # the transition table before it has selected them
+            self.evaluated = False
+
+        def update_terminal_value(self, value: float):
+            self.search_evaluation.terminal_value = value
 
         def add_terminal_move(self, move):
             self.non_terminal_moves.remove(move)
+
+            @property
+            def value(self):
+                if not self.evaluated:
+                    # position is unknown - assume lost
+                    return 0
+                return super().value
 
         def __repr__(self):
             return super().__repr__() + \
@@ -193,11 +207,17 @@ def mcts_search(config: MCTS.Config,
         while node.children:
             node = select_child(config, tree, node)
 
+        node.data.evaluated = True
+
         if node.data.board.result is not None:
             node = backpropagate_terminal(node,
                                           node.data.board.result,
                                           side)
             continue
+
+        # if node.data.position_evaluation is not None:
+        #     tree.expand_node(node, 1)
+        #     node = select_child(config, tree, node)
 
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
@@ -281,7 +301,7 @@ def select_action_not_stupid(config: MCTS.Config,
 def backpropagate_terminal(node: Node,
                            result: Result,
                            side: Side):
-    node.data.search_evaluation.terminal_value = result_to_side(result, side)
+    node.data.update_terminal_value(result_to_side(result, side))
 
     if node.is_root:
         return node

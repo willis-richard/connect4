@@ -25,13 +25,12 @@ class BaseNodeData():
     @property
     def value(self):
         if self.search_evaluation.value is not None:
-            value = self.search_evaluation.value
+            return self.search_evaluation.value
         elif self.position_evaluation.value is not None:
-            value = self.position_evaluation.value
+            return self.position_evaluation.value
         else:
             # position is unknown - assume lost
-            value = 0
-        return value
+            return 0
 
     def set_child_map(self, children):
         self.child_map = {c.name: c for c in children}
