@@ -44,9 +44,9 @@ class ComputerPlayer(BasePlayer):
                                      board=board,
                                      side=side)
 
-        if value == side.value:
+        if value == 1.0:
             print("Trash! I will crush you.")
-        elif value == (1 - side.value):
+        elif value == 0.0:
             print("Ah fuck you lucky shit")
 
         print(self.name + " selected move: ", move)

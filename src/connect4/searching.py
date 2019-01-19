@@ -124,16 +124,17 @@ class MCTS():
         def add_terminal_move(self, move):
             self.non_terminal_moves.remove(move)
 
-            @property
-            def value(self):
-                if not self.evaluated:
-                    # position is unknown - assume lost
-                    return 0
-                return super().value
+        @property
+        def value(self):
+            if not self.evaluated:
+                # position is unknown - assume lost
+                return 0
+            return super().value
 
         def __repr__(self):
             return super().__repr__() + \
-                ",  non_terminal_moves: " + str(self.non_terminal_moves)
+                ",  non_terminal_moves: " + str(self.non_terminal_moves) + \
+                ",  evaluated: ", str(self.evaluated)
 
 
 def evaluate_position_centre(node: Node):
@@ -207,6 +208,10 @@ def mcts_search(config: MCTS.Config,
         while node.children:
             node = select_child(config, tree, node)
 
+        if node.data.evaluated:
+            tree.expand_node(node, 1)
+            node = select_child(config, tree, node)
+
         node.data.evaluated = True
 
         if node.data.board.result is not None:
@@ -215,19 +220,15 @@ def mcts_search(config: MCTS.Config,
                                           side)
             continue
 
-        # if node.data.position_evaluation is not None:
-        #     tree.expand_node(node, 1)
-        #     node = select_child(config, tree, node)
-
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
             value, prior = evaluate_fn(config, node)
             value = value_to_side(value, side)
             prior = normalise_prior(node.data.valid_moves, prior)
             node.data.update_position_value((value, prior))
-            node.data.update_search_value(value)
-        value = node.data.position_evaluation.value
-        tree.expand_node(node, 1)
+        else:
+            value = node.data.position_evaluation.value
+        # tree.expand_node(node, 1)
 
         backpropagate(node, value)
 
@@ -235,8 +236,6 @@ def mcts_search(config: MCTS.Config,
 
 
 def evaluate_nn(config: MCTS.Config, node: Node):
-    # FIXME: remove when sure positions aren't evaluated multiple times
-    assert node.data.position_evaluation.value is None
     value = evaluate_position_centre(node)
     policy_logits = {a: 1.0 + (1.0 / info.width) / (1 + np.abs(((info.width - 1) / 2.0) - a))
                      for a in range(info.width)}
@@ -326,6 +325,7 @@ def backpropagate_terminal(node: Node,
 
 def backpropagate(node: Node,
                   value: float):
+    node.data.update_search_value(value)
     while not node.is_root:
         node = node.parent
         node.data.update_search_value(value)
