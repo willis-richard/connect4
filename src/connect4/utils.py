@@ -12,9 +12,14 @@ class Connect4Stats():
     assert width >= win_length and height >= win_length
 
     centre = (height / 2.0, width / 2.0)
-    value_grid = np.stack([np.concatenate((np.arange(3.5), np.flip(np.arange(3)))) for i in range(height)]) \
-                 + np.transpose(np.stack([np.concatenate((np.arange(3), np.flip(np.arange(3)))) for i in range(width)])) \
-                 + np.ones((height, width))
+    value_grid = np.stack([np.concatenate((np.arange(3.5),
+                                           np.flip(np.arange(3))))
+                           for i in range(height)]) \
+        + np.transpose(
+                     np.stack([np.concatenate((np.arange(3),
+                                               np.flip(np.arange(3))))
+                               for i in range(width)])) \
+        + np.ones((height, width))
     # wtf centre not recognised as a variable...
     #value_grid = np.stack([np.concatenate((np.arange(centre[1]), np.flip(np.arange(int(centre[1]))))) for i in range(height)])
     #    + np.transpose(np.stack([np.concatenate((np.arange(centre[0]), np.flip(np.arange(int(centre[0]))))) for i in range(width)]))
@@ -26,6 +31,12 @@ class Connect4Stats():
     assert height * width <= 64
 
     hash_value = np.array([2**x for x in range(height * width)])
+
+
+class NetworkStats():
+    channels = 2
+    filters = 64
+    area = Connect4Stats.height * Connect4Stats.width
 
 
 class Side(IntEnum):
