@@ -2,6 +2,7 @@ from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import Side, Result
 
 import numpy as np
+import torch
 
 from copy import copy
 
@@ -24,7 +25,7 @@ class Board():
             self.check_terminal_position()
 
     def __copy__(self):
-        new_board = Board()
+        new_board = self.__class__()
         new_board.o_pieces = copy(self.o_pieces)
         new_board.x_pieces = copy(self.x_pieces)
         new_board._player_to_move = copy(self._player_to_move)
@@ -57,6 +58,17 @@ class Board():
             str(np.array([range(info.width)]).astype(str)) \
             + "\n" + str(display.decode('utf-8')) \
             + "\n" + str(np.array([range(info.width)]).astype(str))
+
+    def to_tensor(self):
+        to_move = np.ones(self.o_pieces.shape, dtype=np.bool_) if \
+                  self._player_to_move == Side.o else \
+                  np.zeros(self.x_pieces.shape, dtype=np.bool_)
+        # return torch.ByteTensor(np.stack([to_move.astype(np.uint8),
+        #                                   self.o_pieces.astype(np.uint8),
+        #                                   self.x_pieces.astype(np.uint8)]))
+        return torch.Tensor(np.stack([to_move.astype(np.uint8),
+                                          self.o_pieces.astype(np.uint8),
+                                          self.x_pieces.astype(np.uint8)]))
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces
