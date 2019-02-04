@@ -48,12 +48,12 @@ class ResidualLayer(nn.Module):
 # Input with N * filters * (6,7)
 # Output with N * area
 class ValueHead(nn.Module):
-    def __init__(self, filters=net.filters):
+    def __init__(self, filters=net.filters, fc_layers=net.n_fc_layers):
         super(ValueHead, self).__init__()
         self.conv1 = nn.Conv2d(filters, 1, 1)
         self.batch_norm = nn.BatchNorm2d(1)
         self.relu = nn.LeakyReLU()
-        self.fcN = nn.Sequential(*[nn.Linear(net.area, net.area) for _ in range(4)])
+        self.fcN = nn.Sequential(*[nn.Linear(net.area, net.area) for _ in range(n_fc_layers)])
 
     def forward(self, x):
         x = self.conv1(x)
@@ -100,7 +100,7 @@ class ClassifierTip(nn.Module):
 
 
 missing_tip = nn.Sequential(convolutional_layer,
-                            nn.Sequential(*[ResidualLayer() for _ in range(4)]),
+                            nn.Sequential(*[ResidualLayer() for _ in range(net.n_residuals)]),
                             ValueHead())
 
 value_net = nn.Sequential(missing_tip, ValueTip())

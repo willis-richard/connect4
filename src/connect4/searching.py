@@ -7,7 +7,7 @@ from src.connect4.utils import same_side, Side, Result, result_to_side, value_to
 
 from anytree import Node
 from functools import partial
-from typing import Callable, Dict, Tuple
+from typing import Callable, Dict, Optional, Tuple
 
 import math
 

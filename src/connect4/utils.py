@@ -35,7 +35,9 @@ class Connect4Stats():
 
 class NetworkStats():
     channels = 2
-    filters = 64
+    filters = 32
+    n_fc_layers = 4
+    n_residuals = 3
     area = Connect4Stats.height * Connect4Stats.width
 
 
@@ -64,3 +66,34 @@ def value_to_side(value: float, side: Side):
 
 def result_to_side(result: Result, side: Side):
     return value_to_side(result.value, side)
+
+
+def augment_data(board_train, value_train):
+    v_wins = value_train[value_train == 1.0]
+    v_draws = value_train[value_train == 0.5]
+    v_losses = value_train[value_train == 0.0]
+    b_wins = board_train[value_train == 1.0]
+    b_draws = board_train[value_train == 0.5]
+    b_losses = board_train[value_train == 0.0]
+
+    n_wins = len(v_wins)
+    n_draws = len(v_draws)
+    n_losses = len(v_losses)
+
+    v_augmented_draws = np.repeat(v_draws, n_wins/n_draws)
+    v_augmented_losses = np.repeat(v_losses, n_wins/n_losses)
+    b_augmented_draws = np.repeat(b_draws, n_wins/n_draws, axis=0)
+    b_augmented_losses = np.repeat(b_losses, n_wins/n_losses, axis=0)
+
+    extra_draw_idx = np.random.choice(range(len(v_draws)), n_wins - len(v_augmented_draws), replace=False)
+    extra_losses_idx = np.random.choice(range(len(v_losses)), n_wins - len(v_augmented_losses), replace=False)
+
+    v_augmented_draws = np.hstack([v_augmented_draws, v_draws[extra_draw_idx]])
+    v_augmented_losses = np.hstack([v_augmented_losses, v_losses[extra_losses_idx]])
+    b_augmented_draws = np.concatenate([b_augmented_draws, b_draws[extra_draw_idx]], axis=0)
+    b_augmented_losses = np.concatenate([b_augmented_losses, b_losses[extra_losses_idx]], axis=0)
+
+    value_train = np.hstack([v_wins, v_augmented_draws, v_augmented_losses])
+    board_train = np.concatenate([b_wins, b_augmented_draws, b_augmented_losses], axis=0)
+
+    return board_train, value_train
