@@ -1,12 +1,18 @@
 import src.connect4.tree as t
 
 from src.connect4.board import Board
-
 from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import same_side, Side, Result, result_to_side, value_to_side
+from src.connect4.utils import (same_side,
+                                Side,
+                                Result,
+                                result_to_side,
+                                value_to_side)
+
+from src.connect4.neural.network import Net
 
 from anytree import Node
 from functools import partial
+from scipy.special import softmax
 from typing import Callable, Dict, Optional, Tuple
 
 import math
@@ -21,7 +27,7 @@ class GridSearch():
     def get_search_fn(self):
         return partial(grid_search,
                        plies=self.plies,
-                       evaluate_fn=evaluate_position_centre)
+                       evaluate_fn=evaluate_centre)
 
     class PositionEvaluation():
         def __init__(self):
@@ -63,10 +69,14 @@ class MCTS():
     def __init__(self, config: Config):
         self.config = config
 
-    def get_search_fn(self):
+    def get_search_fn(self, net=None):
+        if net is None:
+            fn = evaluate_centre
+        else:
+            fn = partial(evaluate_nn, net=net)
         return partial(mcts_search,
                        config=self.config,
-                       evaluate_fn=evaluate_nn)
+                       evaluate_fn=fn)
 
     class PositionEvaluation():
         def __init__(self):
@@ -137,15 +147,13 @@ class MCTS():
                 ",  evaluated: ", str(self.evaluated)
 
 
-def evaluate_position_centre(node: Node):
-    # return np.sum(np.multiply(board.o_pieces, info.value_grid) -
-    # np.multiply(board.x_pieces, info.value_grid)) \
-    # / float(info.value_grid_sum)
+def evaluate_centre(node: Node):
     board = node.data.board
-    return 0.5 + \
+    value = 0.5 + \
         (np.einsum('ij,ij', board.o_pieces, info.value_grid)
          - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
         / float(info.value_grid_sum)
+    return value, info.policy_logits
 
 
 def grid_search(tree: t.Tree,
@@ -162,7 +170,7 @@ def grid_search(tree: t.Tree,
     best_move_value = values[idx]
 
     best_move = moves[idx]
-    return best_move, best_move_value
+    return best_move, best_move_value, []
 
 
 def nega_max(node: Node,
@@ -222,7 +230,7 @@ def mcts_search(config: MCTS.Config,
 
         # position may be a in the transpositions table
         if node.data.position_evaluation.value is None:
-            value, prior = evaluate_fn(config, node)
+            value, prior = evaluate_fn(node)
             value = value_to_side(value, side)
             prior = normalise_prior(node.data.valid_moves, prior)
             node.data.update_position_value((value, prior))
@@ -235,11 +243,9 @@ def mcts_search(config: MCTS.Config,
     return select_action_not_stupid(config, tree)
 
 
-def evaluate_nn(config: MCTS.Config, node: Node):
-    value = evaluate_position_centre(node)
-    policy_logits = {a: 1.0 + (1.0 / info.width) / (1 + np.abs(((info.width - 1) / 2.0) - a))
-                     for a in range(info.width)}
-    return value, policy_logits
+def evaluate_nn(node: Node,
+                net: Net):
+    return net(node.board)
 
 
 def ucb_score(config: MCTS.Config, node: Node, child: Node):
@@ -279,22 +285,25 @@ def select_child(config: MCTS.Config,
 
 def select_action(config: MCTS.Config,
                   tree: t.Tree):
-    # FIXME: removed softmax thing (would check game move history)
-    _, action = max(((c.data.evaluation.visit_count, c.name)
+
+    _, action = max(((c.data.search_evaluation.visit_count, c.name)
                     for c in tree.root.children))
 
-    # FIXME: what is the value of that child? avg value_sum?
     return action, tree.root.data.child_map[action].data.value
 
 
 def select_action_not_stupid(config: MCTS.Config,
                              tree: t.Tree):
     # FIXME: removed softmax thing (would check game move history)
-    _, action = max(((c.data.value, c.name)
-                    for c in tree.root.children))
-
     # FIXME: what is the value of that child? avg value_sum?
-    return action, tree.root.data.child_map[action].data.value
+    value, action = max(((c.data.value, c.name)
+                         for c in tree.root.children))
+
+    policy = np.zeros((info.width,))
+    for c in tree.root.children:
+        policy[c.name] = c.data.search_evaluation.visit_count
+    policy = softmax(policy)
+    return action, value, policy
 
 
 def backpropagate_terminal(node: Node,

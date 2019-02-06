@@ -31,32 +31,29 @@ class HumanPlayer(BasePlayer):
 
 
 class ComputerPlayer(BasePlayer):
-    def __init__(self, name, strategy):
+    def __init__(self, name, strategy, nn_storage=None):
         super().__init__(name)
         self.tree = tree.Tree(strategy.NodeData,
                               strategy.PositionEvaluation)
-        self.search_fn = strategy.get_search_fn()
+        if nn_storage is None:
+            self.search_fn = strategy.get_search_fn()
+        else:
+            net = nn_storage.get_net()
+            self.search_fn = strategy.get_search_fn(net)
 
     def get_move(self, board):
         side = board._player_to_move
         self.tree.update_root(board)
-        move, value = self.search_fn(tree=self.tree,
-                                     board=board,
-                                     side=side)
+        move, value, policy = self.search_fn(tree=self.tree,
+                                             board=board,
+                                             side=side)
 
-        if value == 1.0:
-            print("Trash! I will crush you.")
-        elif value == 0.0:
-            print("Ah fuck you lucky shit")
-
-        print(self.name + " selected move: ", move)
-
-        return move
+        return move, value, policy
 
     def make_move(self, board):
-        move = self.get_move(board)
+        move, value, policy = self.get_move(board)
         board.make_move(move)
-        return move
+        return move, value, policy
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

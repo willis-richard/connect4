@@ -1,7 +1,11 @@
-from src.connect4.utils import NetworkStats as net
+from src.connect4.utils import NetworkStats as net_info
 
 import torch
+import torch.optim as optim
 import torch.nn as nn
+from torch.utils.data import DataLoader
+
+from typing import Callable, Dict, Optional, Tuple
 
 # import torch.nn.functional as F
 
@@ -9,22 +13,22 @@ import torch.nn as nn
 # Input with N * channels * (6,7)
 # Output with N * filters * (6,7)
 convolutional_layer = \
-    nn.Sequential(nn.Conv2d(in_channels=net.channels,
-                            out_channels=net.filters,
+    nn.Sequential(nn.Conv2d(in_channels=net_info.channels,
+                            out_channels=net_info.filters,
                             kernel_size=3,
                             stride=1,
                             padding=1,
                             dilation=1,
                             groups=1,
                             bias=False),
-                  nn.BatchNorm2d(net.filters),
+                  nn.BatchNorm2d(net_info.filters),
                   nn.LeakyReLU())
 
 
 # Input with N * filters * (6,7)
 # Output with N * filters * (6,7)
 class ResidualLayer(nn.Module):
-    def __init__(self, filters=net.filters):
+    def __init__(self, filters=net_info.filters):
         super(ResidualLayer, self).__init__()
         self.conv1 = nn.Conv2d(filters, filters, 3, padding=1, bias=False)
         self.conv2 = nn.Conv2d(filters, filters, 3, padding=1, bias=False)
@@ -46,14 +50,18 @@ class ResidualLayer(nn.Module):
 
 
 # Input with N * filters * (6,7)
-# Output with N * area
+# Output with N * 1
 class ValueHead(nn.Module):
-    def __init__(self, filters=net.filters, fc_layers=net.n_fc_layers):
+    def __init__(self, filters=net_info.filters, fc_layers=net_info.n_fc_layers):
         super(ValueHead, self).__init__()
         self.conv1 = nn.Conv2d(filters, 1, 1)
         self.batch_norm = nn.BatchNorm2d(1)
         self.relu = nn.LeakyReLU()
-        self.fcN = nn.Sequential(*[nn.Linear(net.area, net.area) for _ in range(n_fc_layers)])
+        self.fcN = nn.Sequential(*[nn.Linear(net_info.area, net_info.area) for _ in range(fc_layers)])
+        self.fc1 = nn.Linear(net_info.area, 1)
+        self.tanh = torch.nn.Tanh()
+        self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
+        self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -62,20 +70,6 @@ class ValueHead(nn.Module):
         x = x.view(x.shape[0], 1, -1)
         x = self.fcN(x)
         x = self.relu(x)
-        return x
-
-
-# Input with N * area
-# Output with N * 1
-class ValueTip(nn.Module):
-    def __init__(self):
-        super(ValueTip, self).__init__()
-        self.fc1 = nn.Linear(net.area, 1)
-        self.tanh = torch.nn.Tanh()
-        self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
-        self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
-
-    def forward(self, x):
         x = self.fc1(x)
         x = self.tanh(x)
 #         map from [-1, 1] to [0, 1]
@@ -84,24 +78,82 @@ class ValueTip(nn.Module):
         return x
 
 
-# Input with N * area
-# Output with N * 3 (ready for NLLLoss)
-class ClassifierTip(nn.Module):
-    def __init__(self):
-        super(ClassifierTip, self).__init__()
-        self.fc1 = nn.Linear(net.area, 3)
+# Input with N * filters * (6,7)
+# Output with N * 7
+class PolicyHead(nn.Module):
+    def __init__(self, filters=net_info.filters):
+        super(PolicyHead, self).__init__()
+        self.conv1 = nn.Conv2d(filters, 1, 1)
+        self.batch_norm = nn.BatchNorm2d(1)
+        self.relu = nn.LeakyReLU()
+        self.fc1 = nn.Linear(2 * net_info.area, net_info.width)
 
     def forward(self, x):
+        x = self.conv1(x)
+        x = self.batch_norm(x)
+        x = self.relu(x)
+        x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
-        x = x.view(-1, 3)
-        # x = nn.Softmax(x)
-        x = nn.LogSoftmax(x)
+        x = nn.Softmax(x)
         return x
 
 
-missing_tip = nn.Sequential(convolutional_layer,
-                            nn.Sequential(*[ResidualLayer() for _ in range(net.n_residuals)]),
-                            ValueHead())
+# Used in 8-ply testing
+value_net= nn.Sequential(convolutional_layer,
+                         nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]),
+                         ValueHead())
 
-value_net = nn.Sequential(missing_tip, ValueTip())
-classifier_net = nn.Sequential(missing_tip, ClassifierTip())
+
+class Net(nn.Module):
+    def __init__(self):
+        super(Net, self).__init__()
+        self.body = nn.Sequential(convolutional_layer,
+                                  nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
+        self.value_head = ValueHead()
+        self.policy_head = PolicyHead()
+
+    def forward(self, x):
+        x = self.body(x)
+        value = self.value_head(x)
+        policy = self.policy_head(x)
+        return value, policy
+
+
+class Model():
+    def __init__(self,
+                 checkpoint: Optional[Dict] = None):
+        self.net = Net()
+        self.optimiser = optim.Adam(self.net.parameters())
+        if checkpoint is not None:
+            self.net.load_state_dict(checkpoint['net_state_dict'])
+            self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
+        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.net.to(device)
+        self.value_loss = nn.MSELoss()
+        self.policy_loss = nn.CrossEntropyLoss()
+
+    def criterion(self, x_value, x_policy, y_value, y_policy):
+        value_loss = self.value_loss(x_value, y_value)
+        policy_loss = self.policy_loss(x_policy, y_policy)
+        # L2 regularization loss is added via the optimiser (setting a weight_decay value)
+
+        return value_loss - policy_loss
+    # FIXME: How is the optimiser going to work?
+    # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
+    # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
+
+    def train(self,
+              data: DataLoader,
+              n_epochs: int):
+        for epoch in range(n_epochs):
+            self.net.train()
+
+            for board, y_value, y_policy in data:
+                # zero the parameter gradients
+                self.optimiser.zero_grad()
+
+                # forward + backward + optimise
+                x_value, x_policy = self.net(board)
+                loss = self.criterion(x_value, x_policy, y_value, y_policy)
+                loss.backward()
+                self.optimiser.step()
