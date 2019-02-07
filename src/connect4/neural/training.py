@@ -23,10 +23,10 @@ class TrainingGame():
         boards = torch.Tensor()
         policies = torch.Tensor()
         while self.board.result is None:
-            self.player.make_move(self._board)
+            self.player.make_move(self.board)
             policy = self.player.tree.get_policy()
 
-            torch.concatenate(boards, self._board.to_tensor())
+            torch.concatenate(boards, self.board.to_tensor())
             torch.concatenate(policies, policy)
 
         values = self.create_values()
@@ -50,7 +50,7 @@ class TrainingLoop():
                  config: AlphaZeroConfig,
                  folder_path: str):
         self.config = config
-        self.nn_storage = NetworkStorage(folder_path),
+        self.nn_storage = NetworkStorage(folder_path)
         self.replay_storage = ReplayStorage(config, folder_path)
 
     def run(self):
@@ -63,7 +63,7 @@ class TrainingLoop():
                                 MCTS(MCTS.Config(simulations=2500,
                                                  cpuct=9999)),
                                 transition_t,
-                                self.nn_storage.get_net())
+                                self.nn_storage.get_model())
 
         for _ in range(self.config.n_training_games):
             TrainingGame(copy.copy(player),

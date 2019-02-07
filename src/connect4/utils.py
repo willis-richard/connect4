@@ -37,7 +37,7 @@ class Connect4Stats():
 
 
 class NetworkStats():
-    channels = 2
+    channels = 3
     filters = 32
     n_fc_layers = 4
     n_residuals = 3

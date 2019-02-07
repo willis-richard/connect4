@@ -37,15 +37,14 @@ class ComputerPlayer(BasePlayer):
                  name: str,
                  strategy,
                  transition_t: Dict = None,
-                 nn_storage=None):
+                 net=None):
         super().__init__(name)
         self.tree = tree.Tree(strategy.NodeData,
                               strategy.PositionEvaluation,
                               transition_t)
-        if nn_storage is None:
+        if net is None:
             self.search_fn = strategy.get_search_fn()
         else:
-            net = nn_storage.get_net()
             self.search_fn = strategy.get_search_fn(net)
 
     def make_move(self, board):

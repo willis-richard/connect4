@@ -1,3 +1,4 @@
+from src.connect4.board import Board
 from src.connect4.utils import NetworkStats as net_info
 
 import torch
@@ -83,8 +84,8 @@ class ValueHead(nn.Module):
 class PolicyHead(nn.Module):
     def __init__(self, filters=net_info.filters):
         super(PolicyHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 1, 1)
-        self.batch_norm = nn.BatchNorm2d(1)
+        self.conv1 = nn.Conv2d(filters, 2, 1)
+        self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
         self.fc1 = nn.Linear(2 * net_info.area, net_info.width)
 
@@ -107,12 +108,21 @@ value_net= nn.Sequential(convolutional_layer,
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
+        # self.body = nn.Conv2d(in_channels=net_info.channels,
+        #                     out_channels=net_info.filters,
+        #                     kernel_size=3,
+        #                     stride=1,
+        #                     padding=1,
+        #                     dilation=1,
+        #                     groups=1,
+        #                     bias=False)
         self.body = nn.Sequential(convolutional_layer,
                                   nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
         self.value_head = ValueHead()
         self.policy_head = PolicyHead()
 
     def forward(self, x):
+        x = x.view(-1,3,6,7)
         x = self.body(x)
         value = self.value_head(x)
         policy = self.policy_head(x)
@@ -127,10 +137,15 @@ class Model():
         if checkpoint is not None:
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-        device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.net.to(device)
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.net.to(self.device)
         self.value_loss = nn.MSELoss()
         self.policy_loss = nn.CrossEntropyLoss()
+
+    def __call__(self, board: Board):
+        board_tensor = board.to_tensor()
+        board_tensor = board_tensor.to(self.device)
+        return self.net(board_tensor)
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)

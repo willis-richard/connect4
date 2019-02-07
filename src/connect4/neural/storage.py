@@ -1,5 +1,5 @@
 from src.connect4.neural.config import AlphaZeroConfig
-from src.connect4.neural.network import Net
+from src.connect4.neural.network import Model
 
 import torch
 import torch.optim as optim
@@ -9,33 +9,33 @@ import os
 class NetworkStorage():
     def __init__(self, folder_path: str):
         self.folder_path = folder_path
-        self.net = Net
-        self.optimiser = optim.Adam(self.net.parameters())
         self.iteration = 0
-        file_list = os.listdir()
+        file_list = os.listdir(folder_path)
         if file_list:
             latest_file = file_list[-1]
+            print(file_list, latest_file)
             self.iteration = int(latest_file.split('.')[1])
             checkpoint = torch.load(self.file_name)
-            self.net.load_state_dict(checkpoint['net_state_dict'])
-            self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
+            self.model = Model(checkpoint)
+        else:
+            self.model = Model()
 
     @property
     def file_name(self):
         return self.folder_path + '.' + str(self.iteration) + '.pth'
 
-    def save_net(self, net, optimiser):
-        self.net = net
-        self.optimiser = optimiser
+    def save_model(self, model):
+        self.model = model
         torch.save(
             {
-                'net_state_dict': self.net.state_dict(),
-                'optimiser_state_dict': self.optimiser.state_dict()
+                'net_state_dict': self.model.net.state_dict(),
+                'optimiser_state_dict': self.model.optimiser.state_dict()
             },
             self.file_name)
 
-    def get_net(self):
-        return self.net, self.optimiser
+    def get_model(self):
+        return self.model
+
 
 class ReplayStorage():
     def __init__(self,

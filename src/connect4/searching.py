@@ -6,7 +6,7 @@ from src.connect4.utils import (same_side,
                                 Result,
                                 value_to_side)
 
-from src.connect4.neural.network import Net
+from src.connect4.neural.network import Model
 
 from anytree import Node
 from functools import partial
@@ -67,11 +67,11 @@ class MCTS():
     def __init__(self, config: Config):
         self.config = config
 
-    def get_search_fn(self, net=None):
-        if net is None:
+    def get_search_fn(self, model=None):
+        if model is None:
             fn = evaluate_centre_with_prior
         else:
-            fn = partial(evaluate_nn, net=net)
+            fn = partial(evaluate_nn, model=model)
 
         return partial(mcts_search,
                        config=self.config,
@@ -236,8 +236,8 @@ def mcts_search(config: MCTS.Config,
 
 
 def evaluate_nn(node: Node,
-                net: Net):
-    return net(node.board)
+                model: Model):
+    return model(node.data.board)
 
 
 def ucb_score(config: MCTS.Config,
