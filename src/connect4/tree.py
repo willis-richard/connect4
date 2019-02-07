@@ -1,8 +1,11 @@
 from src.connect4.board import Board
-from src.connect4.utils import Side, result_to_side
+from src.connect4.utils import Connect4Stats as info
+from src.connect4.utils import Side, value_to_side
 
 from anytree import Node
 from copy import copy
+import numpy as np
+from typing import Dict, Tuple
 
 
 class BaseNodeData():
@@ -24,16 +27,15 @@ class BaseNodeData():
 
     @property
     def value(self):
-        if self.search_evaluation.value is not None:
+        if self.board.result:
+            return self.board.result.value
+        elif self.search_evaluation.value is not None:
             return self.search_evaluation.value
         elif self.position_evaluation.value is not None:
             return self.position_evaluation.value
         else:
             # position is unknown - assume lost
             return 0
-
-    def set_child_map(self, children):
-        self.child_map = {c.name: c for c in children}
 
     def __repr__(self):
         return \
@@ -47,18 +49,37 @@ class BaseNodeData():
 class Tree():
     def __init__(self,
                  node_data_type,
-                 evaluation_type):
+                 position_evaluation_type,
+                 transition_t: Dict = None):
         self.node_data_type = node_data_type
-        self.evaluation_type = evaluation_type
+        self.position_evaluation_type = position_evaluation_type
 
         # transition_t is a map from board to NodeEvaluation
         # Ideally it would be to NodeData, but I have not solved the
         # transposition problem in my search tree yet
-        self.transition_t = dict()
+        self.transition_t = dict() if transition_t is None else transition_t
+        # FIXME: Actually only set when passed a board
+        self.side = Side.o
 
-    def update_root(self, board):
+    def update_root(self, board: Board):
         self.root = self.create_node('root', copy(board))
         # self.transition_t.age(board.age)
+        self.side = board._player_to_move
+
+    def get_node_value(self, node) -> float:
+        return value_to_side(node.data.value, self.side)
+
+    def select_best_move(self) -> Tuple[int, float]:
+        value, action = max(((self.get_node_value(c), c.name)
+                             for c in self.root.children))
+        return action, value
+
+    def get_policy(self):
+        policy = np.zeros((info.width,))
+        for c in self.root.children:
+            policy[c.name] = c.data.search_evaluation.visit_count
+        policy = softmax(policy)
+        return
 
     def take_action(self, action, node):
         child_names = [c.name for c in node.children]
@@ -74,14 +95,14 @@ class Tree():
 
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
-            board_result, node_evaluation = self.transition_t[board]
+            board_result, position_evaluation = self.transition_t[board]
             board.result = board_result
         else:
             board_result = board.check_terminal_position()
-            node_evaluation = self.evaluation_type()
-            self.transition_t[board] = (board_result, node_evaluation)
+            position_evaluation = self.position_evaluation_type()
+            self.transition_t[board] = (board_result, position_evaluation)
         node_data = self.node_data_type(board,
-                                        node_evaluation)
+                                        position_evaluation)
 
         node = Node(name, parent=parent, data=node_data)
         return node
@@ -95,7 +116,6 @@ class Tree():
         if not node.children:
             for move in node.data.valid_moves:
                 self.create_child(move, node)
-            node.data.set_child_map(node.children)
 
         for child in node.children:
             self.expand_node(child, plies - 1)

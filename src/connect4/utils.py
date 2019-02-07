@@ -64,12 +64,8 @@ def same_side(result: Result, side: Side):
     return False
 
 
-def value_to_side(value: float, side: Side):
+def value_to_side(value: float, side: Side) -> float:
     return value if side == Side.o else (1.0 - value)
-
-
-def result_to_side(result: Result, side: Side):
-    return value_to_side(result.value, side)
 
 
 def augment_data(board_train, value_train):

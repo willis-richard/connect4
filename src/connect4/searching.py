@@ -1,11 +1,9 @@
-import src.connect4.tree as t
-
 from src.connect4.board import Board
+from src.connect4.tree import BaseNodeData, Tree
 from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import (same_side,
                                 Side,
                                 Result,
-                                result_to_side,
                                 value_to_side)
 
 from src.connect4.neural.network import Net
@@ -49,7 +47,7 @@ class GridSearch():
         def __repr__(self):
             return "tree_value: " + str(self.value)
 
-    class NodeData(t.BaseNodeData):
+    class NodeData(BaseNodeData):
         def __init__(self,
                      board: Board,
                      position_evaluation):#: GridSearch.PositionEvaluation):
@@ -71,9 +69,10 @@ class MCTS():
 
     def get_search_fn(self, net=None):
         if net is None:
-            fn = evaluate_centre
+            fn = evaluate_centre_with_prior
         else:
             fn = partial(evaluate_nn, net=net)
+
         return partial(mcts_search,
                        config=self.config,
                        evaluate_fn=fn)
@@ -95,7 +94,7 @@ class MCTS():
         def __init__(self):
             # Although this is known at construction, I don't think the MCTS
             # wants to know this ahead of time
-            self.terminal_value = None
+            self.terminal_result = None
             self.value_sum = 0.0
             self.visit_count = 0
 
@@ -105,18 +104,18 @@ class MCTS():
 
         @property
         def value(self):
-            if self.terminal_value is not None:
-                return self.terminal_value
+            if self.terminal_result is not None:
+                return self.terminal_result.value
             if self.visit_count == 0:
                 return 0
             return self.value_sum / self.visit_count
 
         def __repr__(self):
-            return "terminal_value: " + str(self.terminal_value) + \
+            return "terminal_result: " + str(self.terminal_result) + \
                 ",  value_sum: " + str(self.value_sum) + \
                 ",  visit_count: " + str(self.visit_count)
 
-    class NodeData(t.BaseNodeData):
+    class NodeData(BaseNodeData):
         def __init__(self,
                      board: Board,
                      position_evaluation):#: MCTS.PositionEvaluation):
@@ -128,8 +127,8 @@ class MCTS():
             # the transition table before it has selected them
             self.evaluated = False
 
-        def update_terminal_value(self, value: float):
-            self.search_evaluation.terminal_value = value
+        def update_terminal_result(self, result: Result):
+            self.search_evaluation.terminal_result = result
 
         def add_terminal_move(self, move):
             self.non_terminal_moves.remove(move)
@@ -153,24 +152,20 @@ def evaluate_centre(node: Node):
         (np.einsum('ij,ij', board.o_pieces, info.value_grid)
          - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
         / float(info.value_grid_sum)
+    return value
+
+
+def evaluate_centre_with_prior(node: Node):
+    value = evaluate_centre(node)
     return value, info.policy_logits
 
 
-def grid_search(tree: t.Tree,
+def grid_search(tree: Tree,
                 board: Board,
-                side: Side,
                 plies: int,
                 evaluate_fn: Callable[[Node], float]):
     tree.expand_node(tree.root, plies)
-    nega_max(tree.root, plies, side, evaluate_fn)
-
-    moves = np.array([(n.name) for n in tree.root.children])
-    values = np.array([n.data.value for n in tree.root.children])
-    idx = np.argmax(values) if side == Side.o else np.argmin(values)
-    best_move_value = values[idx]
-
-    best_move = moves[idx]
-    return best_move, best_move_value, []
+    nega_max(tree.root, plies, tree.side, evaluate_fn)
 
 
 def nega_max(node: Node,
@@ -179,8 +174,7 @@ def nega_max(node: Node,
              evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
-        node.data.update_position_value(node.data.board.result.value)
-        return node.data.position_evaluation.value
+        return node.data.board.result
     if plies == 0:
         node.data.update_position_value(evaluate_fn(node))
         return node.data.position_evaluation.value
@@ -201,11 +195,10 @@ def nega_max(node: Node,
 
 
 def mcts_search(config: MCTS.Config,
-                evaluate_fn: Callable[[MCTS.Config, Node],
+                evaluate_fn: Callable[[Node],
                                       Tuple[float, Dict[int, float]]],
-                tree: t.Tree,
-                board: Board,
-                side: Side):
+                tree: Tree,
+                board: Board):
     for _ in range(config.simulations):
         node = tree.root
 
@@ -223,24 +216,23 @@ def mcts_search(config: MCTS.Config,
         node.data.evaluated = True
 
         if node.data.board.result is not None:
-            node = backpropagate_terminal(node,
-                                          node.data.board.result,
-                                          side)
-            continue
-
-        # position may be a in the transpositions table
-        if node.data.position_evaluation.value is None:
-            value, prior = evaluate_fn(node)
-            value = value_to_side(value, side)
-            prior = normalise_prior(node.data.valid_moves, prior)
-            node.data.update_position_value((value, prior))
+            value = node.data.board.result.value
+            node = backpropagate_terminal(tree,
+                                          node,
+                                          node.data.board.result)
         else:
+            # position may be in the transpositions table
+            if node.data.position_evaluation.value is None:
+                value, prior = evaluate_fn(node)
+                prior = normalise_prior(node.data.valid_moves,
+                                        prior)
+                node.data.update_position_value((value, prior))
             value = node.data.position_evaluation.value
-        # tree.expand_node(node, 1)
+            # tree.expand_node(node, 1)
 
         backpropagate(node, value)
 
-    return select_action_not_stupid(config, tree)
+    return
 
 
 def evaluate_nn(node: Node,
@@ -248,7 +240,10 @@ def evaluate_nn(node: Node,
     return net(node.board)
 
 
-def ucb_score(config: MCTS.Config, node: Node, child: Node):
+def ucb_score(config: MCTS.Config,
+              tree: Tree,
+              node: Node,
+              child: Node):
     # pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
     #                 config.pb_c_base) + config.pb_c_init
     # pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
@@ -257,7 +252,7 @@ def ucb_score(config: MCTS.Config, node: Node, child: Node):
            / (child.data.search_evaluation.visit_count + 1)
 
     prior_score = pb_c * node.data.position_evaluation.policy_logits[child.name]
-    value_score = child.data.value
+    value_score = tree.get_node_value(child)
     return prior_score + value_score
 
 
@@ -272,44 +267,21 @@ def normalise_prior(valid_moves, policy_logits):
 
 
 def select_child(config: MCTS.Config,
-                 tree: t.Tree,
+                 tree: Tree,
                  node: Node):
     non_terminal_children = [child for child in node.children if
                              child.name in node.data.non_terminal_moves]
-    _, child_name = max((ucb_score(config, node, child), child.name)
-                        for child in non_terminal_children)
-    child = node.data.child_map[child_name]
+    _, child = max((ucb_score(config, tree, node, child), i)
+                   for i, child in enumerate(non_terminal_children))
+    # zip something so I have a number
 
-    return child
-
-
-def select_action(config: MCTS.Config,
-                  tree: t.Tree):
-
-    _, action = max(((c.data.search_evaluation.visit_count, c.name)
-                    for c in tree.root.children))
-
-    return action, tree.root.data.child_map[action].data.value
+    return non_terminal_children[child]
 
 
-def select_action_not_stupid(config: MCTS.Config,
-                             tree: t.Tree):
-    # FIXME: removed softmax thing (would check game move history)
-    # FIXME: what is the value of that child? avg value_sum?
-    value, action = max(((c.data.value, c.name)
-                         for c in tree.root.children))
-
-    policy = np.zeros((info.width,))
-    for c in tree.root.children:
-        policy[c.name] = c.data.search_evaluation.visit_count
-    policy = softmax(policy)
-    return action, value, policy
-
-
-def backpropagate_terminal(node: Node,
-                           result: Result,
-                           side: Side):
-    node.data.update_terminal_value(result_to_side(result, side))
+def backpropagate_terminal(tree: Tree,
+                           node: Node,
+                           result: Result):
+    node.data.update_terminal_result(result)
 
     if node.is_root:
         return node
@@ -319,14 +291,15 @@ def backpropagate_terminal(node: Node,
 
     # The side to move can choose a win - assume that they will
     if same_side(result, node.data.board._player_to_move):
-        return backpropagate_terminal(node, result, side)
+        return backpropagate_terminal(tree, node, result)
     # The parent has only continuations that lead to terminal results
     elif not node.data.non_terminal_moves:
         # the parent will now choose a draw if possible
-        choices = [c.data.search_evaluation.terminal_value for c in node.children]
-        result = Result.draw if 0.5 in choices else Result(1 - node.data.board._player_to_move)
+        choices = [c.data.search_evaluation.terminal_result
+                   for c in node.children]
+        result = Result.draw if Result.draw in choices else Result(1 - node.data.board._player_to_move)
         assert not same_side(result, node.data.board._player_to_move)
-        return backpropagate_terminal(node, result, side)
+        return backpropagate_terminal(tree, node, result)
 
     # nothing to do
     return node

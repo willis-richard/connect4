@@ -1,5 +1,7 @@
 from src.connect4 import tree
 
+from typing import Dict
+
 
 class BasePlayer():
     def __init__(self, name):
@@ -31,29 +33,28 @@ class HumanPlayer(BasePlayer):
 
 
 class ComputerPlayer(BasePlayer):
-    def __init__(self, name, strategy, nn_storage=None):
+    def __init__(self,
+                 name: str,
+                 strategy,
+                 transition_t: Dict = None,
+                 nn_storage=None):
         super().__init__(name)
         self.tree = tree.Tree(strategy.NodeData,
-                              strategy.PositionEvaluation)
+                              strategy.PositionEvaluation,
+                              transition_t)
         if nn_storage is None:
             self.search_fn = strategy.get_search_fn()
         else:
             net = nn_storage.get_net()
             self.search_fn = strategy.get_search_fn(net)
 
-    def get_move(self, board):
-        side = board._player_to_move
-        self.tree.update_root(board)
-        move, value, policy = self.search_fn(tree=self.tree,
-                                             board=board,
-                                             side=side)
-
-        return move, value, policy
-
     def make_move(self, board):
-        move, value, policy = self.get_move(board)
+        self.tree.update_root(board)
+        self.search_fn(tree=self.tree,
+                       board=board)
+        move, value = self.tree.select_best_move()
         board.make_move(move)
-        return move, value, policy
+        return move, value
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

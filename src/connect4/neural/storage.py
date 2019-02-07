@@ -38,7 +38,9 @@ class NetworkStorage():
         return self.net, self.optimiser
 
 class ReplayStorage():
-    def __init__(self, config: AlphaZeroConfig):
+    def __init__(self,
+                 config: AlphaZeroConfig,
+                 folder_path: str):
         self.window_size = config.window_size
         self.batch_size = config.batch_size
         self.buffer = torch.Tensor()
@@ -49,6 +51,7 @@ class ReplayStorage():
             self.buffer = self.buffer[:self.window_size]
 
     def sample_batch(self):
+        import numpy
         # Sample uniformly across positions.
         move_sum = float(sum(len(g.history) for g in self.buffer))
         games = numpy.random.choice(
