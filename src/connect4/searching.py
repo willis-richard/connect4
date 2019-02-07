@@ -174,7 +174,7 @@ def nega_max(node: Node,
              evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
-        return node.data.board.result
+        return node.data.board.result.value
     if plies == 0:
         node.data.update_position_value(evaluate_fn(node))
         return node.data.position_evaluation.value

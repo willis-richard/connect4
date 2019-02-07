@@ -54,14 +54,14 @@ def test_single():
          [0, 1, 1, 0, 1, 0, 0]], dtype=np.bool_)
 
     board = Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
+                  x_pieces=x_pieces)
 
     computer = ComputerPlayer("test_name",
                               MCTS(MCTS.Config(simulations=8, cpuct=9999)))
 
     print(board)
 
-    move = computer.make_move(board)
+    move, _ = computer.make_move(board)
 
     for pre, fill, node in anytree.RenderTree(computer.tree.root):
             print("%s%s, %s, %s, %s, Node value: %s" % (pre,

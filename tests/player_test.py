@@ -106,7 +106,7 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
 
         print(board)
 
-        move = computer.make_move(board)
+        move, _ = computer.make_move(board)
 
         if plies <= 2:
             for pre, fill, node in anytree.RenderTree(computer.tree.root):
@@ -129,12 +129,12 @@ def test_multiple_moves():
                               GridSearch(plies=4))
     board.make_move(3)
 
-    assert computer.make_move(board) == 3
+    assert computer.make_move(board)[0] == 3
 
     board.make_move(3)
 
-    assert computer.make_move(board) == 3
+    assert computer.make_move(board)[0] == 3
 
     board.make_move(4)
 
-    assert computer.make_move(board) == 2
+    assert computer.make_move(board)[0] == 2
