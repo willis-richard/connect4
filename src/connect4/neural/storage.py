@@ -2,8 +2,9 @@ from src.connect4.neural.config import AlphaZeroConfig
 from src.connect4.neural.network import Model
 
 import torch
-import torch.optim as optim
 import os
+
+from torch.utils.data import DataLoader, Dataset
 
 
 class NetworkStorage():
@@ -24,6 +25,12 @@ class NetworkStorage():
     def file_name(self):
         return self.folder_path + '.' + str(self.iteration) + '.pth'
 
+    def train(self,
+              data: DataLoader,
+              n_epochs: int):
+        self.model.train(data, n_epochs)
+        self.save_model(self.model)
+
     def save_model(self, model):
         self.model = model
         torch.save(
@@ -43,12 +50,23 @@ class ReplayStorage():
                  folder_path: str):
         self.window_size = config.window_size
         self.batch_size = config.batch_size
-        self.buffer = torch.Tensor()
+        self.reset()
 
-    def save_game(self, game):
-        self.buffer = torch.cat((self.buffer, game), 0)
-        if len(self.buffer) > self.window_size:
-            self.buffer = self.buffer[:self.window_size]
+    def reset(self):
+        self.board_buffer = torch.Tensor()
+        self.value_buffer = torch.Tensor()
+        self.policy_buffer = torch.Tensor()
+
+    def save_game(self, boards, values, policies):
+        self.board_buffer = torch.cat((self.board_buffer, boards), 0)
+        self.value_buffer = torch.cat((self.value_buffer, values), 0)
+        self.policy_buffer = torch.cat((self.policy_buffer, policies), 0)
+
+    def get_data(self):
+        data = Connect4Dataset(self.board_buffer,
+                               self.value_buffer,
+                               self.policy_buffer)
+        return DataLoader(data, batch_size=self.batch_size, shuffle=True)
 
     def sample_batch(self):
         import numpy
@@ -60,3 +78,19 @@ class ReplayStorage():
             p=[len(g.history) / move_sum for g in self.buffer])
         game_pos = [(g, numpy.random.randint(len(g.history))) for g in games]
         return [(g.make_image(i), g.make_target(i)) for (g, i) in game_pos]
+
+
+class Connect4Dataset(Dataset):
+    def __init__(self, boards, values, policies):
+        assert len(boards) == len(values) == len(policies)
+        self.boards = boards
+        self.values = values
+        self.policies = policies
+
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx: int):
+        return (self.boards[idx],
+                self.values[idx],
+                self.policies[idx])

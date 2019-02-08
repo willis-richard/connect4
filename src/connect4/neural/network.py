@@ -1,4 +1,5 @@
 from src.connect4.board import Board
+from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import NetworkStats as net_info
 
 import torch
@@ -88,6 +89,7 @@ class PolicyHead(nn.Module):
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
         self.fc1 = nn.Linear(2 * net_info.area, net_info.width)
+        self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -95,7 +97,7 @@ class PolicyHead(nn.Module):
         x = self.relu(x)
         x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
-        x = nn.Softmax(x)
+        x = self.softmax(x)
         return x
 
 
@@ -122,7 +124,7 @@ class Net(nn.Module):
         self.policy_head = PolicyHead()
 
     def forward(self, x):
-        x = x.view(-1,3,6,7)
+        x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
         policy = self.policy_head(x)
@@ -149,6 +151,7 @@ class Model():
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)
+        print(x_policy, y_policy)
         policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
@@ -164,6 +167,13 @@ class Model():
             self.net.train()
 
             for board, y_value, y_policy in data:
+                print(y_policy)
+                print(y_policy.max(1)[0])
+                y_policy = y_policy.max(1)[0]
+
+                board = board.to(self.device)
+                y_value = y_value.to(self.device)
+                y_policy = y_policy.to(self.device)
                 # zero the parameter gradients
                 self.optimiser.zero_grad()
 

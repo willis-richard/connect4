@@ -237,7 +237,14 @@ def mcts_search(config: MCTS.Config,
 
 def evaluate_nn(node: Node,
                 model: Model):
-    return model(node.data.board)
+    value, prior = model(node.data.board)
+    value = value.cpu()
+    value = value.view(-1)
+    value = value.data.numpy()
+    prior = prior.cpu()
+    prior = prior.view(-1)
+    prior = prior.data.numpy()
+    return value, prior
 
 
 def ucb_score(config: MCTS.Config,
@@ -257,13 +264,12 @@ def ucb_score(config: MCTS.Config,
 
 
 def normalise_prior(valid_moves, policy_logits):
-    policy = {a: math.exp(policy_logits[a])
-              for a in valid_moves}
-    policy_sum = sum(policy.values())
-    new_policy = {}
-    for action, p in policy.items():
-        new_policy[action] = p / policy_sum
-    return new_policy
+    invalid_moves = set(range(info.width)).difference(valid_moves)
+    if invalid_moves:
+        for a in invalid_moves:
+            policy_logits[a] = 0.0
+    policy_logits = policy_logits / np.sum(policy_logits)
+    return policy_logits
 
 
 def select_child(config: MCTS.Config,

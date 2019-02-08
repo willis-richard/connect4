@@ -78,8 +78,8 @@ class Tree():
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = c.data.search_evaluation.visit_count
-        policy = softmax(policy)
-        return
+        policy = policy / np.sum(policy)
+        return policy
 
     def take_action(self, action, node):
         child_names = [c.name for c in node.children]

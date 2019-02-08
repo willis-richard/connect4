@@ -1,6 +1,7 @@
 from src.connect4.board import Board
 from src.connect4.player import ComputerPlayer
 from src.connect4.searching import MCTS
+from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
@@ -14,28 +15,38 @@ class TrainingGame():
     def __init__(self,
                  player: ComputerPlayer,
                  board: Board,
-                 replay_storage):
+                 replay_storage: ReplayStorage):
         self.player = player
         self.board = board
         self.replay_storage = replay_storage
 
     def play(self):
-        boards = torch.Tensor()
-        policies = torch.Tensor()
+        boards = []
+        policies = []
         while self.board.result is None:
             self.player.make_move(self.board)
-            policy = self.player.tree.get_policy()
+            policy = torch.Tensor(self.player.tree.get_policy())
 
-            torch.concatenate(boards, self.board.to_tensor())
-            torch.concatenate(policies, policy)
+            boards.append(self.board.to_tensor())
+            policies.append(policy)
 
-        values = self.create_values()
-        self.replay_storage.push(boards, values, policies)
+        boards = torch.stack(boards).squeeze()
+        values = self.create_values(len(boards))
+        policies = torch.stack(policies)
+        # print(boards)
+        # print(values)
+        # print(policies)
+        # game = torch.cat((boards,
+        #                   values,
+        #                   policies), dim=1)
+        self.replay_storage.save_game(boards,
+                                      values,
+                                      policies)
         return self.board.result
 
-    def create_values(self):
+    def create_values(self, length):
         # label board data with result
-        values = torch.ones([2, 4], dtype=torch.float64)
+        values = torch.ones((length,), dtype=torch.float)
         if self.board.result == Result.o_win:
             values[1::2] = 0.
         elif self.board.result == Result.x_win:
@@ -60,14 +71,16 @@ class TrainingLoop():
     def loop(self):
         transition_t = {}
         player = ComputerPlayer('AlphaZero',
-                                MCTS(MCTS.Config(simulations=2500,
+                                MCTS(MCTS.Config(simulations=100,
                                                  cpuct=9999)),
                                 transition_t,
                                 self.nn_storage.get_model())
+        self.replay_storage.reset()
 
         for _ in range(self.config.n_training_games):
             TrainingGame(copy.copy(player),
                          Board(),
-                         self.nn_storage).play()
+                         self.replay_storage).play()
 
-        self.nn_storage.train(self.config.n_training_epochs)
+        self.nn_storage.train(self.replay_storage.get_data(),
+                              self.config.n_training_epochs)
