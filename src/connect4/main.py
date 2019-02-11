@@ -22,7 +22,7 @@ if __name__ == "__main__":
         # player_2 = player.ComputerPlayer("mcts_2",
         #                                  MCTS(MCTS.Config(simulations=2500,
         #                                                   cpuct=9999)))
-        match = Match(True, 24, player_1, player_2)
+        match = Match(True, player_1, player_2, plies=1)
         match.play(agents=12)
         # match = Match(True, 1, player_1, player_2)
         # match.play(agents=1)

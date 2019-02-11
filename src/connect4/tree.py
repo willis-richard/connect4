@@ -79,7 +79,8 @@ class Tree():
         # for c in self.root.children:
         #     policy[c.name] = c.data.search_evaluation.visit_count
         # policy = policy / np.sum(policy)
-        _, action = max((c.data.search_evaluation.visit_count, c.name)
+        # FIXME: was visit_count
+        _, action = max((c.data.value, c.name)
                         for c in self.root.children)
         return action
 
