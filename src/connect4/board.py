@@ -51,7 +51,7 @@ class Board():
 
     def __repr__(self):
         display = np.chararray(self.o_pieces.shape)
-        display[:] = ' '
+        display[:] = '-'
         display[self.o_pieces] = 'o'
         display[self.x_pieces] = 'x'
         return \

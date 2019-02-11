@@ -16,7 +16,8 @@ class Match():
                  display: bool,
                  player_1: BasePlayer,
                  player_2: BasePlayer,
-                 plies: int = 0):
+                 plies: int = 0,
+                 switch: bool = False):
         self._player_1 = player_1
         self._player_2 = player_2
 
@@ -26,25 +27,32 @@ class Match():
                            copy(player_1),
                            copy(player_2),
                            copy(board))
-                      for board in ips] + \
+                      for board in ips]
+
+        self.n = len(self.games)
+
+        if switch:
+            self.games += \
                      [Game(display,
                            copy(player_2),
                            copy(player_1),
                            board)
                       for board in ips]
+        self.switch = switch
 
     def play(self, agents=1):
         if agents == 1:
             results = []
             for i in range(len(self.games)):
-                results.append(self.p1_first_games[i].play().value)
+                results.append(self.games[i].play().value)
         else:
             results = self.play_parallel(agents)
 
         results = np.array(results, dtype='f')
         # flip the results of the games where player_2 moved first
-        results[int(len(self.games) / 2):] *= -1.0
-        results[int(len(self.games) / 2):] += 1.0
+        if self.switch:
+            results[self.n:] *= -1.0
+            results[self.n:] += 1.0
         print("The results are:\nPlayer one: {} wins, {} draws, {} losses"
               .format(np.sum(results == 1),
                       np.sum(results == 0.5),

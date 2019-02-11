@@ -1,6 +1,8 @@
 from src.connect4 import tree
 
-from typing import Dict
+from src.connect4.neural.network import Net
+
+from typing import Dict, Optional
 
 
 class BasePlayer():
@@ -16,7 +18,6 @@ class HumanPlayer(BasePlayer):
         super().__init__(name)
 
     def make_move(self, board):
-        super().make_move(board)
         move = -1
         while move not in board.valid_moves:
             try:
@@ -26,7 +27,7 @@ class HumanPlayer(BasePlayer):
                 print("Try again dipshit")
                 pass
         board.make_move(int(move))
-        return move
+        return move, 1
 
     def __str__(self):
         return super().__str__() + ", type: Human"
@@ -37,7 +38,7 @@ class ComputerPlayer(BasePlayer):
                  name: str,
                  strategy,
                  transition_t: Dict = None,
-                 net=None):
+                 net: Optional[Net] = None):
         super().__init__(name)
         self.tree = tree.Tree(strategy.NodeData,
                               strategy.PositionEvaluation,

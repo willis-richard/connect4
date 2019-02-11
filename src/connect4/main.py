@@ -17,15 +17,15 @@ if __name__ == "__main__":
         # player_1 = player.ComputerPlayer("mcts_1",
         #                                  MCTS(MCTS.Config(simulations=2500,
         #                                                   cpuct=9999)))
-        player_2 = player.ComputerPlayer("grid_2",
-                                         GridSearch(plies=4))
-        # player_2 = player.ComputerPlayer("mcts_2",
-        #                                  MCTS(MCTS.Config(simulations=2500,
-        #                                                   cpuct=9999)))
-        match = Match(True, player_1, player_2, plies=1)
-        match.play(agents=12)
-        # match = Match(True, 1, player_1, player_2)
-        # match.play(agents=1)
+        # player_2 = player.ComputerPlayer("grid_2",
+        #                                  GridSearch(plies=4))
+        player_2 = player.ComputerPlayer("mcts_2",
+                                         MCTS(MCTS.Config(simulations=2500,
+                                                          cpuct=9999)))
+        match = Match(True, player_1, player_2, plies=1, switch=True)
+        # match.play(agents=12)
+        # match = Match(True, player_1, player_2, plies=0, switch=False)
+        match.play(agents=1)
     else:
         folder_path = '/home/richard/Downloads/nn/new_dir'
         TrainingLoop(AlphaZeroConfig,
