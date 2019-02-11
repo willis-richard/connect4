@@ -1,7 +1,6 @@
 from src.connect4.board import Board
 from src.connect4.player import ComputerPlayer
 from src.connect4.searching import MCTS
-from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
@@ -25,10 +24,10 @@ class TrainingGame():
         policies = []
         while self.board.result is None:
             self.player.make_move(self.board)
-            policy = torch.Tensor(self.player.tree.get_policy())
 
             boards.append(self.board.to_tensor())
-            policies.append(policy)
+            policy = self.player.tree.get_policy()
+            policies.append(torch.tensor(policy))
 
         boards = torch.stack(boards).squeeze()
         values = self.create_values(len(boards))

@@ -55,7 +55,7 @@ class ReplayStorage():
     def reset(self):
         self.board_buffer = torch.Tensor()
         self.value_buffer = torch.Tensor()
-        self.policy_buffer = torch.Tensor()
+        self.policy_buffer = torch.LongTensor()
 
     def save_game(self, boards, values, policies):
         self.board_buffer = torch.cat((self.board_buffer, boards), 0)

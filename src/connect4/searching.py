@@ -244,6 +244,7 @@ def evaluate_nn(node: Node,
     prior = prior.cpu()
     prior = prior.view(-1)
     prior = prior.data.numpy()
+    prior = softmax(prior)
     return value, prior
 
 

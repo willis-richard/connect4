@@ -89,7 +89,7 @@ class PolicyHead(nn.Module):
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
         self.fc1 = nn.Linear(2 * net_info.area, net_info.width)
-        self.softmax = nn.Softmax(dim=2)
+        # self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -97,7 +97,9 @@ class PolicyHead(nn.Module):
         x = self.relu(x)
         x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
-        x = self.softmax(x)
+        # x = self.softmax(x)
+        # No idea why but if I had [[[ output then classifier bitched and wanted [[
+        x = x.view(-1, net_info.width)
         return x
 
 
@@ -140,6 +142,7 @@ class Model():
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        # self.device=torch.device("cpu")
         self.net.to(self.device)
         self.value_loss = nn.MSELoss()
         self.policy_loss = nn.CrossEntropyLoss()
@@ -151,7 +154,6 @@ class Model():
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)
-        print(x_policy, y_policy)
         policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
@@ -167,9 +169,9 @@ class Model():
             self.net.train()
 
             for board, y_value, y_policy in data:
-                print(y_policy)
-                print(y_policy.max(1)[0])
-                y_policy = y_policy.max(1)[0]
+                # print(y_policy)
+                # print(y_policy.max(1)[0])
+                # y_policy = y_policy.max(1)[0]
 
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)

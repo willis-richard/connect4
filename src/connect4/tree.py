@@ -75,11 +75,13 @@ class Tree():
         return action, value
 
     def get_policy(self):
-        policy = np.zeros((info.width,))
-        for c in self.root.children:
-            policy[c.name] = c.data.search_evaluation.visit_count
-        policy = policy / np.sum(policy)
-        return policy
+        # policy = np.zeros((info.width,))
+        # for c in self.root.children:
+        #     policy[c.name] = c.data.search_evaluation.visit_count
+        # policy = policy / np.sum(policy)
+        _, action = max((c.data.search_evaluation.visit_count, c.name)
+                        for c in self.root.children)
+        return action
 
     def take_action(self, action, node):
         child_names = [c.name for c in node.children]
