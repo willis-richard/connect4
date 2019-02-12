@@ -241,10 +241,11 @@ def evaluate_nn(node: Node,
     value = value.cpu()
     value = value.view(-1)
     value = value.data.numpy()
-    prior = prior.cpu()
-    prior = prior.view(-1)
-    prior = prior.data.numpy()
-    prior = softmax(prior)
+    # prior = prior.cpu()
+    # prior = prior.view(-1)
+    # prior = prior.data.numpy()
+    # prior = softmax(prior)
+    prior = info.policy_logits
     return value, prior
 
 

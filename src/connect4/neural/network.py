@@ -123,7 +123,7 @@ class Net(nn.Module):
         self.body = nn.Sequential(convolutional_layer,
                                   nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
         self.value_head = ValueHead()
-        self.policy_head = PolicyHead()
+        # self.policy_head = PolicyHead()
 
     def forward(self, x):
         x = x.view(-1, net_info.channels, info.height, info.width)
@@ -154,10 +154,11 @@ class Model():
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)
-        policy_loss = self.policy_loss(x_policy, y_policy)
+        # policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        return value_loss - policy_loss
+        # return value_loss - policy_loss
+        return value_loss
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
@@ -169,13 +170,10 @@ class Model():
             self.net.train()
 
             for board, y_value, y_policy in data:
-                # print(y_policy)
-                # print(y_policy.max(1)[0])
-                # y_policy = y_policy.max(1)[0]
-
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
                 y_policy = y_policy.to(self.device)
+
                 # zero the parameter gradients
                 self.optimiser.zero_grad()
 
