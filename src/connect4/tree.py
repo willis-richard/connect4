@@ -84,18 +84,6 @@ class Tree():
                         for c in self.root.children)
         return action
 
-    def take_action(self, action, node):
-        child_names = [c.name for c in node.children]
-        if action in child_names:
-            return node.children[child_names.index(action)]
-
-        return self.create_child(action, node)
-
-    def create_child(self, action, node):
-        new_board = copy(node.data.board)
-        new_board._make_move(action)
-        return self.create_node(action, new_board, parent=node)
-
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
             board_result, position_evaluation = self.transition_t[board]
@@ -118,7 +106,9 @@ class Tree():
 
         if not node.children:
             for move in node.data.valid_moves:
-                self.create_child(move, node)
+                new_board = copy(node.data.board)
+                new_board._make_move(move)
+                self.create_node(move, new_board, parent=node)
 
         for child in node.children:
             self.expand_node(child, plies - 1)

@@ -105,7 +105,7 @@ class MCTS():
         @property
         def value(self):
             if self.terminal_result is not None:
-                return self.terminal_result.value
+                return self.terminal_result[0].value
             if self.visit_count == 0:
                 return 0
             return self.value_sum / self.visit_count
@@ -127,8 +127,10 @@ class MCTS():
             # the transition table before it has selected them
             self.evaluated = False
 
-        def update_terminal_result(self, result: Result):
-            self.search_evaluation.terminal_result = result
+        def update_terminal_result(self,
+                                   result: Result,
+                                   age: int):
+            self.search_evaluation.terminal_result = (result, age)
 
         def add_terminal_move(self, move):
             self.non_terminal_moves.remove(move)
@@ -174,7 +176,8 @@ def nega_max(node: Node,
              evaluate_fn: Callable[[Node], float]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
-        return node.data.board.result.value
+        # Prefer faster wins
+        return node.data.board.result.value - node.data.board.age / 1000.0
     if plies == 0:
         node.data.update_position_value(evaluate_fn(node))
         return node.data.position_evaluation.value
@@ -217,9 +220,9 @@ def mcts_search(config: MCTS.Config,
 
         if node.data.board.result is not None:
             value = node.data.board.result.value
-            node = backpropagate_terminal(tree,
-                                          node,
-                                          node.data.board.result)
+            node = backpropagate_terminal(node,
+                                          node.data.board.result,
+                                          node.data.board.age)
         else:
             # position may be in the transpositions table
             if node.data.position_evaluation.value is None:
@@ -286,10 +289,10 @@ def select_child(config: MCTS.Config,
     return non_terminal_children[child]
 
 
-def backpropagate_terminal(tree: Tree,
-                           node: Node,
-                           result: Result):
-    node.data.update_terminal_result(result)
+def backpropagate_terminal(node: Node,
+                           result: Result,
+                           age: int):
+    node.data.update_terminal_result(result, age)
 
     if node.is_root:
         return node
@@ -297,17 +300,29 @@ def backpropagate_terminal(tree: Tree,
     node.parent.data.add_terminal_move(node.name)
     node = node.parent
 
-    # The side to move can choose a win - assume that they will
+    # The side to move can choose a win - they choose the quickest forcing line
+    # This can only be entered if we have recursed at least once
     if same_side(result, node.data.board._player_to_move):
-        return backpropagate_terminal(tree, node, result)
-    # The parent has only continuations that lead to terminal results
+        age = min((c.data.board.age
+                   for c in node.children
+                   if c.name in node.data.non_terminal_moves))
+        return backpropagate_terminal(node, result, age)
+    # The parent only has continuations that lead to terminal results
+    # None of them can be winning for this node, because otherwise we would
+    # have previously set the terminal value of this node, and never visited it
+    # again in the mcts
     elif not node.data.non_terminal_moves:
         # the parent will now choose a draw if possible
-        choices = [c.data.search_evaluation.terminal_result
-                   for c in node.children]
-        result = Result.draw if Result.draw in choices else Result(1 - node.data.board._player_to_move)
+        # if forced to choose a loss, will choose the longest one
+        # N.B. in connect4 all draws have age 42
+        _, age, child = max((value_to_side(c.data.value,
+                                           node.data.board._player_to_move),
+                             c.data.board.age,
+                             i)
+                            for i, c in enumerate(node.children))
+        result = node.children[child].data.board.result
         assert not same_side(result, node.data.board._player_to_move)
-        return backpropagate_terminal(tree, node, result)
+        return backpropagate_terminal(node, result, age)
 
     # nothing to do
     return node
