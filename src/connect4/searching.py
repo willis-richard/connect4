@@ -18,44 +18,6 @@ import math
 import numpy as np
 
 
-class GridSearch():
-    def __init__(self, plies):
-        self.plies = plies
-
-    def get_search_fn(self):
-        return partial(grid_search,
-                       plies=self.plies,
-                       evaluate_fn=evaluate_centre)
-
-    class PositionEvaluation():
-        def __init__(self):
-            self.value = None
-
-        def update_value(self, value):
-            self.value = value
-
-        def __repr__(self):
-            return "position_evaluation: " + str(self.value)
-
-    class SearchEvaluation():
-        def __init__(self):
-            self.value = None
-
-        def update_value(self, value):
-            self.value = value
-
-        def __repr__(self):
-            return "tree_value: " + str(self.value)
-
-    class NodeData(BaseNodeData):
-        def __init__(self,
-                     board: Board,
-                     position_evaluation):#: GridSearch.PositionEvaluation):
-            super().__init__(board,
-                             position_evaluation,
-                             GridSearch.SearchEvaluation())
-
-
 class MCTS():
     class Config():
         def __init__(self, simulations, cpuct=None):
@@ -161,40 +123,6 @@ def evaluate_centre_with_prior(node: Node):
     value = evaluate_centre(node)
     return value, info.policy_logits
 
-
-def grid_search(tree: Tree,
-                board: Board,
-                plies: int,
-                evaluate_fn: Callable[[Node], float]):
-    tree.expand_node(tree.root, plies)
-    nega_max(tree.root, plies, tree.side, evaluate_fn)
-
-
-def nega_max(node: Node,
-             plies: int,
-             side: Side,
-             evaluate_fn: Callable[[Node], float]):
-    # https://en.wikipedia.org/wiki/Negamax
-    if node.data.board.result is not None:
-        # Prefer faster wins
-        return node.data.board.result.value - node.data.board.age / 1000.0
-    if plies == 0:
-        node.data.update_position_value(evaluate_fn(node))
-        return node.data.position_evaluation.value
-
-    if side == Side.o:
-        value = -2
-        for child in node.children:
-            value = max(value,
-                        nega_max(child, plies - 1, Side.x, evaluate_fn))
-    else:
-        value = 2
-        for child in node.children:
-            value = min(value,
-                        nega_max(child, plies - 1, Side.o, evaluate_fn))
-
-    node.data.update_search_value(value)
-    return value
 
 
 def mcts_search(config: MCTS.Config,

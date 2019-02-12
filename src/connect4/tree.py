@@ -11,19 +11,11 @@ from typing import Dict, Tuple
 class BaseNodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self,
-                 board: Board,
-                 position_evaluation,
-                 search_evaluation):
+                 board: Board):
         self.board = board
         self.valid_moves = board.valid_moves
-        self.position_evaluation = position_evaluation
-        self.search_evaluation = search_evaluation
-
-    def update_position_value(self, value):
-        self.position_evaluation.update_value(value)
-
-    def update_search_value(self, value):
-        self.search_evaluation.update_value(value)
+        self.position_value = None
+        self.search_value = None
 
     @property
     def value(self):
@@ -48,23 +40,11 @@ class BaseNodeData():
 
 class Tree():
     def __init__(self,
-                 node_data_type,
-                 position_evaluation_type,
-                 transition_t: Dict = None):
-        self.node_data_type = node_data_type
-        self.position_evaluation_type = position_evaluation_type
-
-        # transition_t is a map from board to NodeEvaluation
-        # Ideally it would be to NodeData, but I have not solved the
-        # transposition problem in my search tree yet
-        self.transition_t = dict() if transition_t is None else transition_t
-        # FIXME: Actually only set when passed a board
-        self.side = Side.o
-
-    def update_root(self, board: Board):
-        self.root = self.create_node('root', copy(board))
-        # self.transition_t.age(board.age)
+                 board: Board,
+                 transition_t):
         self.side = board._player_to_move
+        self.root = self.create_node('root', copy(board))
+        self.transition_t = transition_t
 
     def get_node_value(self, node) -> float:
         return value_to_side(node.data.value, self.side)
@@ -86,7 +66,7 @@ class Tree():
 
     def create_node(self, name, board, parent=None):
         if board in self.transition_t:
-            board_result, position_evaluation = self.transition_t[board]
+            board_result, _ = self.transition_t[board]
             board.result = board_result
         else:
             board_result = board.check_terminal_position()

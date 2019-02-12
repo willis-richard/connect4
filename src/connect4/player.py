@@ -31,30 +31,3 @@ class HumanPlayer(BasePlayer):
 
     def __str__(self):
         return super().__str__() + ", type: Human"
-
-
-class ComputerPlayer(BasePlayer):
-    def __init__(self,
-                 name: str,
-                 strategy,
-                 transition_t: Dict = None,
-                 net: Optional[Net] = None):
-        super().__init__(name)
-        self.tree = tree.Tree(strategy.NodeData,
-                              strategy.PositionEvaluation,
-                              transition_t)
-        if net is None:
-            self.search_fn = strategy.get_search_fn()
-        else:
-            self.search_fn = strategy.get_search_fn(net)
-
-    def make_move(self, board):
-        self.tree.update_root(board)
-        self.search_fn(tree=self.tree,
-                       board=board)
-        move, value = self.tree.select_best_move()
-        board.make_move(move)
-        return move, value
-
-    def __str__(self):
-        return super().__str__() + ", type: Computer"
