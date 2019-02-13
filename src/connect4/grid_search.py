@@ -1,62 +1,68 @@
+from src.connect4.board import Board
+from src.connect4.evaluators import Evaluator
 from src.connect4.player import BasePlayer
-from src.connect4.tree import BaseNodeData
+from src.connect4.tree import BaseNodeData, Tree
 from src.connect4.utils import Side
 
 from anytree import Node
 
+from typing import Callable, Dict, Tuple
+
 
 class GridSearch(BasePlayer):
     def __init__(self,
-                 name: str
-                 config,
-                 evaluator):
+                 name: str,
+                 plies: int,
+                 evaluator: Evaluator):
         super().__init__(name)
-        self.config = config
+        self.plies = plies
         self.evaluator = evaluator
 
-    class NodeData(BaseNodeData):
-        def __init__(self):
-            return
-
     def make_move(self, board):
-        self.tree = Tree(board, self.evaluator.transition_t)
+        tree = Tree(board,
+                    self.evaluator.result_table,
+                    BaseNodeData)
 
-        self.tree.expand_node(self.tree.root,
-                              self.config.plies)
-        self.nega_max(self.tree.root,
-                      self.config.plies)
+        tree.expand_node(tree.root,
+                         self.plies)
+        nega_max(tree.root,
+                 self.plies,
+                 self.evaluator)
 
-        move, value = self.tree.select_best_move()
+        move, value = tree.select_best_move()
         board.make_move(move)
-        return move, value
-
-    def nega_max(node: Node,
-                 plies: int):
-        # https://en.wikipedia.org/wiki/Negamax
-        if node.data.board.result is not None:
-            # Prefer faster wins
-            board = node.data.board
-            return board.result.value - board.age / 1000.0
-        if plies == 0:
-            value, _ = self.evaluator(node)
-            node.data.value = value
-            return value
-
-        side = node.data.board._player_to_move
-
-        if side == Side.o:
-            value = -2
-            for child in node.children:
-                value = max(value,
-                            nega_max(child, plies - 1))
-            else:
-                value = 2
-                for child in node.children:
-                    value = min(value,
-                                nega_max(child, plies - 1))
-
-        node.data.value = value
-        return value
+        return move, value, tree
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
+
+
+def nega_max(node: Node,
+             plies: int,
+             evaluator: Callable[[Board],
+                                 Tuple[float, Dict[int, float]]]):
+    # https://en.wikipedia.org/wiki/Negamax
+    if node.data.board.result is not None:
+        # Prefer faster wins
+        board = node.data.board
+        return board.result.value - board.age / 10000.0
+    if plies == 0:
+        value = evaluator(node.data.board)
+        node.data.position_value = value
+        return value
+
+    side = node.data.board._player_to_move
+
+    if side == Side.o:
+        value = -2
+        for child in node.children:
+            value = max(value,
+                        nega_max(child, plies - 1, evaluator))
+    else:
+        value = 2
+        for child in node.children:
+            value = min(value,
+                        nega_max(child, plies - 1, evaluator))
+
+    node.data.search_value = value
+    return value

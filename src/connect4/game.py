@@ -24,10 +24,10 @@ class Game():
             if self.display:
                 print(self._board)
             if self._board._player_to_move == Side.o:
-                move, _ = self._player_o.make_move(self._board)
+                move, _, _ = self._player_o.make_move(self._board)
                 print(self._player_o.name + " selected move: ", move)
             else:
-                move, _ = self._player_x.make_move(self._board)
+                move, _, _ = self._player_x.make_move(self._board)
                 print(self._player_x.name + " selected move: ", move)
             self.move_history = np.append(self.move_history, move)
         return self._board.result

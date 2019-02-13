@@ -1,10 +1,8 @@
 from src.connect4.board import Board
-from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import Side, value_to_side
+from src.connect4.utils import Result, Side, value_to_side
 
 from anytree import Node
 from copy import copy
-import numpy as np
 from typing import Dict, Tuple
 
 
@@ -17,37 +15,38 @@ class BaseNodeData():
         self.position_value = None
         self.search_value = None
 
-    @property
-    def value(self):
+    def value(self, side: Side):
         if self.board.result:
-            return self.board.result.value
-        elif self.search_evaluation.value is not None:
-            return self.search_evaluation.value
-        elif self.position_evaluation.value is not None:
-            return self.position_evaluation.value
+            return value_to_side(self.board.result.value, side)
+        elif self.search_value is not None:
+            return value_to_side(float(self.search_value), side)
+        elif self.position_value is not None:
+            return value_to_side(float(self.position_value), side)
         else:
             # position is unknown - assume lost
-            return 0
+            return 0.0
 
     def __repr__(self):
         return \
             "board: " + str(self.board) + \
             ",  valid_moves: " + str(self.valid_moves) + \
             ",  (board_result: " + str(self.board.result) + \
-            ",  position_evaluation: (" + str(self.position_evaluation) + ")" + \
-            ",  search_evaluation: (" + str(self.search_evaluation) + "))"
+            ",  position_value: (" + str(self.position_value) + ")" + \
+            ",  search_value: (" + str(self.search_value) + "))"
 
 
 class Tree():
     def __init__(self,
                  board: Board,
-                 transition_t):
+                 result_table: Dict[int, Result],
+                 node_data_type):
         self.side = board._player_to_move
+        self.result_table = result_table
+        self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
-        self.transition_t = transition_t
 
-    def get_node_value(self, node) -> float:
-        return value_to_side(node.data.value, self.side)
+    def get_node_value(self, node):
+        return node.data.value(self.side)
 
     def select_best_move(self) -> Tuple[int, float]:
         value, action = max(((self.get_node_value(c), c.name)
@@ -65,15 +64,13 @@ class Tree():
         return action
 
     def create_node(self, name, board, parent=None):
-        if board in self.transition_t:
-            board_result, _ = self.transition_t[board]
+        if board in self.result_table:
+            board_result = self.result_table[board]
             board.result = board_result
         else:
             board_result = board.check_terminal_position()
-            position_evaluation = self.position_evaluation_type()
-            self.transition_t[board] = (board_result, position_evaluation)
-        node_data = self.node_data_type(board,
-                                        position_evaluation)
+            self.result_table[board] = board_result
+        node_data = self.node_data_type(copy(board))
 
         node = Node(name, parent=parent, data=node_data)
         return node
@@ -88,7 +85,7 @@ class Tree():
             for move in node.data.valid_moves:
                 new_board = copy(node.data.board)
                 new_board._make_move(move)
-                self.create_node(move, new_board, parent=node)
+                child = self.create_node(move, new_board, parent=node)
 
         for child in node.children:
             self.expand_node(child, plies - 1)

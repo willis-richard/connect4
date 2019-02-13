@@ -1,7 +1,8 @@
 from src.connect4.board import Board
+import src.connect4.evaluators as evaluators
 from src.connect4.match import Match
-from src.connect4.player import ComputerPlayer
-from src.connect4.searching import MCTS
+from src.connect4.player import BasePlayer
+from src.connect4.mcts import MCTS
 from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
@@ -9,25 +10,24 @@ from src.connect4.neural.storage import (Connect4Dataset,
                                          NetworkStorage,
                                          ReplayStorage)
 
-import copy
+from copy import copy
 import torch
 import torch.utils.data as data
 
 
 class TrainingGame():
     def __init__(self,
-                 player: ComputerPlayer,
-                 board: Board,
+                 player: BasePlayer,
                  replay_storage: ReplayStorage):
         self.player = player
-        self.board = board
         self.replay_storage = replay_storage
 
     def play(self):
+        board = Board()
         boards = []
         policies = []
         while self.board.result is None:
-            self.player.make_move(self.board)
+            self.player.make_move(board)
 
             boards.append(self.board.to_tensor())
             policy = self.player.tree.get_policy()
@@ -36,12 +36,7 @@ class TrainingGame():
         boards = torch.stack(boards).squeeze()
         values = self.create_values(len(boards))
         policies = torch.stack(policies)
-        # print(boards)
-        # print(values)
-        # print(policies)
-        # game = torch.cat((boards,
-        #                   values,
-        #                   policies), dim=1)
+
         self.replay_storage.save_game(boards,
                                       values,
                                       policies)
@@ -84,16 +79,19 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        transition_t = {}
-        player = ComputerPlayer('AlphaZero',
-                                MCTS(MCTS.Config(simulations=100,
-                                                 cpuct=9999)),
-                                transition_t,
-                                self.nn_storage.get_model())
+        model = self.nn_storage.get_model()
+        evaluator = evaluators.NetEvaluator(
+            evaluators.evaluate_nn,
+            model)
+        player = MCTS('AlphaZero',
+                      MCTS.Config(simulations=100,
+                                  cpuct=9999),
+                      evaluator)
+
         self.replay_storage.reset()
 
         for _ in range(self.config.n_training_games):
-            TrainingGame(copy.copy(player),
+            TrainingGame(copy(player),
                          Board(),
                          self.replay_storage).play()
 
@@ -102,12 +100,16 @@ class TrainingLoop():
 
     def evaluate(self):
         self.test_8ply()
-        self.match(ComputerPlayer("mcts",
-                                  MCTS(MCTS.Config(simulations=100,
-                                                   cpuct=9999))))
-        self.match(ComputerPlayer("mcts",
-                                  MCTS(MCTS.Config(simulations=2500,
-                                                   cpuct=9999))))
+        evaluator = evaluators.Evaluator(
+            evaluators.evaluate_centre_with_prior)
+        self.match(MCTS("mcts",
+                        MCTS.Config(simulations=100,
+                                    cpuct=9999),
+                        evaluator))
+        self.match(MCTS("mcts",
+                        MCTS.Config(simulations=2500,
+                                    cpuct=9999),
+                        evaluator))
         return
 
     def test_8ply(self):
@@ -128,8 +130,8 @@ class TrainingLoop():
 
         print("8 Ply Test Stats:  ", test_stats)
 
-    def match(self, opponent: ComputerPlayer):
-        player = ComputerPlayer('AlphaZero',
+    def match(self, opponent: MCTS):
+        player = MCTS('AlphaZero',
                                 MCTS(MCTS.Config(simulations=100,
                                                  cpuct=9999)),
                                 net=self.nn_storage.get_model())

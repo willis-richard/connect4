@@ -1,6 +1,7 @@
 from src.connect4.board import Board
-from src.connect4.player import ComputerPlayer
-from src.connect4.searching import GridSearch, MCTS
+import src.connect4.evaluators as evaluators
+from src.connect4.grid_search import GridSearch
+from src.connect4.mcts import MCTS, MCTSConfig
 
 import anytree
 import pytest
@@ -91,32 +92,38 @@ ans = [[1], [1], [1], [6], [2, 5]]
 
 assert len(o_pieces) == len(x_pieces) == len(plies) == len(ans)
 
+boards = [Board(o_pieces=o, x_pieces=x)
+          for o, x in zip(o_pieces, x_pieces)]
 
-@pytest.mark.parametrize("n,o_pieces,x_pieces,plies,ans",
-                         [(n, o, x, d, a) for n, o, x, d, a in zip(range(len(ans)), o_pieces, x_pieces, plies, ans)])
-def test_next_move(n, o_pieces, x_pieces, plies, ans):
-    computers = [ComputerPlayer("grid_test",
-                                GridSearch(plies=plies)),
-                 ComputerPlayer("mcts_test",
-                                MCTS(MCTS.Config(simulations=7**plies,
-                                                 cpuct=9999)))]
+
+@pytest.mark.parametrize("n,board,plies,ans",
+                         [(n, b, d, a) for n, b, d, a
+                          in zip(range(len(ans)), boards, plies, ans)])
+def test_next_move(n, board, plies, ans):
+    computers = [
+        # GridSearch("grid_test",
+        #                     plies,
+        #                     evaluators.Evaluator(
+        #                         evaluators.evaluate_centre)),
+                 MCTS("mcts_test",
+                      MCTSConfig(simulations=7**plies + 1,
+                                 cpuct=9999),
+                      evaluators.Evaluator(
+                          evaluators.evaluate_centre_with_prior))]
     for computer in computers:
-        board = Board(o_pieces=copy(o_pieces),
-                      x_pieces=copy(x_pieces))
-
         print(board)
 
-        move, _ = computer.make_move(board)
+        move, _, tree = computer.make_move(board)
 
         if plies <= 2:
-            for pre, fill, node in anytree.RenderTree(computer.tree.root):
-                print("%s%s, %s, %s, %s, %s" % (pre,
+            for pre, fill, node in anytree.RenderTree(tree.root):
+                print("%s%s, %3d, %s, %s, %s" % (
+                    pre,
                     node.name,
+                    tree.get_node_value(node),
                     node.data.board.result,
-                    node.data.position_evaluation,
-                    node.data.search_evaluation,
-                    node.data.value))
-
+                    node.data.position_value,
+                    node.data.search_value))
 
         assert move in ans
     return
@@ -125,8 +132,10 @@ def test_next_move(n, o_pieces, x_pieces, plies, ans):
 def test_multiple_moves():
     board = Board()
 
-    computer = ComputerPlayer("test_name",
-                              GridSearch(plies=4))
+    computer = GridSearch("grid_test",
+                          4,
+                          evaluators.Evaluator(
+                              evaluators.evaluate_centre))
     board.make_move(3)
 
     assert computer.make_move(board)[0] == 3
