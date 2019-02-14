@@ -52,7 +52,14 @@ o_pieces = [
          [0, 0, 0, 0, 1, 0, 0],
          [0, 0, 0, 1, 1, 0, 0],
          [0, 0, 1, 0, 0, 0, 0],
-         [0, 0, 0, 1, 1, 1, 0]], dtype=np.bool_)
+         [0, 0, 0, 1, 1, 1, 0]], dtype=np.bool_),
+    np.array(
+        [[0, 0, 0, 0, 1, 1, 1],
+         [0, 0, 1, 1, 0, 0, 0],
+         [0, 0, 1, 0, 0, 1, 0],
+         [0, 0, 0, 1, 1, 1, 0],
+         [0, 0, 1, 0, 0, 0, 1],
+         [1, 0, 0, 1, 1, 1, 0]], dtype=np.bool_)
 ]
 
 x_pieces = [
@@ -97,11 +104,18 @@ x_pieces = [
          [0, 0, 0, 1, 0, 0, 0],
          [0, 0, 1, 0, 0, 0, 0],
          [0, 0, 0, 1, 1, 0, 0],
-         [0, 1, 1, 0, 0, 0, 1]], dtype=np.bool_)
+         [0, 1, 1, 0, 0, 0, 1]], dtype=np.bool_),
+    np.array(
+        [[0, 0, 1, 1, 0, 0, 0],
+         [0, 0, 0, 0, 1, 1, 1],
+         [0, 0, 0, 1, 1, 0, 1],
+         [0, 0, 1, 0, 0, 0, 1],
+         [0, 0, 0, 1, 1, 1, 0],
+         [0, 0, 1, 0, 0, 0, 1]], dtype=np.bool_)
 ]
 
-plies = [1, 2, 2, 4, 4, 2]
-ans = [[1], [1], [1], [6], [2, 5], [4]]
+plies = [1, 2, 2, 4, 4, 2, 100]
+ans = [[1], [1], [1], [6], [2, 5], [4], [0]]
 
 assert len(o_pieces) == len(x_pieces) == len(plies) == len(ans)
 
@@ -114,10 +128,10 @@ boards = [Board(o_pieces=o, x_pieces=x)
                           in zip(range(len(ans)), boards, plies, ans)])
 def test_next_move(n, board, plies, ans):
     computers = [
-        GridSearch("grid_test",
-                   plies,
-                   evaluators.Evaluator(
-                       evaluators.evaluate_centre)),
+        # GridSearch("grid_test",
+        #            plies,
+        #            evaluators.Evaluator(
+        #                evaluators.evaluate_centre)),
         MCTS("mcts_test",
              MCTSConfig(simulations=7**plies + 1,
                         cpuct=9999),
@@ -140,6 +154,12 @@ def test_next_move(n, board, plies, ans):
                     # node.data.board.result,
                     # node.data.position_value,
                     # node.data.search_value))
+        elif plies == 100:
+            for pre, fill, node in anytree.RenderTree(tree.root):
+                print("%s%s, %s" % (
+                    pre,
+                    node.name,
+                    node.data.terminal_result))
 
         assert move in ans
     return

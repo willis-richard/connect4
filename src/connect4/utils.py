@@ -6,6 +6,7 @@ from enum import Enum, IntEnum
 class Connect4Stats():
     height = 6
     width = 7
+    area = 42
     win_length = 4
 
     # Check inputs are sane

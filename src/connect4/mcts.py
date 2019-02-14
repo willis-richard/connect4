@@ -2,6 +2,7 @@ from src.connect4.board import Board
 from src.connect4.evaluators import Evaluator
 from src.connect4.player import BasePlayer
 from src.connect4.tree import BaseNodeData, Tree
+from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import (same_side,
                                 Side,
                                 value_to_side,
@@ -122,19 +123,20 @@ class MCTS(BasePlayer):
         if tree.root.data.terminal_result is None:
             move, value = tree.select_best_move()
         # choose shortest win
-        elif same_side(tree.root.data.terminal_result, tree.side):
+        # elif same_side(tree.root.data.terminal_result, tree.side):
+        elif tree.get_node_value(tree.root) == 1.0:
             print("Yay")
-            _, move, value = min((c.data.terminal_result[1],
-                                  c.name,
-                                  tree.get_node_value(c))
+            value, _, move = max((tree.get_node_value(c),
+                                 info.area - c.data.terminal_result[1],
+                                 c.name)
                                  for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
             print("Crap")
-            _, move, value = max((c.data.terminal_result[1],
-                                  c.name,
-                                  tree.get_node_value(c))
+            value, _, move = max((tree.get_node_value(c),
+                                 c.data.terminal_result[1],
+                                 c.name)
                                  for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
         board.make_move(move)
@@ -220,9 +222,8 @@ def backpropagate_terminal(node: Node,
     node = node.parent
 
     # The side to move can choose a win - they choose the quickest forcing line
-    # This can only be entered if we have recursed at least once
     if same_side(result, node.data.board._player_to_move):
-        age = min((c.data.board.age
+        age = min((c.data.terminal_result[1]
                    for c in node.children
                    if c.name in node.data.terminal_moves))
         return backpropagate_terminal(node, result, age)
@@ -234,14 +235,19 @@ def backpropagate_terminal(node: Node,
         # the parent will now choose a draw if possible
         # if forced to choose a loss, will choose the longest one
         # N.B. in connect4 all draws have age 42
-        _, age, child = max((value_to_side(
+        _, age, idx = max((value_to_side(
             c.data.terminal_result[0].value,
             node.data.board._player_to_move),
-                             c.data.board.age,
+                             c.data.terminal_result[1],
                              i)
                             for i, c in enumerate(node.children))
-        result = node.children[child].data.terminal_result[0]
-        assert not same_side(result, node.data.board._player_to_move)
+        result = node.children[idx].data.terminal_result[0]
+        # if same_side(result, node.data.board._player_to_move):
+        #     print(result)
+        #     print(node.data)
+        #     print(node.data.board)
+        #     for child in node.children:
+        #         print(child.name, child.data)
         return backpropagate_terminal(node, result, age)
 
     # nothing to do
