@@ -1,12 +1,14 @@
 from src.connect4.board import Board
-from src.connect4.player import ComputerPlayer
-from src.connect4.searching import GridSearch
+import src.connect4.evaluators as evaluators
+from src.connect4.grid_search import GridSearch
 # from src.connect4 import transition_table
 
 
 def disabled_test_transition_table():
-    computer_1 = ComputerPlayer("test_name",
-                                GridSearch(plies=2))
+    computer_1 = GridSearch("grid_1",
+                            2,
+                            evaluators.Evaluator(
+                                evaluators.evaluate_centre))
     board = Board()
 
     computer_1.make_move(board)

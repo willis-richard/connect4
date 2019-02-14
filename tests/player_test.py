@@ -124,9 +124,10 @@ def test_next_move(n, board, plies, ans):
              evaluators.Evaluator(
                  evaluators.evaluate_centre_with_prior))]
     for computer in computers:
+        board_copy = copy(board)
         print(board)
 
-        move, _, tree = computer.make_move(board)
+        move, _, tree = computer.make_move(board_copy)
 
         if plies <= 2:
             for pre, fill, node in anytree.RenderTree(tree.root):

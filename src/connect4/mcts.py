@@ -127,14 +127,16 @@ class MCTS(BasePlayer):
             _, move, value = min((c.data.terminal_result[1],
                                   c.name,
                                   tree.get_node_value(c))
-                                 for c in tree.root.terminal_moves)
+                                 for c in tree.root.children
+                                 if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
             print("Crap")
             _, move, value = max((c.data.terminal_result[1],
                                   c.name,
                                   tree.get_node_value(c))
-                                 for c in tree.root.terminal_moves)
+                                 for c in tree.root.children
+                                 if c.name in tree.root.data.terminal_moves)
         board.make_move(move)
         return move, value, tree
 
