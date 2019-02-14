@@ -2,7 +2,7 @@ from src.connect4.board import Board
 from src.connect4.evaluators import Evaluator
 from src.connect4.player import BasePlayer
 from src.connect4.tree import BaseNodeData, Tree
-from src.connect4.utils import Side
+from src.connect4.utils import same_side, Side
 
 from anytree import Node
 
@@ -44,8 +44,11 @@ def nega_max(node: Node,
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
         board = node.data.board
-        # Prefer faster wins
-        value = board.result.value - board.age / 10000.0
+        # Prefer faster wins and slower losses
+        if same_side(board.result, Side.o):
+            value = board.result.value - board.age / 10000.0
+        else:
+            value = board.result.value + board.age / 10000.0
         node.data.position_value = value
         return value
     if plies == 0:
