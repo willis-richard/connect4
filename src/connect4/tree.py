@@ -16,15 +16,21 @@ class BaseNodeData():
         self.search_value = None
 
     def value(self, side: Side):
-        if self.board.result:
-            return value_to_side(self.board.result.value, side)
-        elif self.search_value is not None:
+        # if self.board.result:
+        #     return value_to_side(self.board.result.value, side)
+        if self.search_value is not None:
             return value_to_side(float(self.search_value), side)
         elif self.position_value is not None:
             return value_to_side(float(self.position_value), side)
         else:
             # position is unknown - assume lost
             return 0.0
+
+    def __str__(self):
+        return \
+            "board_result: " + str(self.board.result) + \
+            ",  position_value: (" + str(self.position_value) + ")" + \
+            ",  search_value: (" + str(self.search_value) + ")"
 
     def __repr__(self):
         return \
@@ -70,6 +76,7 @@ class Tree():
         else:
             board_result = board.check_terminal_position()
             self.result_table[board] = board_result
+        # FIXME: copy required?
         node_data = self.node_data_type(copy(board))
 
         node = Node(name, parent=parent, data=node_data)

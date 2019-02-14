@@ -43,9 +43,11 @@ def nega_max(node: Node,
                                  Tuple[float, Dict[int, float]]]):
     # https://en.wikipedia.org/wiki/Negamax
     if node.data.board.result is not None:
-        # Prefer faster wins
         board = node.data.board
-        return board.result.value - board.age / 10000.0
+        # Prefer faster wins
+        value = board.result.value - board.age / 10000.0
+        node.data.position_value = value
+        return value
     if plies == 0:
         value = evaluator(node.data.board)
         node.data.position_value = value

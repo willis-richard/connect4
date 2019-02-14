@@ -3,8 +3,9 @@ from src.connect4.utils import Connect4Stats as info
 
 from src.connect4.neural.network import Model
 
-from anytree import Node
+from copy import copy
 from functools import partial
+from typing import List, Set
 import numpy as np
 
 
@@ -39,19 +40,19 @@ def evaluate_centre(board: Board):
 
 def evaluate_centre_with_prior(board: Board):
     value = evaluate_centre(board)
-    prior = info.policy_logits
+    prior = copy(info.prior)
     prior = normalise_prior(board.valid_moves,
                             prior)
     return value, prior
 
 
-def normalise_prior(valid_moves, policy_logits):
+def normalise_prior(valid_moves: Set, prior: List[float]):
     invalid_moves = set(range(info.width)).difference(valid_moves)
     if invalid_moves:
         for a in invalid_moves:
-            policy_logits[a] = 0.0
-    policy_logits = policy_logits / np.sum(policy_logits)
-    return policy_logits
+            prior[a] = 0.0
+    prior = prior / np.sum(prior)
+    return prior
 
 
 def evaluate_nn(board: Board,
@@ -64,6 +65,6 @@ def evaluate_nn(board: Board,
     # prior = prior.view(-1)
     # prior = prior.data.numpy()
     # prior = softmax(prior)
-    prior = info.policy_logits
+    prior = copy(info.prior)
     prior = normalise_prior(board.valid_moves, prior)
     return value, prior

@@ -224,3 +224,24 @@ def test_valid_moves():
                          x_pieces=x_pieces)
 
     assert board_.valid_moves == set([6])
+
+    o_pieces = np.array(
+        [[0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 1, 1, 0, 0],
+         [0, 0, 0, 0, 1, 0, 0],
+         [0, 0, 0, 1, 1, 0, 0],
+         [0, 0, 1, 0, 0, 0, 0],
+         [0, 0, 0, 1, 1, 1, 0]], dtype=np.bool_)
+
+    x_pieces = np.array(
+        [[0, 0, 0, 1, 0, 0, 0],
+         [0, 0, 0, 0, 0, 0, 0],
+         [0, 0, 0, 1, 0, 0, 0],
+         [0, 0, 1, 0, 0, 0, 0],
+         [0, 0, 0, 1, 1, 0, 0],
+         [1, 1, 1, 0, 0, 0, 1]], dtype=np.bool_)
+
+    board_ = board.Board(o_pieces=o_pieces,
+                         x_pieces=x_pieces)
+
+    assert board_.valid_moves == set([0, 1, 2, 4, 5, 6])
