@@ -20,14 +20,16 @@ class Game():
     def play(self):
         if self.display:
             print("Game between", self._player_o, " and ", self._player_x)
+            print(self._board)
         while self._board.result is None:
-            if self.display:
-                print(self._board)
             if self._board._player_to_move == Side.o:
                 move, _, _ = self._player_o.make_move(self._board)
-                print(self._player_o.name + " selected move: ", move)
+                name = self._player_o.name
             else:
                 move, _, _ = self._player_x.make_move(self._board)
-                print(self._player_x.name + " selected move: ", move)
+                name = self._player_x.name
+            if self.display:
+                print(name + " selected move: ", move)
+                print(self._board)
             self.move_history = np.append(self.move_history, move)
         return self._board.result

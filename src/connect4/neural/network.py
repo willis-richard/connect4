@@ -129,8 +129,8 @@ class Net(nn.Module):
         x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
-        policy = self.policy_head(x)
-        return value, policy
+        # policy = self.policy_head(x)
+        return value, torch.ones(value.shape[0], net_info.width) #, policy
 
 
 class Model():

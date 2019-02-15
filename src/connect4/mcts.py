@@ -125,7 +125,6 @@ class MCTS(BasePlayer):
         # choose shortest win
         # elif same_side(tree.root.data.terminal_result, tree.side):
         elif tree.get_node_value(tree.root) == 1.0:
-            print("Yay")
             value, _, move = max((tree.get_node_value(c),
                                  info.area - c.data.terminal_result[1],
                                  c.name)
@@ -133,7 +132,6 @@ class MCTS(BasePlayer):
                                  if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
-            print("Crap")
             value, _, move = max((tree.get_node_value(c),
                                  c.data.terminal_result[1],
                                  c.name)
@@ -242,12 +240,6 @@ def backpropagate_terminal(node: Node,
                              i)
                             for i, c in enumerate(node.children))
         result = node.children[idx].data.terminal_result[0]
-        # if same_side(result, node.data.board._player_to_move):
-        #     print(result)
-        #     print(node.data)
-        #     print(node.data.board)
-        #     for child in node.children:
-        #         print(child.name, child.data)
         return backpropagate_terminal(node, result, age)
 
     # nothing to do

@@ -2,7 +2,7 @@ from src.connect4.board import Board
 import src.connect4.evaluators as evaluators
 from src.connect4.match import Match
 from src.connect4.player import BasePlayer
-from src.connect4.mcts import MCTS
+from src.connect4.mcts import MCTS, MCTSConfig
 from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
@@ -26,28 +26,28 @@ class TrainingGame():
         board = Board()
         boards = []
         policies = []
-        while self.board.result is None:
-            self.player.make_move(board)
+        while board.result is None:
+            _, _, tree = self.player.make_move(board)
 
-            boards.append(self.board.to_tensor())
-            policy = self.player.tree.get_policy()
+            boards.append(board.to_tensor())
+            policy = tree.get_policy()
             policies.append(torch.tensor(policy))
 
         boards = torch.stack(boards).squeeze()
-        values = self.create_values(len(boards))
+        values = self.create_values(board.result, len(boards))
         policies = torch.stack(policies)
 
         self.replay_storage.save_game(boards,
                                       values,
                                       policies)
-        return self.board.result
+        return board.result
 
-    def create_values(self, length):
+    def create_values(self, result, length):
         # label board data with result
         values = torch.ones((length,), dtype=torch.float)
-        if self.board.result == Result.o_win:
+        if result == Result.o_win:
             values[1::2] = 0.
-        elif self.board.result == Result.x_win:
+        elif result == Result.x_win:
             values[0::2] = 0.
         else:
             values *= 0.5
@@ -79,20 +79,12 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        model = self.nn_storage.get_model()
-        evaluator = evaluators.NetEvaluator(
-            evaluators.evaluate_nn,
-            model)
-        player = MCTS('AlphaZero',
-                      MCTS.Config(simulations=100,
-                                  cpuct=9999),
-                      evaluator)
+        alpha_zero = self.create_alpha_zero()
 
         self.replay_storage.reset()
 
         for _ in range(self.config.n_training_games):
-            TrainingGame(copy(player),
-                         Board(),
+            TrainingGame(alpha_zero,
                          self.replay_storage).play()
 
         self.nn_storage.train(self.replay_storage.get_data(),
@@ -100,16 +92,22 @@ class TrainingLoop():
 
     def evaluate(self):
         self.test_8ply()
+
+        alpha_zero = self.create_alpha_zero()
+
         evaluator = evaluators.Evaluator(
             evaluators.evaluate_centre_with_prior)
-        self.match(MCTS("mcts",
-                        MCTS.Config(simulations=100,
-                                    cpuct=9999),
+
+        self.match(alpha_zero,
+                   MCTS("mcts:100",
+                        MCTSConfig(simulations=100,
+                                   cpuct=9999),
                         evaluator))
-        self.match(MCTS("mcts",
-                        MCTS.Config(simulations=2500,
-                                    cpuct=9999),
-                        evaluator))
+        # self.match(alpha_zero,
+        #            MCTS("mcts:2500",
+        #                 MCTSConfig(simulations=2500,
+        #                            cpuct=9999),
+        #                 evaluator))
         return
 
     def test_8ply(self):
@@ -130,16 +128,22 @@ class TrainingLoop():
 
         print("8 Ply Test Stats:  ", test_stats)
 
-    def match(self, opponent: MCTS):
-        player = MCTS('AlphaZero',
-                                MCTS(MCTS.Config(simulations=100,
-                                                 cpuct=9999)),
-                                net=self.nn_storage.get_model())
-
-        match = Match(False, player, opponent, plies=2, switch=True)
+    def match(self, alpha_zero, opponent: MCTS):
+        match = Match(False, alpha_zero, opponent, plies=2, switch=True)
         # match.play_parallel(agents=self.config.agents)
         match.play()
         return
+
+    def create_alpha_zero(self):
+        model = self.nn_storage.get_model()
+        evaluator = evaluators.NetEvaluator(
+            evaluators.evaluate_nn,
+            model)
+        player = MCTS('AlphaZero',
+                      MCTSConfig(simulations=100,
+                                  cpuct=9999),
+                      evaluator)
+        return player
 
 
 def categorise_predictions(preds):
