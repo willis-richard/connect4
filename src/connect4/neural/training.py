@@ -59,7 +59,7 @@ class TrainingLoop():
                  config: AlphaZeroConfig,
                  folder_path: str):
         self.config = config
-        self.nn_storage = NetworkStorage(folder_path)
+        self.nn_storage = NetworkStorage(folder_path, config.model_config)
         self.replay_storage = ReplayStorage(config, folder_path)
 
         boards = torch.load('/home/richard/Downloads/connect4_boards.pth')
@@ -101,12 +101,12 @@ class TrainingLoop():
         self.match(alpha_zero,
                    MCTS("mcts:100",
                         MCTSConfig(simulations=100,
-                                   cpuct=9999),
+                                   pb_c_init=9999),
                         evaluator))
         # self.match(alpha_zero,
         #            MCTS("mcts:2500",
         #                 MCTSConfig(simulations=2500,
-        #                            cpuct=9999),
+        #                            pb_c_init=9999),
         #                 evaluator))
         return
 
@@ -140,8 +140,7 @@ class TrainingLoop():
             evaluators.evaluate_nn,
             model)
         player = MCTS('AlphaZero',
-                      MCTSConfig(simulations=100,
-                                  cpuct=9999),
+                      MCTSConfig(simulations=100),
                       evaluator)
         return player
 

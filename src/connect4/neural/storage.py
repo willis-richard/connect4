@@ -1,4 +1,4 @@
-from src.connect4.neural.config import AlphaZeroConfig
+from src.connect4.neural.config import AlphaZeroConfig, ModelConfig
 from src.connect4.neural.network import Model
 
 import torch
@@ -8,7 +8,9 @@ from torch.utils.data import DataLoader, Dataset
 
 
 class NetworkStorage():
-    def __init__(self, folder_path: str):
+    def __init__(self,
+                 folder_path: str,
+                 config: ModelConfig):
         self.folder_path = folder_path
         self.iteration = 0
         file_list = os.listdir(folder_path)
@@ -17,9 +19,9 @@ class NetworkStorage():
             print(file_list, latest_file)
             self.iteration = int(latest_file.split('.')[1])
             checkpoint = torch.load(self.file_name)
-            self.model = Model(checkpoint)
+            self.model = Model(config, checkpoint)
         else:
-            self.model = Model()
+            self.model = Model(config)
 
     @property
     def file_name(self):
@@ -36,7 +38,8 @@ class NetworkStorage():
         torch.save(
             {
                 'net_state_dict': self.model.net.state_dict(),
-                'optimiser_state_dict': self.model.optimiser.state_dict()
+                'optimiser_state_dict': self.model.optimiser.state_dict(),
+                'scheduler_state_dict': self.model.scheduler.state_dict()
             },
             self.file_name)
 

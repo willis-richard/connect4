@@ -134,7 +134,7 @@ def test_next_move(n, board, plies, ans):
         #                evaluators.evaluate_centre)),
         MCTS("mcts_test",
              MCTSConfig(simulations=7**plies + 1,
-                        cpuct=9999),
+                        pb_c_init=9999),
              evaluators.Evaluator(
                  evaluators.evaluate_centre_with_prior))]
     for computer in computers:

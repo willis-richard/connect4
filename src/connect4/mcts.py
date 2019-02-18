@@ -14,11 +14,13 @@ from typing import Callable, List, Set, Tuple
 
 
 class MCTSConfig():
-    def __init__(self, simulations, cpuct=9999):
+    def __init__(self, simulations, pb_c_base=19652, pb_c_init=1.25):
         self.simulations = simulations
-        self.pb_c_base = 0
-        self.pb_c_init = 0
-        self.cpuct = cpuct
+        self.pb_c_base = pb_c_base
+        self.pb_c_init = pb_c_init
+        # self.num_sampling_moves = 30
+        # self.root_dirichlet_alpha = 0.3  # for chess, 0.03 for Go and 0.15 for shogi.
+        # self.root_exploration_fraction = 0.25
 
 
 class PositionEvaluation():
@@ -195,11 +197,11 @@ def ucb_score(config: MCTSConfig,
               tree: Tree,
               node: Node,
               child: Node):
-    # pb_c = math.log((node.visit_count + config.pb_c_base + 1) /
-    #                 config.pb_c_base) + config.pb_c_init
-    # pb_c *= math.sqrt(node.visit_count) / (child.visit_count + 1)
-    # pb_c = config.cpuct
-    pb_c = config.cpuct * (
+    pb_c = math.log((node.data._search_value.visit_count + config.pb_c_base + 1) /
+                    config.pb_c_base) + config.pb_c_init
+    pb_c *= math.sqrt(node.data._search_value.visit_count) / (child.data._search_value.visit_count + 1)
+
+    pb_c = pb_c * (
         math.sqrt(node.data._search_value.visit_count)
         / (child.data._search_value.visit_count + 1))
 

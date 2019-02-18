@@ -2,10 +2,13 @@ from src.connect4.board import Board
 from src.connect4.utils import Connect4Stats as info
 from src.connect4.utils import NetworkStats as net_info
 
+from src.connect4.neural.config import ModelConfig
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import MultiStepLR
 
 from typing import Callable, Dict, Optional, Tuple
 
@@ -135,17 +138,28 @@ class Net(nn.Module):
 
 class Model():
     def __init__(self,
+                 config: ModelConfig,
                  checkpoint: Optional[Dict] = None):
+        self.config = config
         self.net = Net()
-        self.optimiser = optim.Adam(self.net.parameters())
+        self.optimiser = optim.SGD(self.net.parameters(),
+                                   lr=config.initial_lr,
+                                   momentum=config.momentum,
+                                   weight_decay=config.weight_decay)
+        self.scheduler = MultiStepLR(self.optimiser,
+                                     milestones=config.milestones,
+                                     gamma=config.gamma)
+        # self.optimiser = optim.Adam(self.net.parameters())
         if checkpoint is not None:
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         # self.device=torch.device("cpu")
         self.net.to(self.device)
         self.value_loss = nn.MSELoss()
-        self.policy_loss = nn.CrossEntropyLoss()
+        # Note that this needs to be with logits, not just the class index
+        # self.policy_loss = nn.CrossEntropyLoss()
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
@@ -170,6 +184,7 @@ class Model():
             self.net.train()
 
             for board, y_value, y_policy in data:
+                self.scheduler.step()
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
                 y_policy = y_policy.to(self.device)
