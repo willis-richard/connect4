@@ -53,7 +53,7 @@ class Match():
         if self.switch:
             results[self.n:] *= -1.0
             results[self.n:] += 1.0
-        print("The results for " + self._player_1.name + " vs " + self._player_2 + " are: {} wins, {} draws, {} losses"
+        print("The results for " + self._player_1.name + " vs " + self._player_2.name + " are: {} wins, {} draws, {} losses"
               .format(np.sum(results == 1),
                       np.sum(results == 0.5),
                       np.sum(results == 0)))
