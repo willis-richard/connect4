@@ -1,0 +1,9 @@
+name: muff2n
+channels:
+  - conda-forge
+  - pytorch
+dependencies:
+  - pytorch
+  - numpy
+  - pip:
+      - anytree

@@ -8,4 +8,10 @@ setup(name='connect4',
       author_email='flyingcircus@example.com',
       license='MIT',
       packages=['src/connect4'],
-      zip_safe=False)
+      zip_safe=False,
+      install_requires=[
+          'anytree',
+          'numpy',
+          'pytorch'
+      ]
+)
