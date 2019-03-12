@@ -12,6 +12,8 @@ setup(name='connect4',
       install_requires=[
           'anytree',
           'numpy',
-          'pytorch'
+          'pandas',
+          'pytorch',
+          'visdom'
       ]
 )

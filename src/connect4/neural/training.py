@@ -1,8 +1,8 @@
 from src.connect4.board import Board
-import src.connect4.evaluators as evaluators
+import src.connect4.evaluators as e
 from src.connect4.match import Match
-from src.connect4.player import BasePlayer
 from src.connect4.mcts import MCTS, MCTSConfig
+from src.connect4.player import BasePlayer
 from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
@@ -11,6 +11,7 @@ from src.connect4.neural.storage import (Connect4Dataset,
                                          ReplayStorage)
 
 from copy import copy
+import pandas as pd
 import torch
 import torch.utils.data as data
 
@@ -56,18 +57,39 @@ class TrainingGame():
 
 class TrainingLoop():
     def __init__(self,
-                 config: AlphaZeroConfig,
-                 folder_path: str):
+                 config: AlphaZeroConfig):
         self.config = config
-        self.nn_storage = NetworkStorage(folder_path, config.model_config)
-        self.replay_storage = ReplayStorage(config, folder_path)
+        self.nn_storage = NetworkStorage(config.storage_config.save_dir,
+                                         config.model_config)
+        self.replay_storage = ReplayStorage(config.storage_config.save_dir,
+                                            config.model_config)
 
-        boards = torch.load('/home/richard/Downloads/connect4_boards.pth')
-        values = torch.load('/home/richard/Downloads/connect4_values.pth')
+        boards = torch.load(config.storage_config.path_8ply_boards)
+        values = torch.load(config.storage_config.path_8ply_values)
 
         # Note no policy here, 3rd arg unused
         test_data = Connect4Dataset(boards, values, values)
         self.test_data = data.DataLoader(test_data, batch_size=4096)
+
+        self.easy_opponent = MCTS("mcts:100",
+                                  MCTSConfig(simulations=100,
+                                             pb_c_init=9999),
+                                  e.Evaluator(e.evaluate_centre_with_prior))
+        self.hard_opponent = MCTS("mcts:2500",
+                                  MCTSConfig(simulations=2500,
+                                             pb_c_init=9999),
+                                  e.Evaluator(e.evaluate_centre_with_prior))
+
+        self.easy_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
+        self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
+        self.stats_8ply = pd.DataFrame()
+
+        if config.vizdom_enabled:
+            from vizdom import Vizdom
+            viz = Vizdom()
+            self.easy_win = viz.matplot()
+            self.hard_win = viz.matplot()
+            self.win_8ply = viz.matplot()
 
     def run(self):
         i = 0
@@ -95,20 +117,18 @@ class TrainingLoop():
 
         alpha_zero = self.create_alpha_zero()
 
-        evaluator = evaluators.Evaluator(
-            evaluators.evaluate_centre_with_prior)
+        results = self.match(alpha_zero, self.easy_opponent)
+        self.easy_results = self.easy_results.append(results, ignore_index=True)
+        self.easy_results.to_pickle('~/easy_results.pkl')
 
-        self.match(alpha_zero,
-                   MCTS("mcts:100",
-                        MCTSConfig(simulations=100,
-                                   pb_c_init=9999),
-                        evaluator))
-        # self.match(alpha_zero,
-        #            MCTS("mcts:2500",
-        #                 MCTSConfig(simulations=2500,
-        #                            pb_c_init=9999),
-        #                 evaluator))
-        return
+        # results = self.match(alpha_zero, self.hard_opponent)
+        # self.hard_results = self.hard_results.append(results, ignore_index=True)
+        # self.hard_results.to_pickle('~/hard_results.pkl')
+
+        if self.config.vizdom_enabled:
+            viz.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
+            viz.matplot(self.easy_results.plot(y=['return']), win=self.easy_win)
+            viz.matplot(self.hard_results.plot(y=['return']), win=self.hard_win)
 
     def test_8ply(self):
         """Get an idea of how the initialisation is"""
@@ -127,20 +147,21 @@ class TrainingLoop():
                 test_stats.update(x_value, y_value, loss)
 
         print("8 Ply Test Stats:  ", test_stats)
+        self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
+        self.stats_8ply.to_pickle('~/8ply.pkl')
 
     def match(self, alpha_zero, opponent: MCTS):
-        match = Match(False, alpha_zero, opponent, plies=2, switch=True)
-        # match.play_parallel(agents=self.config.agents)
-        match.play()
-        return
+        match = Match(False, alpha_zero, opponent, plies=1, switch=True)
+        return match.play(agents=self.config.agents)
 
     def create_alpha_zero(self):
         model = self.nn_storage.get_model()
-        evaluator = evaluators.NetEvaluator(
-            evaluators.evaluate_nn,
+        evaluator = e.NetEvaluator(
+            e.evaluate_nn,
             model)
         player = MCTS('AlphaZero',
-                      MCTSConfig(simulations=100),
+                      MCTSConfig(self.config.simulations,
+                                 self.config.pb_c_init),
                       evaluator)
         return player
 
@@ -174,6 +195,18 @@ class Stats():
     def average(self):
         return self.average_value / self.n
 
+    def to_dict(self):
+        dict_ = {'Average loss': self.loss,
+                 'Accuracy': self.accuracy,
+                 'Smallest':self.smallest,
+                 'Largest': self.largest,
+                 'Average': self.average}
+        dict_['correct'] = {}
+        for k in self.correct:
+            dict_['correct'][k] = (self.total[k], self.correct[k])
+
+        return dict_
+
     def __repr__(self):
         x = "Average loss:  " + "{:.5f}".format(self.loss) + \
             "  Accuracy:  " + "{:.5f}".format(self.accuracy) + \
@@ -183,7 +216,7 @@ class Stats():
             "\nCategory, # Members, # Correct Predictions:"
 
         for k in self.correct:
-            x += "{}, {}, {}".format(
+            x += "  ({}, {}, {})".format(
                 k,
                 self.total[k],
                 self.correct[k])

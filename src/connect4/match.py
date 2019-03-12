@@ -53,10 +53,21 @@ class Match():
         if self.switch:
             results[self.n:] *= -1.0
             results[self.n:] += 1.0
-        print("The results for " + self._player_1.name + " vs " + self._player_2.name + " are: {} wins, {} draws, {} losses"
-              .format(np.sum(results == 1),
-                      np.sum(results == 0.5),
-                      np.sum(results == 0)))
+
+        wins = np.sum(results == 1)
+        draws = np.sum(results == 0.5)
+        losses = np.sum(results == 0)
+        return_ = (1.0 * wins + 0.5 * draws) / (wins + draws + losses)
+
+        print("The results for {} vs {} are: {} wins, {} draws, {} losses, {:.3f} return"
+              .format(self._player_1.name,
+                      self._player_2.name,
+                      wins,
+                      draws,
+                      losses,
+                      return_))
+
+        return {'wins': wins, 'draws': draws, 'losses': losses, 'return': return_}
 
     def play_parallel(self, agents):
         from multiprocessing import Pool

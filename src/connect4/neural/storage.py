@@ -25,7 +25,7 @@ class NetworkStorage():
 
     @property
     def file_name(self):
-        return self.folder_path + '.' + str(self.iteration) + '.pth'
+        return self.folder_path + '/net.' + str(self.iteration) + '.pth'
 
     def train(self,
               data: DataLoader,
@@ -49,10 +49,10 @@ class NetworkStorage():
 
 class ReplayStorage():
     def __init__(self,
-                 config: AlphaZeroConfig,
-                 folder_path: str):
-        self.window_size = config.window_size
+                 folder_path: str,
+                 config: AlphaZeroConfig):
         self.batch_size = config.batch_size
+        self.window_size = config.window_size
         self.reset()
 
     def reset(self):

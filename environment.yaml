@@ -1,9 +1,11 @@
-name: muff2n
+name: connect4
 channels:
   - conda-forge
   - pytorch
 dependencies:
   - pytorch
   - numpy
+  - pandas
   - pip:
       - anytree
+      - visdom

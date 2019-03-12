@@ -31,8 +31,6 @@ if __name__ == "__main__":
         match = Match(True, player_1, player_2, plies=1, switch=True)
         # match.play(agents=12)
         # match = Match(True, player_1, player_2, plies=0, switch=False)
-        match.play(agents=1)
+        match.play(agents=2)
     else:
-        folder_path = '/home/richard/Downloads/nn/new_dir'
-        TrainingLoop(AlphaZeroConfig,
-                     folder_path).run()
+        TrainingLoop(AlphaZeroConfig).run()
