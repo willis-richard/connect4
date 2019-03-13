@@ -115,7 +115,7 @@ class TrainingLoop():
         self.nn_storage.train(self.replay_storage.get_data(),
                               self.config.n_training_epochs)
         end = time.time()
-        print('Generate games: {:.0f}  training: {}:.0f'.format(train - start, end - train))
+        print('Generate games: {:.0f}  training: {:.0f}'.format(train - start, end - train))
 
     def evaluate(self):
         self.test_8ply()
