@@ -16,12 +16,12 @@ import torch
 import torch.utils.data as data
 
 
+def top_level_defined_play(x):
+    return TrainingGame(x).play()
+
 class TrainingGame():
-    def __init__(self,
-                 player: BasePlayer,
-                 replay_storage: ReplayStorage):
+    def __init__(self, player: BasePlayer):
         self.player = player
-        self.replay_storage = replay_storage
 
     def play(self):
         board = Board()
@@ -38,10 +38,7 @@ class TrainingGame():
         values = self.create_values(board.result, len(boards))
         policies = torch.stack(policies)
 
-        self.replay_storage.save_game(boards,
-                                      values,
-                                      policies)
-        return board.result
+        return board.result, (boards, values, policies)
 
     def create_values(self, result, length):
         # label board data with result
@@ -107,9 +104,19 @@ class TrainingLoop():
 
         import time
         start = time.time()
-        for _ in range(self.config.n_training_games):
-            TrainingGame(alpha_zero,
-                         self.replay_storage).play()
+        if self.config.agents == 1:
+            for _ in range(self.config.n_training_games):
+                _, data = TrainingGame(alpha_zero).play()
+                self.replay_storage.save_game(data)
+        else:
+            from torch.multiprocessing import Pool, Process, set_start_method
+            set_start_method('spawn')
+
+            a0 = [alpha_zero for _ in range(self.config.n_training_games)
+            with Pool(processes=agents) as pool:
+                _, data = pool.map(top_level_defined_play, a0)
+                self.replay_storage.save_game(data)
+
         train = time.time()
 
         self.nn_storage.train(self.replay_storage.get_data(),
