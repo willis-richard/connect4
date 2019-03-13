@@ -71,7 +71,11 @@ class Match():
 
     def play_parallel(self, agents):
         from torch.multiprocessing import Pool, Process, set_start_method
-        set_start_method('spawn')
+        try:
+            set_start_method('spawn')
+        except RuntimeError as e:
+            if e.message == 'context has already been set':
+                pass
 
         with Pool(processes=agents) as pool:
             # results = pool.map(lambda x: x.play(), self.games)

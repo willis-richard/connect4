@@ -110,7 +110,11 @@ class TrainingLoop():
                 self.replay_storage.save_game(data)
         else:
             from torch.multiprocessing import Pool, Process, set_start_method
-            set_start_method('spawn')
+            try:
+                set_start_method('spawn')
+            except RuntimeError as e:
+                if e.message == 'context has already been set':
+                    pass
 
             a0 = [alpha_zero for _ in range(self.config.n_training_games)
             with Pool(processes=agents) as pool:
