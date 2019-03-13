@@ -49,9 +49,7 @@ class NetworkStorage():
 
 
 class ReplayStorage():
-    def __init__(self,
-                 folder_path: str,
-                 config: AlphaZeroConfig):
+    def __init__(self, config: AlphaZeroConfig):
         self.batch_size = config.batch_size
         # FIXME: not used
         # self.window_size = config.window_size

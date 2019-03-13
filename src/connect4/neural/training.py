@@ -1,5 +1,6 @@
 from src.connect4.board import Board
 import src.connect4.evaluators as e
+from src.connect4.grid_search import GridSearch
 from src.connect4.match import Match
 from src.connect4.mcts import MCTS, MCTSConfig
 from src.connect4.player import BasePlayer
@@ -27,8 +28,11 @@ class TrainingGame():
         board = Board()
         boards = []
         policies = []
+        history = []
         while board.result is None:
-            _, _, tree = self.player.make_move(board)
+            move, value, tree = self.player.make_move(board)
+
+            history.append((move, value))
 
             boards.append(board.to_tensor())
             policy = tree.get_policy()
@@ -38,7 +42,7 @@ class TrainingGame():
         values = self.create_values(board.result, len(boards))
         policies = torch.stack(policies)
 
-        return board.result, (boards, values, policies)
+        return board.result, history, (boards, values, policies)
 
     def create_values(self, result, length):
         # label board data with result
@@ -56,10 +60,16 @@ class TrainingLoop():
     def __init__(self,
                  config: AlphaZeroConfig):
         self.config = config
-        self.nn_storage = NetworkStorage(config.storage_config.save_dir,
+        self.save_dir = config.storage_config.save_dir
+
+        # create directories to save in
+        os.makedirs(self.save_dir + '/net', exist_ok=True)
+        os.makedirs(self.save_dir + '/games', exist_ok=True)
+        os.makedirs(self.save_dir + '/stats', exist_ok=True)
+
+        self.nn_storage = NetworkStorage(self.save_dir + '/net',
                                          config.model_config)
-        self.replay_storage = ReplayStorage(config.storage_config.save_dir,
-                                            config.model_config)
+        self.replay_storage = ReplayStorage(config.model_config)
 
         boards = torch.load(config.storage_config.path_8ply_boards)
         values = torch.load(config.storage_config.path_8ply_values)
@@ -68,18 +78,28 @@ class TrainingLoop():
         test_data = Connect4Dataset(boards, values, values)
         self.test_data = data.DataLoader(test_data, batch_size=4096)
 
-        self.easy_opponent = MCTS("mcts:100",
-                                  MCTSConfig(simulations=100,
-                                             pb_c_init=9999),
-                                  e.Evaluator(e.evaluate_centre_with_prior))
+        self.easy_opponent = GridSearch("gridsearch:4",
+                                        plies=4,
+                                        e.Evaluator(e.evaluate_centre))
         self.hard_opponent = MCTS("mcts:2500",
                                   MCTSConfig(simulations=2500,
                                              pb_c_init=9999),
                                   e.Evaluator(e.evaluate_centre_with_prior))
 
-        self.easy_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
-        self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
-        self.stats_8ply = pd.DataFrame()
+        if os.path.exists(self.save_dir + '/stats/easy_results.pkl'):
+            self.stats = pd.read_pickle(self.save_dir + '/stats/easy_results.pkl')
+        else:
+            self.easy_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
+
+        if os.path.exists(self.save_dir + '/stats/hard_results.pkl'):
+            self.stats = pd.read_pickle(self.save_dir + '/stats/hard_results.pkl')
+        else:
+            self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
+
+        if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
+            self.stats = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
+        else:
+            self.stats_8ply = pd.DataFrame()
 
         if config.vizdom_enabled:
             from vizdom import Vizdom
@@ -136,11 +156,11 @@ class TrainingLoop():
 
         results = self.match(alpha_zero, self.easy_opponent)
         self.easy_results = self.easy_results.append(results, ignore_index=True)
-        self.easy_results.to_pickle('~/easy_results.pkl')
+        self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
 
-        results = self.match(alpha_zero, self.hard_opponent)
-        self.hard_results = self.hard_results.append(results, ignore_index=True)
-        self.hard_results.to_pickle('~/hard_results.pkl')
+        # results = self.match(alpha_zero, self.hard_opponent)
+        # self.hard_results = self.hard_results.append(results, ignore_index=True)
+        # self.hard_results.to_pickle(self.save_dir + '/stats/hard_results.pkl')
 
         if self.config.vizdom_enabled:
             viz.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
@@ -165,7 +185,7 @@ class TrainingLoop():
 
         print("8 Ply Test Stats:  ", test_stats)
         self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
-        self.stats_8ply.to_pickle('~/8ply.pkl')
+        self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
 
     def match(self, alpha_zero, opponent: MCTS):
         match = Match(False, alpha_zero, opponent, plies=1, switch=True)
