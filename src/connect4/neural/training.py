@@ -107,19 +107,20 @@ class TrainingLoop():
         if self.config.agents == 1:
             for _ in range(self.config.n_training_games):
                 _, data = TrainingGame(alpha_zero).play()
-                self.replay_storage.save_game(data)
+                self.replay_storage.save_game(*data)
         else:
             from torch.multiprocessing import Pool, Process, set_start_method
             try:
                 set_start_method('spawn')
             except RuntimeError as e:
-                if e.message == 'context has already been set':
+                if str(e) == 'context has already been set':
                     pass
 
-            a0 = [alpha_zero for _ in range(self.config.n_training_games)
-            with Pool(processes=agents) as pool:
-                _, data = pool.map(top_level_defined_play, a0)
-                self.replay_storage.save_game(data)
+            a0 = [alpha_zero for _ in range(self.config.n_training_games)]
+            with Pool(processes=self.config.agents) as pool:
+                results = pool.map(top_level_defined_play, a0)
+            for _, data in results:
+                self.replay_storage.save_game(*data)
 
         train = time.time()
 

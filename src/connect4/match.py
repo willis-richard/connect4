@@ -74,7 +74,7 @@ class Match():
         try:
             set_start_method('spawn')
         except RuntimeError as e:
-            if e.message == 'context has already been set':
+            if str(e) == 'context has already been set':
                 pass
 
         with Pool(processes=agents) as pool:
