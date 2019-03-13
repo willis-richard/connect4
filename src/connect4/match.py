@@ -70,7 +70,7 @@ class Match():
         return {'wins': wins, 'draws': draws, 'losses': losses, 'return': return_}
 
     def play_parallel(self, agents):
-        from multiprocessing import Pool
+        from torch.multiprocessing import Pool
 
         with Pool(processes=agents) as pool:
             # results = pool.map(lambda x: x.play(), self.games)

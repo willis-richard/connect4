@@ -17,7 +17,7 @@ class StorageConfig():
     save_dir = '/home/richard/Downloads/nn/new_dir'
 
 class AlphaZeroConfig():
-    agents = 1
+    agents = 2
     simulations = 100
     pb_c_init=9999
     n_eval = 2

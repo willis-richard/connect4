@@ -15,7 +15,7 @@ class NetworkStorage():
         self.iteration = 0
         file_list = os.listdir(folder_path)
         if file_list:
-            iterations = [f.split('.')[1] for f in file_list]
+            iterations = [int(f.split('.')[1]) for f in file_list]
             self.iteration = max(iterations)
             print(file_list, self.file_name)
             checkpoint = torch.load(self.file_name)

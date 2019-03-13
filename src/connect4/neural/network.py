@@ -142,6 +142,8 @@ class Model():
                  checkpoint: Optional[Dict] = None):
         self.config = config
         self.net = Net()
+        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+        self.net.to(self.device)
         self.optimiser = optim.SGD(self.net.parameters(),
                                    lr=config.initial_lr,
                                    momentum=config.momentum,
@@ -154,8 +156,6 @@ class Model():
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.net.to(self.device)
         self.value_loss = nn.MSELoss()
         # Note that this needs to be with logits, not just the class index
         # self.policy_loss = nn.CrossEntropyLoss()
