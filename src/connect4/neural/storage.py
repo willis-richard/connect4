@@ -15,9 +15,9 @@ class NetworkStorage():
         self.iteration = 0
         file_list = os.listdir(folder_path)
         if file_list:
-            latest_file = file_list[-1]
-            print(file_list, latest_file)
-            self.iteration = int(latest_file.split('.')[1])
+            iterations = [f.split('.')[1] for f in file_list]
+            self.iteration = max(iterations)
+            print(file_list, self.file_name)
             checkpoint = torch.load(self.file_name)
             self.model = Model(config, checkpoint)
         else:
@@ -32,6 +32,7 @@ class NetworkStorage():
               n_epochs: int):
         self.model.train(data, n_epochs)
         self.save_model(self.model)
+        self.iteration += 1
 
     def save_model(self, model):
         self.model = model
@@ -52,7 +53,8 @@ class ReplayStorage():
                  folder_path: str,
                  config: AlphaZeroConfig):
         self.batch_size = config.batch_size
-        self.window_size = config.window_size
+        # FIXME: not used
+        # self.window_size = config.window_size
         self.reset()
 
     def reset(self):
@@ -71,6 +73,7 @@ class ReplayStorage():
                                self.policy_buffer)
         return DataLoader(data, batch_size=self.batch_size, shuffle=True)
 
+    # FIXME: Not used
     def sample_batch(self):
         import numpy
         # Sample uniformly across positions.

@@ -9,7 +9,7 @@ class ModelConfig():
     # read https://pytorch.org/docs/stable/optim.html about pre layer lr
     # could have one for the body, and diff ones for each head
     batch_size = 1
-    window_size = 50
+    # window_size = 50
 
 class StorageConfig():
     path_8ply_boards = '/home/richard/Downloads/connect4_boards.pth'

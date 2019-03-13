@@ -155,7 +155,6 @@ class Model():
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        # self.device=torch.device("cpu")
         self.net.to(self.device)
         self.value_loss = nn.MSELoss()
         # Note that this needs to be with logits, not just the class index

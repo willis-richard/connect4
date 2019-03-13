@@ -105,12 +105,17 @@ class TrainingLoop():
 
         self.replay_storage.reset()
 
+        import time
+        start = time.time()
         for _ in range(self.config.n_training_games):
             TrainingGame(alpha_zero,
                          self.replay_storage).play()
+        train = time.time()
 
         self.nn_storage.train(self.replay_storage.get_data(),
                               self.config.n_training_epochs)
+        end = time.time()
+        print('Generate games: ', start - train, '  training: ', train - end)
 
     def evaluate(self):
         self.test_8ply()
@@ -121,9 +126,9 @@ class TrainingLoop():
         self.easy_results = self.easy_results.append(results, ignore_index=True)
         self.easy_results.to_pickle('~/easy_results.pkl')
 
-        # results = self.match(alpha_zero, self.hard_opponent)
-        # self.hard_results = self.hard_results.append(results, ignore_index=True)
-        # self.hard_results.to_pickle('~/hard_results.pkl')
+        results = self.match(alpha_zero, self.hard_opponent)
+        self.hard_results = self.hard_results.append(results, ignore_index=True)
+        self.hard_results.to_pickle('~/hard_results.pkl')
 
         if self.config.vizdom_enabled:
             viz.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
