@@ -14,6 +14,7 @@ setup(name='connect4',
           'numpy',
           'os',
           'pandas',
+          'pickle',
           'pytorch',
           'visdom'
       ]

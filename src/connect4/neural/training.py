@@ -70,6 +70,7 @@ class TrainingLoop():
         self.nn_storage = NetworkStorage(self.save_dir + '/net',
                                          config.model_config)
         self.replay_storage = ReplayStorage(config.model_config)
+        self.game_storage = GameStorage(self.save_dir + '/games')
 
         boards = torch.load(config.storage_config.path_8ply_boards)
         values = torch.load(config.storage_config.path_8ply_values)
@@ -126,8 +127,9 @@ class TrainingLoop():
         start = time.time()
         if self.config.agents == 1:
             for _ in range(self.config.n_training_games):
-                _, data = TrainingGame(alpha_zero).play()
+                _, history, data = TrainingGame(alpha_zero).play()
                 self.replay_storage.save_game(*data)
+                self.game_storage.save_game(history)
         else:
             from torch.multiprocessing import Pool, Process, set_start_method
             try:
@@ -139,9 +141,11 @@ class TrainingLoop():
             a0 = [alpha_zero for _ in range(self.config.n_training_games)]
             with Pool(processes=self.config.agents) as pool:
                 results = pool.map(top_level_defined_play, a0)
-            for _, data in results:
+            for _, history, data in results:
                 self.replay_storage.save_game(*data)
+                self.game_storage.save_game(history)
 
+        self.game_storage.save()
         train = time.time()
 
         self.nn_storage.train(self.replay_storage.get_data(),

@@ -5,7 +5,9 @@ channels:
 dependencies:
   - pytorch
   - numpy
+  - os
   - pandas
+  - pickle
   - pip:
       - anytree
       - visdom
