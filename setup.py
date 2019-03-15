@@ -11,8 +11,8 @@ setuptools.setup(name='connect4',
       long_description=long_description,
       url='http://github.com/muff2n/connect4',
       license='MIT',
-      # packages=['src/connect4'],
-      packages=setuptools.find_packages(),
+      packages=['connect4'],
+      # packages=setuptools.find_packages(),
       classifiers=[
         "Programming Language :: Python :: 3",
         "License :: OSI Approved :: MIT License",
@@ -21,9 +21,7 @@ setuptools.setup(name='connect4',
       install_requires=[
           'anytree',
           'numpy',
-          'os',
           'pandas',
-          'pickle',
           'pytorch',
           'visdom'
       ]
