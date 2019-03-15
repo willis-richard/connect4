@@ -30,4 +30,4 @@ class AlphaZeroConfig():
     model_config = ModelConfig()
     storage_config = StorageConfig()
 
-    vizdom_enabled = False
+    visdom_enabled = False

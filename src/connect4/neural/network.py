@@ -156,6 +156,9 @@ class Model():
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+        else:
+            # Initialise weights to zero (output should be 0.5)
+            self.net.apply(weights_init)
         self.value_loss = nn.MSELoss()
         # Note that this needs to be with logits, not just the class index
         # self.policy_loss = nn.CrossEntropyLoss()
@@ -196,3 +199,15 @@ class Model():
                 loss = self.criterion(x_value, x_policy, y_value, y_policy)
                 loss.backward()
                 self.optimiser.step()
+
+
+def weights_init(m):
+    classname = m.__class__.__name__
+    if classname.find('Conv2d') != -1:
+        nn.init.constant_(m.weight, 0)
+    elif classname.find('BatchNorm2d') != -1:
+        nn.init.constant_(m.weight, 0)
+        nn.init.constant_(m.bias, 0)
+    elif classname.find('Linear') != -1:
+        nn.init.constant_(m.weight, 0)
+        nn.init.constant_(m.bias, 0)

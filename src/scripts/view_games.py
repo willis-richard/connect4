@@ -1,5 +1,7 @@
 from src.connect4.board import Board
 
+from src.connect4.neural.storage import game_str
+
 import pickle
 import sys
 
@@ -9,8 +11,4 @@ if __name__ == "__main__":
         games = pickle.loads(f)
         game = games[sys.argv[2]]
 
-        board = Board()
-        for move, value in game:
-            board.make_move(move)
-            print(board)
-            print("Value = ", value)
+        print(game_str(game))

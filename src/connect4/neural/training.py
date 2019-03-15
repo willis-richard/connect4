@@ -8,13 +8,16 @@ from src.connect4.utils import Result
 
 from src.connect4.neural.config import AlphaZeroConfig
 from src.connect4.neural.storage import (Connect4Dataset,
+                                         GameStorage,
                                          NetworkStorage,
                                          ReplayStorage)
 
 from copy import copy
+import os
 import pandas as pd
 import torch
 import torch.utils.data as data
+from visdom import Visdom
 
 
 def top_level_defined_play(x):
@@ -80,7 +83,7 @@ class TrainingLoop():
         self.test_data = data.DataLoader(test_data, batch_size=4096)
 
         self.easy_opponent = GridSearch("gridsearch:4",
-                                        plies=4,
+                                        4,
                                         e.Evaluator(e.evaluate_centre))
         self.hard_opponent = MCTS("mcts:2500",
                                   MCTSConfig(simulations=2500,
@@ -102,12 +105,12 @@ class TrainingLoop():
         else:
             self.stats_8ply = pd.DataFrame()
 
-        if config.vizdom_enabled:
-            from vizdom import Vizdom
-            viz = Vizdom()
-            self.easy_win = viz.matplot()
-            self.hard_win = viz.matplot()
-            self.win_8ply = viz.matplot()
+        if config.visdom_enabled:
+            self.vis = Visdom()
+            self.easy_win = self.vis.matplot()
+            self.hard_win = self.vis.matplot()
+            self.win_8ply = self.vis.matplot()
+            self.game_win = self.vis.text('')
 
     def run(self):
         i = 0
@@ -145,6 +148,8 @@ class TrainingLoop():
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
 
+        if self.config.visdom_enabled:
+            self.vis.text(str(self.game_storage.games[-1]), win=self.game_win)
         self.game_storage.save()
         train = time.time()
 
@@ -156,20 +161,22 @@ class TrainingLoop():
     def evaluate(self):
         self.test_8ply()
 
+        if self.config.visdom_enabled:
+            self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
+
         alpha_zero = self.create_alpha_zero(training=False)
 
         results = self.match(alpha_zero, self.easy_opponent)
         self.easy_results = self.easy_results.append(results, ignore_index=True)
         self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
+        if self.config.visdom_enabled:
+            self.vis.matplot(self.easy_results.plot(y=['return']), win=self.easy_win)
 
         # results = self.match(alpha_zero, self.hard_opponent)
         # self.hard_results = self.hard_results.append(results, ignore_index=True)
         # self.hard_results.to_pickle(self.save_dir + '/stats/hard_results.pkl')
-
-        if self.config.vizdom_enabled:
-            viz.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
-            viz.matplot(self.easy_results.plot(y=['return']), win=self.easy_win)
-            viz.matplot(self.hard_results.plot(y=['return']), win=self.hard_win)
+        # if self.config.visdom_enabled:
+        #     self.vis.matplot(self.hard_results.plot(y=['return']), win=self.hard_win)
 
     def test_8ply(self):
         """Get an idea of how the initialisation is"""
@@ -204,7 +211,7 @@ class TrainingLoop():
                       MCTSConfig(self.config.simulations,
                                  self.config.pb_c_init,
                                  self.config.root_dirichlet_alpha if training else 0.0,
-                                 self.config.root_exploration_fraction if training else 0.0)
+                                 self.config.root_exploration_fraction if training else 0.0),
                       evaluator)
         return player
 

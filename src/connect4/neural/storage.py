@@ -116,3 +116,14 @@ class Connect4Dataset(Dataset):
         return (self.boards[idx],
                 self.values[idx],
                 self.policies[idx])
+
+
+def game_str(game_history: List):
+        board = Board()
+        out_str = str(board)
+        for move, value in game:
+            out_str += '\nMove: ' + str(move) + '  Value: ' + str(value)
+            board.make_move(move)
+            out_str += '\n' + str(board)
+
+        return out_str
