@@ -91,17 +91,17 @@ class TrainingLoop():
                                   e.Evaluator(e.evaluate_centre_with_prior))
 
         if os.path.exists(self.save_dir + '/stats/easy_results.pkl'):
-            self.stats = pd.read_pickle(self.save_dir + '/stats/easy_results.pkl')
+            self.easy_results = pd.read_pickle(self.save_dir + '/stats/easy_results.pkl')
         else:
             self.easy_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
 
         if os.path.exists(self.save_dir + '/stats/hard_results.pkl'):
-            self.stats = pd.read_pickle(self.save_dir + '/stats/hard_results.pkl')
+            self.hard_results = pd.read_pickle(self.save_dir + '/stats/hard_results.pkl')
         else:
             self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
 
         if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
-            self.stats = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
+            self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
         else:
             self.stats_8ply = pd.DataFrame()
 

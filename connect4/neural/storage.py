@@ -16,9 +16,10 @@ class GameStorage():
     def save(self):
         if os.path.exists(self.filename):
             with open(self.filename, 'rb') as f:
-                old_games = pickle.load(self.filename)
+                old_games = pickle.load(f)
             self.games = old_games + self.games
-        pickle.dumps(self.filename)
+        with open(self.filename, 'wb') as f:
+            pickle.dump(self.games, f)
         self.games = []
 
     def save_game(self, game: List):
