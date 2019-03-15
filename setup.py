@@ -19,10 +19,12 @@ setuptools.setup(name='connect4',
         "Operating System :: OS Independent",
       ],
       install_requires=[
-          'anytree',
           'numpy',
           'pandas',
-          'pytorch',
-          'visdom'
+          'pytorch'
+      ],
+      dependency_links=[
+          'https://github.com/c0fec0de/anytree/archive/master.zip',
+          'https://github.com/c0fec0de/facebookresearch/visdom/master.zip'
       ]
 )
