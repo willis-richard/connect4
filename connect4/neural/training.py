@@ -13,6 +13,7 @@ from connect4.neural.storage import (Connect4Dataset,
                                          ReplayStorage)
 
 from copy import copy
+import matplotlib.pyplot as plt
 import os
 import pandas as pd
 import torch
@@ -107,9 +108,10 @@ class TrainingLoop():
 
         if config.visdom_enabled:
             self.vis = Visdom()
-            self.easy_win = self.vis.matplot()
-            self.hard_win = self.vis.matplot()
-            self.win_8ply = self.vis.matplot()
+            fig = plt.figure()
+            self.easy_win = self.vis.matplot(fig)
+            self.hard_win = self.vis.matplot(fig)
+            self.win_8ply = self.vis.matplot(fig)
             self.game_win = self.vis.text('')
 
     def run(self):
@@ -149,7 +151,8 @@ class TrainingLoop():
                 self.game_storage.save_game(history)
 
         if self.config.visdom_enabled:
-            self.vis.text(self.game_storage.last_game_str, win=self.game_win)
+            self.vis.text(self.game_storage.last_game_str(),
+                          win=self.game_win)
         self.game_storage.save()
         train = time.time()
 
@@ -162,7 +165,8 @@ class TrainingLoop():
         self.test_8ply()
 
         if self.config.visdom_enabled:
-            self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']), win=self.win_8ply)
+            self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
+                             win=self.win_8ply)
 
         alpha_zero = self.create_alpha_zero(training=False)
 
@@ -170,13 +174,14 @@ class TrainingLoop():
         self.easy_results = self.easy_results.append(results, ignore_index=True)
         self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
         if self.config.visdom_enabled:
-            self.vis.matplot(self.easy_results.plot(y=['return']), win=self.easy_win)
+            self.vis.matplot(self.easy_results.plot(y=['return']).figure,
+                             win=self.easy_win)
 
         # results = self.match(alpha_zero, self.hard_opponent)
         # self.hard_results = self.hard_results.append(results, ignore_index=True)
         # self.hard_results.to_pickle(self.save_dir + '/stats/hard_results.pkl')
         # if self.config.visdom_enabled:
-        #     self.vis.matplot(self.hard_results.plot(y=['return']), win=self.hard_win)
+        #     self.vis.matplot(self.hard_results.plot(y=['return']).figure, win=self.hard_win)
 
     def test_8ply(self):
         """Get an idea of how the initialisation is"""

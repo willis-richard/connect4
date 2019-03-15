@@ -19,6 +19,7 @@ setuptools.setup(name='connect4',
         "Operating System :: OS Independent",
       ],
       install_requires=[
+          'matplotlib',
           'numpy',
           'pandas',
           'pytorch'

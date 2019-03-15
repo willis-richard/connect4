@@ -25,9 +25,9 @@ class AlphaZeroConfig():
     root_exploration_fraction = 0.25
     n_eval = 2
     n_training_epochs = 2
-    n_training_games = 200
+    n_training_games = 2
 
     model_config = ModelConfig()
     storage_config = StorageConfig()
 
-    visdom_enabled = False
+    visdom_enabled = True
