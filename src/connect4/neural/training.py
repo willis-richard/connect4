@@ -149,7 +149,7 @@ class TrainingLoop():
                 self.game_storage.save_game(history)
 
         if self.config.visdom_enabled:
-            self.vis.text(str(self.game_storage.games[-1]), win=self.game_win)
+            self.vis.text(self.game_storage.last_game_str, win=self.game_win)
         self.game_storage.save()
         train = time.time()
 

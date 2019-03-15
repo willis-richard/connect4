@@ -10,10 +10,10 @@ from torch.utils.data import DataLoader, Dataset
 
 class GameStorage():
     def __init__(self, folder_path: str):
+        self.filename = folder_path + '/games.pkl'
         self.games = []
 
     def save(self):
-        self.filename = folder_path + '/games.pkl'
         if os.path.exists(self.filename):
             with open(self.filename, 'rb') as f:
                 old_games = pickle.load(self.filename)
@@ -21,8 +21,11 @@ class GameStorage():
         pickle.dumps(self.filename)
         self.games = []
 
-    def add_game(self, game: List):
+    def save_game(self, game: List):
         self.games.append(game)
+
+    def last_game_str(self):
+        return game_str(self.games[-1])
 
 
 class NetworkStorage():
