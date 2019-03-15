@@ -7,8 +7,8 @@ import sys
 
 
 if __name__ == "__main__":
-    with open(sys.argvp[1], 'rb') as f:
-        games = pickle.loads(f)
-        game = games[sys.argv[2]]
+    with open(sys.argv[1], 'rb') as f:
+        games = pickle.load(f)
+        game = games[int(sys.argv[2])]
 
         print(game_str(game))

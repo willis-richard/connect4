@@ -1,3 +1,5 @@
+from connect4.board import Board
+
 from connect4.neural.config import AlphaZeroConfig, ModelConfig
 from connect4.neural.network import Model
 
@@ -122,7 +124,7 @@ class Connect4Dataset(Dataset):
                 self.policies[idx])
 
 
-def game_str(game_history: List):
+def game_str(game: List):
         board = Board()
         out_str = str(board)
         for move, value in game:
