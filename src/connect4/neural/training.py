@@ -119,7 +119,7 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        alpha_zero = self.create_alpha_zero()
+        alpha_zero = self.create_alpha_zero(training=True)
 
         self.replay_storage.reset()
 
@@ -156,7 +156,7 @@ class TrainingLoop():
     def evaluate(self):
         self.test_8ply()
 
-        alpha_zero = self.create_alpha_zero()
+        alpha_zero = self.create_alpha_zero(training=False)
 
         results = self.match(alpha_zero, self.easy_opponent)
         self.easy_results = self.easy_results.append(results, ignore_index=True)
@@ -195,14 +195,16 @@ class TrainingLoop():
         match = Match(False, alpha_zero, opponent, plies=1, switch=True)
         return match.play(agents=self.config.agents)
 
-    def create_alpha_zero(self):
+    def create_alpha_zero(self, training=False):
         model = self.nn_storage.get_model()
         evaluator = e.NetEvaluator(
             e.evaluate_nn,
             model)
         player = MCTS('AlphaZero',
                       MCTSConfig(self.config.simulations,
-                                 self.config.pb_c_init),
+                                 self.config.pb_c_init,
+                                 self.config.root_dirichlet_alpha if training else 0.0,
+                                 self.config.root_exploration_fraction if training else 0.0)
                       evaluator)
         return player
 

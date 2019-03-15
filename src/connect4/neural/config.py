@@ -21,6 +21,8 @@ class AlphaZeroConfig():
     agents = 2
     simulations = 100
     pb_c_init=9999
+    root_dirichlet_alpha = 0.3 # for chess, 0.03 for Go and 0.15 for shogi.
+    root_exploration_fraction = 0.25
     n_eval = 10
     n_training_epochs = 2
     n_training_games = 100

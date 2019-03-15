@@ -41,18 +41,7 @@ def evaluate_centre(board: Board):
 def evaluate_centre_with_prior(board: Board):
     value = evaluate_centre(board)
     prior = copy(info.prior)
-    prior = normalise_prior(board.valid_moves,
-                            prior)
     return value, prior
-
-
-def normalise_prior(valid_moves: Set, prior: List[float]):
-    invalid_moves = set(range(info.width)).difference(valid_moves)
-    if invalid_moves:
-        for a in invalid_moves:
-            prior[a] = 0.0
-    prior = prior / np.sum(prior)
-    return prior
 
 
 def evaluate_nn(board: Board,
@@ -66,5 +55,4 @@ def evaluate_nn(board: Board,
     # prior = prior.data.numpy()
     # prior = softmax(prior)
     prior = copy(info.prior)
-    prior = normalise_prior(board.valid_moves, prior)
     return value, prior

@@ -10,17 +10,23 @@ from src.connect4.utils import (same_side,
 
 from anytree import Node
 import math
-from typing import Callable, List, Set, Tuple
+import numpy as np
+from typing import Callable, Dict, List, Set, Tuple
 
 
 class MCTSConfig():
-    def __init__(self, simulations, pb_c_base=19652, pb_c_init=1.25):
+    def __init__(self,
+            simulations: int,
+            pb_c_base: int=19652,
+            pb_c_init: int=1.25,
+            num_sampling_moves: int=0,
+            dirichlet_alpha: float=0.3, # for chess, 0.03 for Go and 0.15 for shogi.
+            exploration_fraction: float=0.25):
         self.simulations = simulations
         self.pb_c_base = pb_c_base
         self.pb_c_init = pb_c_init
-        # self.num_sampling_moves = 30
-        # self.root_dirichlet_alpha = 0.3  # for chess, 0.03 for Go and 0.15 for shogi.
-        # self.root_exploration_fraction = 0.25
+        self.root_dirichlet_alpha = root_dirichlet_alpha
+        self.root_exploration_fraction = root_exploration_fraction
 
 
 class PositionEvaluation():
@@ -175,6 +181,9 @@ def search(config: MCTSConfig,
                                           board.age)
         else:
             value, prior = evaluator(board)
+            if node.is_root:
+                prior.add_exploration_noise(config, prior)
+            prior = normalise_prior(board.valid_moves, prior)
             node.data.position_value = PositionEvaluation(value, prior)
 
         backpropagate(node, value)
@@ -254,3 +263,21 @@ def backpropagate(node: Node,
     while not node.is_root:
         node = node.parent
         node.data._search_value.add(value)
+
+
+def add_exploration_noise(config: AlphaZeroConfig,
+                          prior: Dict[int, float]):
+    noise = np.random.gamma(config.root_dirichlet_alpha, 1, info.width)
+    frac = config.root_exploration_fraction
+    for i, n in enumerate(noise):
+      prior[i] = prior[i] * (1 - frac) + n * frac
+    return prior
+
+
+def normalise_prior(valid_moves: Set, prior: List[float]):
+    invalid_moves = set(range(info.width)).difference(valid_moves)
+    if invalid_moves:
+        for a in invalid_moves:
+            prior[a] = 0.0
+    prior = prior / np.sum(prior)
+    return prior
