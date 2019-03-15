@@ -1,13 +1,13 @@
 """Hi"""
 
-import src.connect4.evaluators as evaluators
-from src.connect4.grid_search import GridSearch
-from src.connect4.match import Match
-from src.connect4.mcts import MCTS, MCTSConfig
-from src.connect4.player import HumanPlayer
+import connect4.evaluators as evaluators
+from connect4.grid_search import GridSearch
+from connect4.match import Match
+from connect4.mcts import MCTS, MCTSConfig
+from connect4.player import HumanPlayer
 
-from src.connect4.neural.config import AlphaZeroConfig
-from src.connect4.neural.training import TrainingLoop
+from connect4.neural.config import AlphaZeroConfig
+from connect4.neural.training import TrainingLoop
 
 import sys
 

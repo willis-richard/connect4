@@ -1,7 +1,7 @@
-from src.connect4.board import Board
-from src.connect4.utils import Connect4Stats as info
+from connect4.board import Board
+from connect4.utils import Connect4Stats as info
 
-from src.connect4.neural.network import Model
+from connect4.neural.network import Model
 
 from copy import copy
 from functools import partial

@@ -1,7 +1,7 @@
-from src.connect4.board import Board
-import src.connect4.evaluators as evaluators
-from src.connect4.grid_search import GridSearch
-from src.connect4.mcts import MCTS, MCTSConfig
+from connect4.board import Board
+import connect4.evaluators as evaluators
+from connect4.grid_search import GridSearch
+from connect4.mcts import MCTS, MCTSConfig
 
 import anytree
 import pytest

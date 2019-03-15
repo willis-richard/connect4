@@ -1,8 +1,8 @@
-from src.connect4.board import Board
-from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import NetworkStats as net_info
+from connect4.board import Board
+from connect4.utils import Connect4Stats as info
+from connect4.utils import NetworkStats as net_info
 
-from src.connect4.neural.config import ModelConfig
+from connect4.neural.config import ModelConfig
 
 import torch
 import torch.optim as optim

@@ -1,5 +1,5 @@
-from src.connect4 import board
-from src.connect4.utils import Result, Side
+from connect4 import board
+from connect4.utils import Result, Side
 
 import pytest
 

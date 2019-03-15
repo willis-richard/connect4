@@ -1,13 +1,13 @@
-from src.connect4.board import Board
-import src.connect4.evaluators as e
-from src.connect4.grid_search import GridSearch
-from src.connect4.match import Match
-from src.connect4.mcts import MCTS, MCTSConfig
-from src.connect4.player import BasePlayer
-from src.connect4.utils import Result
+from connect4.board import Board
+import connect4.evaluators as e
+from connect4.grid_search import GridSearch
+from connect4.match import Match
+from connect4.mcts import MCTS, MCTSConfig
+from connect4.player import BasePlayer
+from connect4.utils import Result
 
-from src.connect4.neural.config import AlphaZeroConfig
-from src.connect4.neural.storage import (Connect4Dataset,
+from connect4.neural.config import AlphaZeroConfig
+from connect4.neural.storage import (Connect4Dataset,
                                          GameStorage,
                                          NetworkStorage,
                                          ReplayStorage)

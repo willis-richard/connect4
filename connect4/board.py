@@ -1,5 +1,5 @@
-from src.connect4.utils import Connect4Stats as info
-from src.connect4.utils import Side, Result
+from connect4.utils import Connect4Stats as info
+from connect4.utils import Side, Result
 
 import numpy as np
 import torch

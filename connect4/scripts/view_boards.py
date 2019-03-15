@@ -1,4 +1,4 @@
-from src.connect4.board import Board
+from connect4.board import Board
 
 import numpy as np
 import torch

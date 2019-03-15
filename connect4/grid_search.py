@@ -1,8 +1,8 @@
-from src.connect4.board import Board
-from src.connect4.evaluators import Evaluator
-from src.connect4.player import BasePlayer
-from src.connect4.tree import BaseNodeData, Tree
-from src.connect4.utils import same_side, Side
+from connect4.board import Board
+from connect4.evaluators import Evaluator
+from connect4.player import BasePlayer
+from connect4.tree import BaseNodeData, Tree
+from connect4.utils import same_side, Side
 
 from anytree import Node
 

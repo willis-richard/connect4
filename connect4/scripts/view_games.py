@@ -1,6 +1,6 @@
-from src.connect4.board import Board
+from connect4.board import Board
 
-from src.connect4.neural.storage import game_str
+from connect4.neural.storage import game_str
 
 import pickle
 import sys

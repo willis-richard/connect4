@@ -1,5 +1,5 @@
-from src.connect4.neural.config import AlphaZeroConfig, ModelConfig
-from src.connect4.neural.network import Model
+from connect4.neural.config import AlphaZeroConfig, ModelConfig
+from connect4.neural.network import Model
 
 import os
 import pickle

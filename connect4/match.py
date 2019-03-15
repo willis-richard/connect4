@@ -1,6 +1,6 @@
-from src.connect4.board import Board
-from src.connect4.game import Game
-from src.connect4.player import BasePlayer
+from connect4.board import Board
+from connect4.game import Game
+from connect4.player import BasePlayer
 
 from copy import copy
 import numpy as np

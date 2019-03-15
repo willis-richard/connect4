@@ -1,5 +1,5 @@
-from src.connect4.board import Board
-from src.connect4.utils import Result, Side, value_to_side
+from connect4.board import Board
+from connect4.utils import Result, Side, value_to_side
 
 from anytree import Node
 from copy import copy
