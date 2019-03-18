@@ -64,8 +64,13 @@ class Tree():
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)
-        policy = policy / np.sum(policy)
-        return policy
+        policy_sum = np.sum(policy)
+        if policy_sum == 0.0:
+            for c in self.root.children:
+                policy[c.name] = 1.0
+            return policy / len(self.root.children)
+        else:
+            return policy / policy_sum
         # If pytorch CrossEntropy
         # _, action = max((self.get_node_value(c), c.name)
         #                 for c in self.root.children)

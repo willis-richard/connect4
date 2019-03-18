@@ -1,6 +1,5 @@
-import numpy as np
-
 from enum import Enum, IntEnum
+import numpy as np
 
 
 class Connect4Stats():
