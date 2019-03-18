@@ -115,25 +115,17 @@ value_net= nn.Sequential(convolutional_layer,
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        # self.body = nn.Conv2d(in_channels=net_info.channels,
-        #                     out_channels=net_info.filters,
-        #                     kernel_size=3,
-        #                     stride=1,
-        #                     padding=1,
-        #                     dilation=1,
-        #                     groups=1,
-        #                     bias=False)
         self.body = nn.Sequential(convolutional_layer,
                                   nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
         self.value_head = ValueHead()
-        # self.policy_head = PolicyHead()
+        self.policy_head = PolicyHead()
 
     def forward(self, x):
         x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
-        # policy = self.policy_head(x)
-        return value, torch.ones(value.shape[0], net_info.width) #, policy
+        policy = self.policy_head(x)
+        return value, policy
 
 
 class Model():
@@ -160,8 +152,10 @@ class Model():
             # Initialise weights to zero (output should be 0.5)
             self.net.apply(weights_init)
         self.value_loss = nn.MSELoss()
-        # Note that this needs to be with logits, not just the class index
+        # FIXME: that this needs to be with logits, not just the class index
+        # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
         # self.policy_loss = nn.CrossEntropyLoss()
+        self.policy_loss = nn.MultiLabelSoftMarginLoss()
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
@@ -170,11 +164,11 @@ class Model():
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)
-        # policy_loss = self.policy_loss(x_policy, y_policy)
+        policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        # return value_loss - policy_loss
-        return value_loss
+        return value_loss - policy_loss
+
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization

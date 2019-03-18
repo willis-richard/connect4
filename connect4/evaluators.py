@@ -5,6 +5,7 @@ from connect4.neural.network import Model
 
 from copy import copy
 from functools import partial
+from scipy.special import softmax
 from typing import List, Set
 import numpy as np
 
@@ -50,9 +51,16 @@ def evaluate_nn(board: Board,
     value = value.cpu()
     value = value.view(-1)
     value = value.data.numpy()
-    # prior = prior.cpu()
-    # prior = prior.view(-1)
-    # prior = prior.data.numpy()
-    # prior = softmax(prior)
-    prior = copy(info.prior)
+    prior = prior.cpu()
+    prior = prior.view(-1)
+    prior = prior.data.numpy()
+    prior = softmax(prior)
     return value, prior
+
+
+def normalise_prior(valid_moves: Set, np.ndarray):
+    invalid_moves = set(range(info.width)).difference(valid_moves)
+    if invalid_moves:
+        np.put(prior, invalid_moves, 0.0)
+    prior = prior / np.sum(prior)
+    return prior

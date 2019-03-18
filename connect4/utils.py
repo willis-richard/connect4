@@ -31,7 +31,7 @@ class Connect4Stats():
     # wtf width not recognised either...
     # prior = np.array([1.0 + (1.0 / 7) / (1 + np.abs(((7 - 1) / 2.0) - a))
     #                           for a in range(7)])
-    prior = np.ones((7,), dtype=float)
+    prior = np.ones((7,), dtype=float) / 7.0
 
     # my hash function converts to a u64
     assert height * width <= 64

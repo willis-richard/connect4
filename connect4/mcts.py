@@ -1,5 +1,5 @@
 from connect4.board import Board
-from connect4.evaluators import Evaluator
+from connect4.evaluators import Evaluator, normalise_prior
 from connect4.player import BasePlayer
 from connect4.tree import BaseNodeData, Tree
 from connect4.utils import Connect4Stats as info
@@ -19,8 +19,8 @@ class MCTSConfig():
             simulations: int,
             pb_c_base: int=19652,
             pb_c_init: int=1.25,
-            root_dirichlet_alpha: float=0.3,
-            root_exploration_fraction: float=0.25):
+            root_dirichlet_alpha: float=0.0,
+            root_exploration_fraction: float=0.0):
         self.simulations = simulations
         self.pb_c_base = pb_c_base
         self.pb_c_init = pb_c_init
@@ -31,7 +31,7 @@ class MCTSConfig():
 class PositionEvaluation():
     def __init__(self,
                  value: float,
-                 prior: List[float]):
+                 prior: np.ndarray):
         self.value = value
         self.prior = prior
 
@@ -98,10 +98,6 @@ class NodeData(BaseNodeData):
         return super().value(side)
 
     def __str__(self):
-        # if self.position_value is not None:
-        #     return "prior: " + str(self.position_value.prior) + \
-        #         "   terminal_result: " + str(self.terminal_result) + \
-        #         "  " + super().__str__()
         return "terminal_result: " + str(self.terminal_result) + \
             "  " + super().__str__()
 
@@ -155,13 +151,22 @@ def search(config: MCTSConfig,
            tree: Tree,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
+    # First evaluate root and add noise
+    if tree.root.data.position_value is not None:
+        root_prior = tree.root.data.position_evaluation.prior
+    else:
+        value, root_prior = evaluator(board)
+        tree.root.data.position_value = PositionEvaluation(value, root_prior)
+    # later we will return the root prior to it's true value so the transition table is accurate
+    noisy_prior = add_exploration_noise(config, tree.root.data.position_evaluation.prior)
+    tree.root.data.position_value.prior = noisy_prior
+
     for _ in range(config.simulations):
         node = tree.root
 
         if not tree.root.data.non_terminal_moves:
             break
 
-        # FIXME: node.data.evaluated() ?
         while node.children:
             node = select_child(config, tree, node)
 
@@ -174,19 +179,20 @@ def search(config: MCTSConfig,
         # encountered a new terminal position
         if board.result is not None:
             value = board.result.value
-            node.data.position_value = PositionEvaluation(value, [])
+            node.data.position_value = PositionEvaluation(value,
+                                                          np.zeros((info.width)))
             node = backpropagate_terminal(node,
                                           board.result,
                                           board.age)
         else:
             value, prior = evaluator(board)
-            if node.is_root:
-                prior = add_exploration_noise(config, prior)
-            prior = normalise_prior(board.valid_moves, prior)
             node.data.position_value = PositionEvaluation(value, prior)
 
         backpropagate(node, value)
 
+    # Return the root prior to it's true value
+    # FIXME: Check that this works for parallelism
+    tree.root.data.position_value.prior = root_prior
     return
 
 
@@ -265,18 +271,10 @@ def backpropagate(node: Node,
 
 
 def add_exploration_noise(config: MCTSConfig,
-                          prior: Dict[int, float]):
-    noise = np.random.gamma(config.root_dirichlet_alpha, 1, info.width)
-    frac = config.root_exploration_fraction
-    for i, n in enumerate(noise):
-      prior[i] = prior[i] * (1 - frac) + n * frac
-    return prior
-
-
-def normalise_prior(valid_moves: Set, prior: List[float]):
-    invalid_moves = set(range(info.width)).difference(valid_moves)
-    if invalid_moves:
-        for a in invalid_moves:
-            prior[a] = 0.0
-    prior = prior / np.sum(prior)
+                          prior: np.ndarray):
+    if config.root_dirichlet_alpha and config.root_exploration_fraction:
+        noise = np.random.gamma(config.root_dirichlet_alpha, 1, info.width)
+        frac = config.root_exploration_fraction
+        prior = prior * (1 - frac) + n * frac
+        prior = normalise_prior(board.valid_moves, prior)
     return prior
