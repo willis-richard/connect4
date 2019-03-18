@@ -36,11 +36,11 @@ class TrainingGame():
         while board.result is None:
             move, value, tree = self.player.make_move(board)
 
-            history.append((move, value))
-
             boards.append(board.to_tensor())
             policy = tree.get_policy()
-            policies.append(torch.tensor(policy))
+            policies.append(torch.FloatTensor(policy))
+
+            history.append((move, value, policy))
 
         boards = torch.stack(boards).squeeze()
         values = self.create_values(board.result, len(boards))

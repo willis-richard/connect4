@@ -18,7 +18,7 @@ class StorageConfig():
     save_dir = '/home/richard/Downloads/nn/new_dir4'
 
 class AlphaZeroConfig():
-    agents = 2
+    agents = 1
     simulations = 100
     pb_c_init=9999
     root_dirichlet_alpha = 0.3 # for chess, 0.03 for Go and 0.15 for shogi.
@@ -30,4 +30,4 @@ class AlphaZeroConfig():
     model_config = ModelConfig()
     storage_config = StorageConfig()
 
-    visdom_enabled = True
+    visdom_enabled = False

@@ -1,8 +1,9 @@
 from connect4.board import Board
-from connect4.utils import Result, Side, value_to_side
+from connect4.utils import Connect4Stats as info, Result, Side, value_to_side
 
 from anytree import Node
 from copy import copy
+import numpy as np
 from typing import Dict, Tuple
 
 
@@ -60,14 +61,15 @@ class Tree():
         return action, value
 
     def get_policy(self):
-        # policy = np.zeros((info.width,))
-        # for c in self.root.children:
-        #     policy[c.name] = c.data.search_evaluation.visit_count
-        # policy = policy / np.sum(policy)
-        # FIXME: was visit_count
-        _, action = max((self.get_node_value(c), c.name)
-                        for c in self.root.children)
-        return action
+        policy = np.zeros((info.width,))
+        for c in self.root.children:
+            policy[c.name] = self.get_node_value(c)
+        policy = policy / np.sum(policy)
+        return policy
+        # If pytorch CrossEntropy
+        # _, action = max((self.get_node_value(c), c.name)
+        #                 for c in self.root.children)
+        # return action
 
     def create_node(self, name, board, parent=None):
         if board in self.result_table:

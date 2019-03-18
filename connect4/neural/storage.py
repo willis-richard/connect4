@@ -82,7 +82,8 @@ class ReplayStorage():
     def reset(self):
         self.board_buffer = torch.Tensor()
         self.value_buffer = torch.Tensor()
-        self.policy_buffer = torch.LongTensor()
+        # self.policy_buffer = torch.LongTensor()
+        self.policy_buffer = torch.Tensor()
 
     def save_game(self, boards, values, policies):
         self.board_buffer = torch.cat((self.board_buffer, boards), 0)
@@ -127,8 +128,8 @@ class Connect4Dataset(Dataset):
 def game_str(game: List):
         board = Board()
         out_str = str(board)
-        for move, value in game:
-            out_str += '\nMove: ' + str(move) + '  Value: ' + str(value)
+        for move, value, policy in game:
+            out_str += '\nMove: ' + str(move) + '  Value: ' + str(value) + '  Policy: ' + str(policy)
             board.make_move(move)
             out_str += '\n' + str(board)
 

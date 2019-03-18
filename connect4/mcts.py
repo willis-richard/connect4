@@ -155,10 +155,10 @@ def search(config: MCTSConfig,
     if tree.root.data.position_value is not None:
         root_prior = tree.root.data.position_evaluation.prior
     else:
-        value, root_prior = evaluator(board)
+        value, root_prior = evaluator(tree.root.data.board)
         tree.root.data.position_value = PositionEvaluation(value, root_prior)
     # later we will return the root prior to it's true value so the transition table is accurate
-    noisy_prior = add_exploration_noise(config, tree.root.data.position_evaluation.prior)
+    noisy_prior = add_exploration_noise(config, tree.root.data.position_value.prior)
     tree.root.data.position_value.prior = noisy_prior
 
     for _ in range(config.simulations):

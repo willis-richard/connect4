@@ -58,7 +58,7 @@ def evaluate_nn(board: Board,
     return value, prior
 
 
-def normalise_prior(valid_moves: Set, np.ndarray):
+def normalise_prior(valid_moves: Set, prior: np.ndarray):
     invalid_moves = set(range(info.width)).difference(valid_moves)
     if invalid_moves:
         np.put(prior, invalid_moves, 0.0)
