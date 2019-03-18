@@ -127,12 +127,14 @@ class TrainingLoop():
         alpha_zero = self.create_alpha_zero(training=True)
 
         self.replay_storage.reset()
+        game_results = []
 
         import time
         start = time.time()
         if self.config.agents == 1:
             for _ in range(self.config.n_training_games):
-                _, history, data = TrainingGame(alpha_zero).play()
+                result, history, data = TrainingGame(alpha_zero).play()
+                game_results.append(result)
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
         else:
@@ -146,9 +148,10 @@ class TrainingLoop():
             a0 = [alpha_zero for _ in range(self.config.n_training_games)]
             with Pool(processes=self.config.agents) as pool:
                 results = pool.map(top_level_defined_play, a0)
-            for _, history, data in results:
+            for result, history, data in results:
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
+                game_results.append(result)
 
         if self.config.visdom_enabled:
             self.vis.text(self.game_storage.last_game_str(),
@@ -160,6 +163,10 @@ class TrainingLoop():
                               self.config.n_training_epochs)
         end = time.time()
         print('Generate games: {:.0f}  training: {:.0f}'.format(train - start, end - train))
+        print('Player one: wins, draws, losses:  {}, {}, {}'.format(
+            game_results.count(Result.o_win),
+            game_results.count(Result.draw),
+            game_results.count(Result.x_win)))
 
     def evaluate(self):
         self.test_8ply()
