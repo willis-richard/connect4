@@ -27,7 +27,7 @@ class Parser():
            print('Unrecognized command')
            parser.print_help()
            exit(1)
-        # use dispatchattern to invoke method with same name
+
         getattr(self, self.mode.mode)()
 
     def game(self):
@@ -75,7 +75,7 @@ if __name__ == "__main__":
         match.play(agents=parser.args.agents)
     else:
         if parser.args.config:
-            spec = spec_from_file_location("module.name", "/path/to/file.py")
+            spec = spec_from_file_location("module.name", parser.args.config)
             config = module_from_spec(spec)
             spec.loader.exec_module(config)
             config = config.config
