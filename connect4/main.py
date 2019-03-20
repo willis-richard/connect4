@@ -1,6 +1,6 @@
 """Hi"""
 
-import connect4.evaluators as evaluators
+import connect4.evaluators as ev
 from connect4.grid_search import GridSearch
 from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
@@ -9,28 +9,76 @@ from connect4.player import HumanPlayer
 from connect4.neural.config import AlphaZeroConfig
 from connect4.neural.training import TrainingLoop
 
+import argparse
+from importlib.util import module_from_spec, spec_from_file_location
 import sys
 
+
+class Parser():
+    def __init__(self):
+        parser = argparse.ArgumentParser(description='Run either a single game, or use AlphaZero either in a match or training loop.',
+                                         usage='<game|match|training> [<args>]')
+        parser.add_argument('-m', '--mode',
+                            choices=['game', 'match', 'training'],
+                            help='Choose whether to run a match or a training loop')
+        self.mode = parser.parse_args(sys.argv[1:3])
+
+        if not hasattr(self, self.mode.mode):
+           print('Unrecognized command')
+           parser.print_help()
+           exit(1)
+        # use dispatchattern to invoke method with same name
+        getattr(self, self.mode.mode)()
+
+    def game(self):
+        parser = argparse.ArgumentParser(description='Run a game between two human players.')
+        parser.add_argument('-n', '--names', nargs=2,
+                            help='the names of the two players')
+        self.args = parser.parse_args(sys.argv[3:])
+
+    def match(self):
+        parser = argparse.ArgumentParser(description='Run a match from different initial positions.')
+        parser.add_argument('-a', '--agents', default=1, type=int,
+                            help='how many processes to run')
+        parser.add_argument('-p', '--plies', default=1, type=int,
+                            help='the number of pre-made half-moves for each game')
+        self.args = parser.parse_args(sys.argv[3:])
+
+    def training(self):
+        parser = argparse.ArgumentParser(description='Run a training loop.')
+        parser.add_argument('-c', '--config', required=False,
+                            help='An AlphaZero config filepath')
+        self.args = parser.parse_args(sys.argv[3:])
+
 if __name__ == "__main__":
-    if len(sys.argv) == 1:
-        # player_1 = HumanPlayer("human_1")
+    parser = Parser()
+    if parser.mode.mode == 'game':
+        player_1 = HumanPlayer(parser.args.names[0])
+        player_2 = HumanPlayer(parser.args.names[1])
+
+        match = Match(True, player_1, player_2, switch=False)
+        match.play()
+    elif parser.mode.mode == 'match':
         player_1 = GridSearch("grid_1",
                               4,
-                              evaluators.Evaluator(
-                                  evaluators.evaluate_centre))
-        # player_1 = player.ComputerPlayer("mcts_1",
-        #                                  MCTS(MCTS.Config(simulations=2500,
-        #                                                   pb_c_init=9999)))
-        # player_2 = player.ComputerPlayer("grid_2",
-        #                                  GridSearch(plies=4))
+                              ev.Evaluator(ev.evaluate_centre))
         player_2 = MCTS("mcts_2",
                         MCTSConfig(simulations=2500,
                                    pb_c_init=9999),
-                        evaluators.Evaluator(
-                            evaluators.evaluate_centre_with_prior))
-        match = Match(True, player_1, player_2, plies=1, switch=True)
-        # match.play(agents=12)
-        # match = Match(True, player_1, player_2, plies=0, switch=False)
-        match.play(agents=2)
+                        ev.Evaluator(ev.evaluate_centre_with_prior))
+
+        match = Match(True,
+                      player_1,
+                      player_2,
+                      plies=parser.args.plies,
+                      switch=True)
+        match.play(agents=parser.args.agents)
     else:
-        TrainingLoop(AlphaZeroConfig).run()
+        if parser.args.config:
+            spec = spec_from_file_location("module.name", "/path/to/file.py")
+            config = module_from_spec(spec)
+            spec.loader.exec_module(config)
+            config = config.config
+        else:
+            config = AlphaZeroConfig()
+        TrainingLoop(config).run()

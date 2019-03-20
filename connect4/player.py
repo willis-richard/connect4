@@ -27,7 +27,7 @@ class HumanPlayer(BasePlayer):
                 print("Try again dipshit")
                 pass
         board.make_move(int(move))
-        return move, 1
+        return move, None, None
 
     def __str__(self):
         return super().__str__() + ", type: Human"
