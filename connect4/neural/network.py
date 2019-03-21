@@ -156,6 +156,9 @@ class Model():
         # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
         # self.policy_loss = nn.CrossEntropyLoss()
         self.policy_loss = nn.MultiLabelSoftMarginLoss()
+        print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
+        self.net.eval()
+        # self.net.train(False)
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
@@ -176,8 +179,8 @@ class Model():
     def train(self,
               data: DataLoader,
               n_epochs: int):
+        self.net.train()
         for epoch in range(n_epochs):
-            self.net.train()
 
             for board, y_value, y_policy in data:
                 self.scheduler.step()
@@ -193,15 +196,23 @@ class Model():
                 loss = self.criterion(x_value, x_policy, y_value, y_policy)
                 loss.backward()
                 self.optimiser.step()
+        # https://discuss.pytorch.org/t/output-always-the-same/5934/4
+        # https://github.com/pytorch/pytorch/issues/5406
+        # https://discuss.pytorch.org/t/model-eval-gives-incorrect-loss-for-model-with-batchnorm-layers/7561/13
+        # Epic post in this one
+        # https://discuss.pytorch.org/t/performance-highly-degraded-when-eval-is-activated-in-the-test-phase/3323/33
+        # self.net.train(False)
+        self.net.eval()
 
 
 def weights_init(m):
-    classname = m.__class__.__name__
-    if classname.find('Conv2d') != -1:
-        nn.init.constant_(m.weight, 0)
-    elif classname.find('BatchNorm2d') != -1:
-        nn.init.constant_(m.weight, 0)
-        nn.init.constant_(m.bias, 0)
-    elif classname.find('Linear') != -1:
-        nn.init.constant_(m.weight, 0)
-        nn.init.constant_(m.bias, 0)
+    return
+    # classname = m.__class__.__name__
+    # if classname.find('Conv2d') != -1:
+    #     nn.init.constant_(m.weight, 1)
+    # elif classname.find('BatchNorm2d') != -1:
+    #     nn.init.constant_(m.weight, 1)
+    #     nn.init.constant_(m.bias, 0)
+    # elif classname.find('Linear') != -1:
+    #     nn.init.constant_(m.weight, 1)
+    #     nn.init.constant_(m.bias, 0)

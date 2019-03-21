@@ -162,7 +162,7 @@ class TrainingLoop():
         self.nn_storage.train(self.replay_storage.get_data(),
                               self.config.n_training_epochs)
         end = time.time()
-        print('Generate games: {:.0f}  training: {:.0f}'.format(train - start, end - train))
+        print('Generate games: {:.0f}s  training: {:.0f}s'.format(train - start, end - train))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             game_results.count(Result.o_win),
             game_results.count(Result.draw),
@@ -177,12 +177,12 @@ class TrainingLoop():
 
         alpha_zero = self.create_alpha_zero(training=False)
 
-        results = self.match(alpha_zero, self.easy_opponent)
-        self.easy_results = self.easy_results.append(results, ignore_index=True)
-        self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
-        if self.config.visdom_enabled:
-            self.vis.matplot(self.easy_results.plot(y=['return']).figure,
-                             win=self.easy_win)
+        # results = self.match(alpha_zero, self.easy_opponent)
+        # self.easy_results = self.easy_results.append(results, ignore_index=True)
+        # self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
+        # if self.config.visdom_enabled:
+        #     self.vis.matplot(self.easy_results.plot(y=['return']).figure,
+        #                      win=self.easy_win)
 
         # results = self.match(alpha_zero, self.hard_opponent)
         # self.hard_results = self.hard_results.append(results, ignore_index=True)
@@ -199,7 +199,6 @@ class TrainingLoop():
         criterion = model.value_loss
 
         with torch.set_grad_enabled(False):
-            net = net.eval()
             for board, value, _ in self.test_data:
                 board, y_value = board.to(device), value.to(device)
                 x_value, _ = net(board)
