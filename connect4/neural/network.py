@@ -159,6 +159,10 @@ class Model():
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
         # self.net.train(False)
+        board_1 = Board()
+        board_2 = Board()
+        board_2.o_pieces=np.ones((info.width, info.height))
+        print("Test board output: empty board:  {}, full o board:  {}".format(self.__call__(board_1), self.__call__board(2)))
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
