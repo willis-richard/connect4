@@ -4,6 +4,7 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 
+import numpy as np
 from tensorflow.keras.layers import (Activation,
                           add,
                           BatchNormalization,
@@ -108,7 +109,8 @@ value_net = Sequential([convolutional_layer,
                        Sequential([ResidualLayer() for _ in range(net_info.n_residuals)]),
                        ValueHead()])
 
-
+# One can subclass their own models but better to avoid?
+# https://keras.io/models/about-keras-models/
 class Net(Model):
     def __init__(self):
         super(Net, self).__init__()
@@ -161,6 +163,10 @@ class Model():
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
         # self.net.train(False)
+        board_1 = Board()
+        board_2 = Board()
+        board_2.o_pieces=np.ones((info.width, info.height))
+        print("Test board output: empty board:  {}, full o board:  {}".format(self.__call__(board_1), self.__call__board(2)))
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
