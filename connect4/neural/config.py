@@ -23,7 +23,7 @@ class StorageConfig():
     def __init__(self,
                  path_8ply_boards='/home/richard/Downloads/connect4_boards.pth',
                  path_8ply_values='/home/richard/Downloads/connect4_values.pth',
-                 save_dir='/home/richard/Downloads/nn/new_dir4'):
+                 save_dir='/home/richard/Downloads/nn/new_dir'):
         self.path_8ply_boards = path_8ply_boards
         self.path_8ply_values = path_8ply_values
         self.save_dir = save_dir
@@ -35,12 +35,12 @@ class AlphaZeroConfig():
                  storage_config=StorageConfig(),
                  agents=1,
                  simulations=100,
-                 pb_c_init=9999,
+                 pb_c_init=1.25,
                  root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
-                 n_eval=2,
-                 n_training_epochs=2,
-                 n_training_games=2,
+                 n_eval=5,
+                 n_training_epochs=5,
+                 n_training_games=500,
                  visdom_enabled=False):
         self.model_config = model_config
         self.storage_config = storage_config

@@ -5,9 +5,10 @@ from connect4.neural.network import Model
 
 from copy import copy
 from functools import partial
-from scipy.special import softmax
-from typing import List, Set
 import numpy as np
+from scipy.special import softmax
+import torch
+from typing import List, Set
 
 
 class Evaluator():
@@ -48,6 +49,8 @@ def evaluate_centre_with_prior(board: Board):
 def evaluate_nn(board: Board,
                 model: Model):
     value, prior = model(board)
+    assert not torch.isnan(value).any()
+    assert not torch.isnan(prior).any()
     value = value.cpu()
     value = value.view(-1)
     value = value.data.numpy()

@@ -162,8 +162,11 @@ class Model():
         # self.net.train(False)
         board_1 = Board()
         board_2 = Board()
-        board_2.o_pieces=np.ones((info.width, info.height))
-        print("Test board output: empty board:  {}, full o board:  {}".format(self.__call__(board_1), self.__call__board(2)))
+        board_3 = Board()
+        board_2.o_pieces=np.ones((info.height, info.width))
+        board_3.x_pieces=np.ones((info.height, info.width))
+        print("Test board output: empty board:  {}, full o board:  {}, full x board:  {}"
+              .format(self.__call__(board_1), self.__call__(board_2), self.__call__(board_3)))
 
     def __call__(self, board: Board):
         board_tensor = board.to_tensor()
