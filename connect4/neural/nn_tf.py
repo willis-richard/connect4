@@ -4,12 +4,14 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 
+from tensorflow.keras.initializers import Constant, Ones
 from tensorflow.keras.layers import (Activation,
                           add,
                           BatchNormalization,
                           Conv2D,
                           Dense,
-                          Input)
+                          Input,
+                          Layer)
 from tensorflow.keras.models import Model, Sequential
 
 from typing import Callable, Dict, Optional, Tuple
@@ -32,18 +34,17 @@ convolutional_layer = \
 
 # Input with N * filters * (6,7)
 # Output with N * filters * (6,7)
-class ResidualLayer(Model):
+class ResidualLayer():
     def __init__(self, filters=net_info.filters):
-        super(ResidualLayer, self).__init__()
         self.conv1 = Conv2D(filters=filters, kernel_size=3, use_bias=False)
         self.conv2 = Conv2D(filters=filters, kernel_size=3, use_bias=False)
         self.batch_norm1 = BatchNormalization(axis=1)
         self.batch_norm2 = BatchNormalization(axis=1)
         self.relu = Activation('relu')
 
-    def call(self, x):
-        residual = x
-        out = self.conv1(x)
+    def call(self, input_: Input):
+        residual = input_
+        out = self.conv1(input_)
         out = self.batch_norm1(out)
         out = self.relu(out)
         out = self.conv2(out)
@@ -54,9 +55,43 @@ class ResidualLayer(Model):
         return out
 
 
+class Body():
+    def __init__(self, n_residuals: int=net_info.n_residuals):
+        self.body = Sequential([convolutional_layer,
+                                Sequential([ResidualLayer() for _ in range(n_residuals)])])
+
+    def build(self, input_: Input):
+        x = self.body(x)
+        return x
+
+
 # Input with N * filters * (6,7)
 # Output with N * 1
-class ValueHead(Model):
+class ValueHead():
+    # class AddOneDivideByTwo(Layer):
+    #     def __init__(self, **kwargs):
+    #        super(AddOneDivideByTwo, self).__init__(**kwargs)
+
+    #     def build(self, input_shape):
+    #         # Create a trainable weight variable for this layer.
+    #         # self.kernel = self.add_weight(name='kernel',
+    #         #                               shape=(input_shape[1], 1),
+    #         #                               initializer=keras.initializers.Constant(value=0.5),
+    #         #                               trainable=False)
+    #         super(AddOneDivideByTwo, self).build(input_shape)  # Be sure to call this at the end
+
+    #     def call(self, x):
+    #         x = x + 1
+    #         x = x * 0.5
+    #         # return K.dot(x, self.kernel)
+    #         return x
+
+    #     def compute_output_shape(self, input_shape):
+    #         # assert input_shape is batchsize by 1
+    #         assert len(input_shape) == 2
+    #         assert input_shape[1] == 1
+    #         return input_shape[0]
+
     def __init__(self, filters=net_info.filters, fc_layers=net_info.n_fc_layers):
         super(ValueHead, self).__init__()
         self.conv1 = Conv2D(filters=1, kernel_size=1)
@@ -65,11 +100,14 @@ class ValueHead(Model):
         self.fcN = Sequential([Dense(net_info.area, input_shape=(net_info.area,)) for _ in range(fc_layers)])
         self.fc1 = Dense(1, input_shape=(net_info.area,))
         self.tanh = Activation('tanh')
-        # self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
-        # self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
+        # N.B could have used two untrainable Dense layers, one that adds bias of 1, then one that multiplies by 0.5, no bias
+        # https://keras.io/layers/core/
+        # self.final_layer = AddOneDivideByTwo(trainable=False)
+        self.add_one = Dense(1, input_shape=1, trainable=False, kernel_initialization='zeros', use_bias=True, bias_initialization=Ones())
+        self.divide_by_two = Dense(1, input_shape=1, trainable=False, kernel_initialization=Constant(value=0.5), use_bias=False)
 
-    def call(self, x):
-        x = self.conv1(x)
+    def build(self, inout_: Input):
+        x = self.conv1(input_)
         x = self.batch_norm(x)
         x = self.relu(x)
         # x = x.view(x.shape[0], 1, -1)
@@ -78,14 +116,17 @@ class ValueHead(Model):
         x = self.fc1(x)
         x = self.tanh(x)
 #         map from [-1, 1] to [0, 1]
-        x = (x + 1.0) * 0.5
+        # x = (x + 1.0) * 0.5
+        x = self.final_layer(x)
+        x = self.add_one(x)
+        x = self.divide_by_two(x)
         # x = x.view(-1, 1)
         return x
 
 
 # Input with N * filters * (6,7)
 # Output with N * 7
-class PolicyHead(Model):
+class PolicyHead():
     def __init__(self):
         super(PolicyHead, self).__init__()
         self.conv1 = Conv2D(filters=2, kernel_size=1)
@@ -93,8 +134,8 @@ class PolicyHead(Model):
         self.relu = Activation('relu')
         self.fc1 = Dense(net_info.width, input_shape=(2 * net_info.area))
 
-    def call(self, x):
-        x = self.conv1(x)
+    def build(self, input_: Input):
+        x = self.conv1(input_)
         x = self.batch_norm(x)
         x = self.relu(x)
         # x = x.view(x.shape[0], 1, -1)
@@ -104,26 +145,28 @@ class PolicyHead(Model):
 
 
 # Used in 8-ply testing
-value_net = Sequential([convolutional_layer,
-                       Sequential([ResidualLayer() for _ in range(net_info.n_residuals)]),
-                       ValueHead()])
+# value_net = Sequential([convolutional_layer,
+#                        Sequential([ResidualLayer().build for _ in range(net_info.n_residuals)])] + \
+#                        ValueHead().get_layers_list())
+
 
 # One can subclass their own models but better to avoid?
 # https://keras.io/models/about-keras-models/
-class Net(Model):
+class Net():
     def __init__(self):
         super(Net, self).__init__()
-        self.body = Sequential([convolutional_layer,
-                                Sequential([ResidualLayer() for _ in range(net_info.n_residuals)])])
+        self.body = Body()
         self.value_head = ValueHead()
         self.policy_head = PolicyHead()
 
-    def call(self, x):
-        x = x.view(-1, net_info.channels, info.height, info.width)
-        x = self.body(x)
-        value = self.value_head(x)
-        policy = self.policy_head(x)
-        return [value, policy]
+    def build(self, input_: Input):
+        # x = x.view(-1, net_info.channels, info.height, info.width)
+        body_out = self.body.build(input_)
+        value = self.value_head.build(body_out)
+        policy = self.policy_head.build(body_out)
+
+        model = Model(inputs=[input_], outputs=[value, policy])
+        return model
 
 
 class Model():
@@ -134,9 +177,9 @@ class Model():
 
         # build body, build two tips?
         # https://www.pyimagesearch.com/2018/06/04/keras-multiple-outputs-and-multiple-losses/
-        inputs = Inputs((info.width, info.height, 3))
+        input_ = Inputs((net_info.channels, info.height, info.width), dtype='float32')
 
-        self.net = Net()
+        self.net = Net().build(input_)
 
         # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.optimiser = optim.SGD(self.net.parameters(),
@@ -180,7 +223,7 @@ class Model():
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
     def train(self,
-              data: DataLoader,
+              data,
               n_epochs: int):
         self.net.train()
         for epoch in range(n_epochs):
