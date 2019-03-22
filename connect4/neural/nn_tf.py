@@ -4,7 +4,6 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 
-import numpy as np
 from tensorflow.keras.layers import (Activation,
                           add,
                           BatchNormalization,

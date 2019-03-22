@@ -4,6 +4,7 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 
+import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
