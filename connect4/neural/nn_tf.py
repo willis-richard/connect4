@@ -20,29 +20,36 @@ from typing import Callable, Dict, Optional, Tuple
 # N = batch size
 # Input with N * channels * (6,7)
 # Output with N * filters * (6,7)
-convolutional_layer = \
-    model = Sequential([Conv2D(filters=net_info.filters,
-                        kernel_size=3,
-                        strides=1,
-                        padding='valid',
-                        data_format='channels_first', # to be consistent with pytorch
-                        activation=None,
-                        use_bias=False),
-                  BatchNormalization(axis=1), # due to channels_first
-                  Activation('relu')]) # what about alpha=0.01 for LeakyRelu consistency?
+class ConvolutionalLayer():
+    def __init__(self, filters=net_info.filters):
+        self.conv = Conv2D(filters=filters,
+                           kernel_size=3,
+                           strides=(1, 1),
+                           padding='same',
+                           data_format='channels_first', # to be consistent with pytorch
+                           activation=None,
+                           use_bias=False)
+        self.batch_norm = BatchNormalization(axis=1) # due to channels_first
+        self.relu = Activation('relu') # what about alpha=0.01 for LeakyRelu consistency?
+
+    def build(self, input_: Input):
+        x = self.conv(input_)
+        x = self.batch_norm(x)
+        x = self.relu(x)
+        return x
 
 
 # Input with N * filters * (6,7)
 # Output with N * filters * (6,7)
 class ResidualLayer():
     def __init__(self, filters=net_info.filters):
-        self.conv1 = Conv2D(filters=filters, kernel_size=3, use_bias=False)
-        self.conv2 = Conv2D(filters=filters, kernel_size=3, use_bias=False)
+        self.conv1 = Conv2D(filters=filters, kernel_size=3, padding='same', use_bias=False, data_format='channels_first')
+        self.conv2 = Conv2D(filters=filters, kernel_size=3, padding='same', use_bias=False, data_format='channels_first')
         self.batch_norm1 = BatchNormalization(axis=1)
         self.batch_norm2 = BatchNormalization(axis=1)
         self.relu = Activation('relu')
 
-    def call(self, input_: Input):
+    def build(self, input_: Input):
         residual = input_
         out = self.conv1(input_)
         out = self.batch_norm1(out)
@@ -50,18 +57,22 @@ class ResidualLayer():
         out = self.conv2(out)
         out = self.batch_norm2(out)
 
-        out = add([residual, y])
+        out = add([residual, out])
         out = self.relu(out)
         return out
 
 
+# Actually these only need to be functions?
+# https://towardsdatascience.com/understanding-residual-networks-9add4b664b03
 class Body():
     def __init__(self, n_residuals: int=net_info.n_residuals):
-        self.body = Sequential([convolutional_layer,
-                                Sequential([ResidualLayer() for _ in range(n_residuals)])])
+        self.conv = ConvolutionalLayer()
+        self.residuals = [ResidualLayer() for _ in range(n_residuals)]
 
     def build(self, input_: Input):
-        x = self.body(x)
+        x = self.conv.build(input_)
+        for r in self .residuals:
+            x = r.build(x)
         return x
 
 
@@ -93,20 +104,19 @@ class ValueHead():
     #         return input_shape[0]
 
     def __init__(self, filters=net_info.filters, fc_layers=net_info.n_fc_layers):
-        super(ValueHead, self).__init__()
-        self.conv1 = Conv2D(filters=1, kernel_size=1)
+        self.conv1 = Conv2D(filters=1, kernel_size=1, data_format='channels_first')
         self.batch_norm = BatchNormalization(axis=1)
         self.relu = Activation('relu')
-        self.fcN = Sequential([Dense(net_info.area, input_shape=(net_info.area,)) for _ in range(fc_layers)])
-        self.fc1 = Dense(1, input_shape=(net_info.area,))
+        self.fcN = Sequential([Dense(net_info.area) for _ in range(fc_layers)])
+        self.fc1 = Dense(1)
         self.tanh = Activation('tanh')
         # N.B could have used two untrainable Dense layers, one that adds bias of 1, then one that multiplies by 0.5, no bias
         # https://keras.io/layers/core/
         # self.final_layer = AddOneDivideByTwo(trainable=False)
-        self.add_one = Dense(1, input_shape=1, trainable=False, kernel_initialization='zeros', use_bias=True, bias_initialization=Ones())
-        self.divide_by_two = Dense(1, input_shape=1, trainable=False, kernel_initialization=Constant(value=0.5), use_bias=False)
+        self.add_one = Dense(1, trainable=False, kernel_initializer='zeros', use_bias=True, bias_initializer=Ones())
+        self.divide_by_two = Dense(1, trainable=False, kernel_initializer=Constant(value=0.5), use_bias=False)
 
-    def build(self, inout_: Input):
+    def build(self, input_: Input):
         x = self.conv1(input_)
         x = self.batch_norm(x)
         x = self.relu(x)
@@ -117,7 +127,7 @@ class ValueHead():
         x = self.tanh(x)
 #         map from [-1, 1] to [0, 1]
         # x = (x + 1.0) * 0.5
-        x = self.final_layer(x)
+        # x = self.final_layer(x)
         x = self.add_one(x)
         x = self.divide_by_two(x)
         # x = x.view(-1, 1)
@@ -128,11 +138,10 @@ class ValueHead():
 # Output with N * 7
 class PolicyHead():
     def __init__(self):
-        super(PolicyHead, self).__init__()
-        self.conv1 = Conv2D(filters=2, kernel_size=1)
+        self.conv1 = Conv2D(filters=2, kernel_size=1, data_format='channels_first')
         self.batch_norm = BatchNormalization(axis=1)
         self.relu = Activation('relu')
-        self.fc1 = Dense(net_info.width, input_shape=(2 * net_info.area))
+        self.fc1 = Dense(net_info.width)
 
     def build(self, input_: Input):
         x = self.conv1(input_)
@@ -145,16 +154,26 @@ class PolicyHead():
 
 
 # Used in 8-ply testing
-# value_net = Sequential([convolutional_layer,
-#                        Sequential([ResidualLayer().build for _ in range(net_info.n_residuals)])] + \
-#                        ValueHead().get_layers_list())
+class ValueNet():
+    def __init__(self):
+        self.body = Body()
+        self.value_head = ValueHead()
+
+    def build(self, input_: Input):
+        x = self.body.build(input_)
+        x = self.value_head.build(x)
+        return x
+
+# value_net has no need of 'player to move' channel as it is only tested on 8ply boards
+input_ = Input((2, info.height, info.width), dtype='float32')
+x = Conv2D(filters=net_info.filters, kernel_size=3, use_bias=False, data_format='channels_first')(input_)
+value_net = ValueNet().build(input_)
 
 
 # One can subclass their own models but better to avoid?
 # https://keras.io/models/about-keras-models/
 class Net():
     def __init__(self):
-        super(Net, self).__init__()
         self.body = Body()
         self.value_head = ValueHead()
         self.policy_head = PolicyHead()
@@ -177,9 +196,10 @@ class Model():
 
         # build body, build two tips?
         # https://www.pyimagesearch.com/2018/06/04/keras-multiple-outputs-and-multiple-losses/
-        input_ = Inputs((net_info.channels, info.height, info.width), dtype='float32')
+        input_ = Input((net_info.channels, info.height, info.width), dtype='float32')
 
         self.net = Net().build(input_)
+        # sth about a model creation
 
         # self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
         self.optimiser = optim.SGD(self.net.parameters(),
