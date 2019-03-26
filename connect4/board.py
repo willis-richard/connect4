@@ -59,14 +59,14 @@ class Board():
             + "\n" + str(display.decode('utf-8')) \
             + "\n" + str(np.array([range(info.width)]).astype(str))
 
-    def to_tensor(self):
+    def to_array(self):
         to_move = np.ones(self.o_pieces.shape, dtype=np.bool_) if \
                   self._player_to_move == Side.o else \
                   np.zeros(self.x_pieces.shape, dtype=np.bool_)
 
-        return torch.Tensor(np.stack([to_move.astype(np.uint8),
-                                      self.o_pieces.astype(np.uint8),
-                                      self.x_pieces.astype(np.uint8)]))
+        return np.stack([to_move.astype(np.uint8),
+                         self.o_pieces.astype(np.uint8),
+                         self.x_pieces.astype(np.uint8)])
 
     def _get_pieces(self):
         return self.o_pieces + self.x_pieces

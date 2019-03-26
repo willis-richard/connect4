@@ -31,7 +31,7 @@ with open('/home/richard/Downloads/connect-4.data') as f:
     both = []
     for line in f:
         board, value = parse_line(line)
-        board = board.to_tensor()
+        board = torch.tensor(board.to_array())
         value = torch.tensor(float(value))
         boards.append(board)
         values.append(value)

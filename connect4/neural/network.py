@@ -3,12 +3,13 @@ from connect4.utils import Connect4Stats as info
 from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
+from connect4.neural.stats import Stats
 
 import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import MultiStepLR
 
 from typing import Callable, Dict, Optional, Tuple
@@ -129,10 +130,10 @@ class Net(nn.Module):
         return value, policy
 
 
-class Model():
+class ModelWrapper():
     def __init__(self,
                  config: ModelConfig,
-                 checkpoint: Optional[Dict] = None):
+                 filename: Optional[str] = None):
         self.config = config
         self.net = Net()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -145,13 +146,14 @@ class Model():
                                      milestones=config.milestones,
                                      gamma=config.gamma)
         # self.optimiser = optim.Adam(self.net.parameters())
-        if checkpoint is not None:
+        if filename is not None:
+            checkpoint = torch.load(self.file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         else:
-            # Initialise weights to zero (output should be 0.5)
             self.net.apply(weights_init)
+
         self.value_loss = nn.MSELoss()
         # FIXME: that this needs to be with logits, not just the class index
         # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
@@ -169,9 +171,18 @@ class Model():
               .format(self.__call__(board_1), self.__call__(board_2), self.__call__(board_3)))
 
     def __call__(self, board: Board):
-        board_tensor = board.to_tensor()
+        board_tensor = torch.FloatTensor(board.to_array())
         board_tensor = board_tensor.to(self.device)
         return self.net(board_tensor)
+
+    def save(self, filename: str):
+        torch.save(
+            {
+                'net_state_dict': self.net.state_dict(),
+                'optimiser_state_dict': self.optimiser.state_dict(),
+                'scheduler_state_dict': self.scheduler.state_dict()
+            },
+            file_name)
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
         value_loss = self.value_loss(x_value, y_value)
@@ -185,8 +196,9 @@ class Model():
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
     def train(self,
-              data: DataLoader,
+              data,
               n_epochs: int):
+        data = self.create_dataset(*data, batch_size=self.config.batch_size)
         self.net.train()
         for epoch in range(n_epochs):
 
@@ -212,6 +224,27 @@ class Model():
         # self.net.train(False)
         self.net.eval()
 
+    def evaluate_value_only(self, data):
+        data = self.create_dataset(*data, batch_size=4096)
+        """Get an idea of how the initialisation is"""
+        stats = Stats()
+
+        with torch.set_grad_enabled(False):
+            for board, value, _ in data:
+                board, y_value = board.to(self.device), value.to(self.device)
+                x_value, _ = self.net(board)
+                loss = self.value_loss(x_value, y_value)
+                stats.update(x_value.numpy(), y_value.numpy(), loss.item())
+
+        return stats
+
+    def create_dataset(self, boards, values, policies, batch_size):
+        data = Connect4Dataset(boards,
+                               values,
+                               policies)
+
+        return DataLoader(data, batch_size=batch_size, shuffle=True)
+
 
 def weights_init(m):
     return
@@ -224,3 +257,19 @@ def weights_init(m):
     # elif classname.find('Linear') != -1:
     #     nn.init.constant_(m.weight, 1)
     #     nn.init.constant_(m.bias, 0)
+
+
+class Connect4Dataset(Dataset):
+    def __init__(self, boards, values, policies):
+        assert len(boards) == len(values) == len(policies)
+        self.boards = torch.FloatTensor(boards)
+        self.values = torch.tensor(values)
+        self.policies = torch.FloatTensor(policies)
+
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx: int):
+        return (self.boards[idx],
+                self.values[idx],
+                self.policies[idx])

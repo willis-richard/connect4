@@ -7,13 +7,13 @@ from connect4.player import BasePlayer
 from connect4.utils import Result
 
 from connect4.neural.config import AlphaZeroConfig
-from connect4.neural.storage import (Connect4Dataset,
-                                         GameStorage,
-                                         NetworkStorage,
-                                         ReplayStorage)
+from connect4.neural.storage import (GameStorage,
+                                     NetworkStorage,
+                                     ReplayStorage)
 
 from copy import copy
 import matplotlib.pyplot as plt
+import numpy as np
 import os
 import pandas as pd
 import torch
@@ -36,25 +36,23 @@ class TrainingGame():
         while board.result is None:
             move, value, tree = self.player.make_move(board)
 
-            boards.append(board.to_tensor())
+            boards.append(board.to_array())
             policy = tree.get_policy()
-            policies.append(torch.FloatTensor(policy))
+            policies.append(policy)
 
             history.append((move, value, policy))
 
-        boards = torch.stack(boards).squeeze()
         values = self.create_values(board.result, len(boards))
-        policies = torch.stack(policies)
 
         return board.result, history, (boards, values, policies)
 
     def create_values(self, result, length):
         # label board data with result
-        values = torch.ones((length,), dtype=torch.float)
+        values = np.ones((length,), dtype=np.float64)
         if result == Result.o_win:
-            values[1::2] = 0.
+            values[1::2] = 0.0
         elif result == Result.x_win:
-            values[0::2] = 0.
+            values[0::2] = 0.0
         else:
             values *= 0.5
         return values
@@ -73,15 +71,8 @@ class TrainingLoop():
 
         self.nn_storage = NetworkStorage(self.save_dir + '/net',
                                          config.model_config)
-        self.replay_storage = ReplayStorage(config.model_config)
+        self.replay_storage = ReplayStorage()
         self.game_storage = GameStorage(self.save_dir + '/games')
-
-        boards = torch.load(config.storage_config.path_8ply_boards)
-        values = torch.load(config.storage_config.path_8ply_values)
-
-        # Note no policy here, 3rd arg unused
-        test_data = Connect4Dataset(boards, values, values)
-        self.test_data = data.DataLoader(test_data, batch_size=4096)
 
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
@@ -130,10 +121,11 @@ class TrainingLoop():
         game_results = []
 
         import time
-        start = time.time()
+        start_t = time.time()
         if self.config.agents == 1:
             for _ in range(self.config.n_training_games):
                 result, history, data = TrainingGame(alpha_zero).play()
+                # N.B. ideally these would be saved inside play(), but... multiprocess?
                 game_results.append(result)
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
@@ -157,19 +149,27 @@ class TrainingLoop():
             self.vis.text(self.game_storage.last_game_str(),
                           win=self.game_win)
         self.game_storage.save()
-        train = time.time()
+        train_t = time.time()
 
         self.nn_storage.train(self.replay_storage.get_data(),
                               self.config.n_training_epochs)
-        end = time.time()
-        print('Generate games: {:.0f}s  training: {:.0f}s'.format(train - start, end - train))
+        end_t = time.time()
+        print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             game_results.count(Result.o_win),
             game_results.count(Result.draw),
             game_results.count(Result.x_win)))
 
     def evaluate(self):
-        self.test_8ply()
+        model = self.nn_storage.get_model()
+
+        # Note no policy here, 3rd arg unused
+        test_stats = model.evaluate_value_only(boards, values, values)
+
+        print("8 Ply Test Stats:  ", test_stats)
+        self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
+        self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
+
 
         if self.config.visdom_enabled:
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
@@ -190,25 +190,6 @@ class TrainingLoop():
         # if self.config.visdom_enabled:
         #     self.vis.matplot(self.hard_results.plot(y=['return']).figure, win=self.hard_win)
 
-    def test_8ply(self):
-        """Get an idea of how the initialisation is"""
-        test_stats = Stats()
-        model = self.nn_storage.get_model()
-        net = model.net
-        device = model.device
-        criterion = model.value_loss
-
-        with torch.set_grad_enabled(False):
-            for board, value, _ in self.test_data:
-                board, y_value = board.to(device), value.to(device)
-                x_value, _ = net(board)
-                loss = criterion(x_value, y_value)
-                test_stats.update(x_value, y_value, loss)
-
-        print("8 Ply Test Stats:  ", test_stats)
-        self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
-        self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
-
     def match(self, alpha_zero, opponent: MCTS):
         match = Match(False, alpha_zero, opponent, plies=1, switch=True)
         return match.play(agents=self.config.agents)
@@ -225,76 +206,3 @@ class TrainingLoop():
                                  self.config.root_exploration_fraction if training else 0.0),
                       evaluator)
         return player
-
-
-def categorise_predictions(preds):
-    preds = preds * 3.0
-    torch.floor_(preds)
-    preds = preds / 2.0
-    return preds
-
-
-class Stats():
-    def __init__(self):
-        self.n = 0
-        self.average_value = 0.0
-        self.total_loss = 0.0
-        self.smallest = 1.0
-        self.largest = 0.0
-        self.correct = {i: 0 for i in [0.0, 0.5, 1.0]}
-        self.total = {i: 0 for i in [0.0, 0.5, 1.0]}
-
-    @property
-    def loss(self):
-        return self.total_loss / self.n
-
-    @property
-    def accuracy(self):
-        return float(sum(self.correct.values())) / self.n
-
-    @property
-    def average(self):
-        return self.average_value / self.n
-
-    def to_dict(self):
-        dict_ = {'Average loss': self.loss,
-                 'Accuracy': self.accuracy,
-                 'Smallest':self.smallest,
-                 'Largest': self.largest,
-                 'Average': self.average}
-        dict_['correct'] = {}
-        for k in self.correct:
-            dict_['correct'][k] = (self.total[k], self.correct[k])
-
-        return dict_
-
-    def __repr__(self):
-        x = "Average loss:  " + "{:.5f}".format(self.loss) + \
-            "  Accuracy:  " + "{:.5f}".format(self.accuracy) + \
-            "  Smallest:  " + "{:.5f}".format(self.smallest) + \
-            "  Largest:  " + "{:.5f}".format(self.largest) + \
-            "  Average:  " + "{:.5f}".format(self.average) + \
-            "\nCategory, # Members, # Correct Predictions:"
-
-        for k in self.correct:
-            x += "  ({}, {}, {})".format(
-                k,
-                self.total[k],
-                self.correct[k])
-        return x
-
-    def update(self, outputs, values, loss):
-        self.n += len(values)
-        self.average_value += outputs.sum().item()
-        self.total_loss += loss.item() * len(values)
-        self.smallest = min(self.smallest, torch.min(outputs).item())
-        self.largest = max(self.largest, torch.max(outputs).item())
-
-        categories = categorise_predictions(outputs)
-        values = values.view(-1)
-        categories = categories.view(-1)
-
-        for k in self.correct:
-            idx = (values == k).nonzero()
-            self.total[k] += len(idx)
-            self.correct[k] += len(torch.eq(categories[idx], values[idx]).nonzero())

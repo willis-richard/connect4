@@ -1,8 +1,6 @@
 from connect4.board import Board
 from connect4.utils import Connect4Stats as info
 
-from connect4.neural.network import Model
-
 from copy import copy
 from functools import partial
 import numpy as np
@@ -47,7 +45,7 @@ def evaluate_centre_with_prior(board: Board):
 
 
 def evaluate_nn(board: Board,
-                model: Model):
+                model):
     value, prior = model(board)
     assert not torch.isnan(value).any()
     assert not torch.isnan(prior).any()
