@@ -74,6 +74,9 @@ class TrainingLoop():
         self.replay_storage = ReplayStorage()
         self.game_storage = GameStorage(self.save_dir + '/games')
 
+        self.boards = torch.load(config.storage_config.path_8ply_boards)
+        self.values = torch.load(config.storage_config.path_8ply_values)
+
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
                                         e.Evaluator(e.evaluate_centre))
@@ -163,8 +166,7 @@ class TrainingLoop():
     def evaluate(self):
         model = self.nn_storage.get_model()
 
-        # Note no policy here, 3rd arg unused
-        test_stats = model.evaluate_value_only(boards, values, values)
+        test_stats = model.evaluate_value_only(self.boards, self.values)
 
         print("8 Ply Test Stats:  ", test_stats)
         self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)

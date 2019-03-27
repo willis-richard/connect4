@@ -231,8 +231,8 @@ class ModelWrapper():
     def __call__(self, board: Board):
         return self.model.evaluate(board)
 
-    def save(self, filename: str):
-        self.model.save(filename)
+    def save(self, file_name: str):
+        self.model.save(file_name)
 
     def train(self,
               data: Sequence,

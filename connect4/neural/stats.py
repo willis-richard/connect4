@@ -58,8 +58,6 @@ class Stats():
         self.largest = max(self.largest, np.max(outputs).item())
 
         categories = self.categorise_predictions(outputs)
-        values = values.view(-1)
-        categories = categories.view(-1)
 
         for k in self.correct:
             idx = np.where(values == k)[0]

@@ -11,15 +11,15 @@ from typing import List
 
 class GameStorage():
     def __init__(self, folder_path: str):
-        self.filename = folder_path + '/games.pkl'
+        self.file_name = folder_path + '/games.pkl'
         self.games = []
 
     def save(self):
-        if os.path.exists(self.filename):
-            with open(self.filename, 'rb') as f:
+        if os.path.exists(self.file_name):
+            with open(self.file_name, 'rb') as f:
                 old_games = pickle.load(f)
             self.games = old_games + self.games
-        with open(self.filename, 'wb') as f:
+        with open(self.file_name, 'wb') as f:
             pickle.dump(self.games, f)
         self.games = []
 
@@ -58,7 +58,7 @@ class NetworkStorage():
 
     def save_model(self, model):
         self.model = model
-        self.model.save(self.filename)
+        self.model.save(self.file_name)
 
     def get_model(self):
         return self.model

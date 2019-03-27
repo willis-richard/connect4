@@ -133,7 +133,7 @@ class Net(nn.Module):
 class ModelWrapper():
     def __init__(self,
                  config: ModelConfig,
-                 filename: Optional[str] = None):
+                 file_name: Optional[str] = None):
         self.config = config
         self.net = Net()
         self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
@@ -146,8 +146,8 @@ class ModelWrapper():
                                      milestones=config.milestones,
                                      gamma=config.gamma)
         # self.optimiser = optim.Adam(self.net.parameters())
-        if filename is not None:
-            checkpoint = torch.load(self.file_name)
+        if file_name is not None:
+            checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
@@ -175,7 +175,7 @@ class ModelWrapper():
         board_tensor = board_tensor.to(self.device)
         return self.net(board_tensor)
 
-    def save(self, filename: str):
+    def save(self, file_name: str):
         torch.save(
             {
                 'net_state_dict': self.net.state_dict(),
@@ -224,8 +224,9 @@ class ModelWrapper():
         # self.net.train(False)
         self.net.eval()
 
-    def evaluate_value_only(self, data):
-        data = self.create_dataset(*data, batch_size=4096)
+    def evaluate_value_only(self, boards, values):
+        # Note no policy here, 3rd arg unused
+        data = self.create_dataset(boards, values, values, batch_size=4096)
         """Get an idea of how the initialisation is"""
         stats = Stats()
 
@@ -234,7 +235,8 @@ class ModelWrapper():
                 board, y_value = board.to(self.device), value.to(self.device)
                 x_value, _ = self.net(board)
                 loss = self.value_loss(x_value, y_value)
-                stats.update(x_value.numpy(), y_value.numpy(), loss.item())
+                # FIXME: flatten is the right way here yes?
+                stats.update(x_value.numpy().flatten(), y_value.numpy().flatten(), loss.item())
 
         return stats
 
@@ -263,7 +265,7 @@ class Connect4Dataset(Dataset):
     def __init__(self, boards, values, policies):
         assert len(boards) == len(values) == len(policies)
         self.boards = torch.FloatTensor(boards)
-        self.values = torch.tensor(values)
+        self.values = torch.FloatTensor(values)
         self.policies = torch.FloatTensor(policies)
 
     def __len__(self):
