@@ -1,7 +1,6 @@
 from connect4.board import Board
 
 from connect4.neural.config import ModelConfig
-from connect4.neural.network import ModelWrapper
 
 import numpy as np
 import os
@@ -33,7 +32,8 @@ class GameStorage():
 class NetworkStorage():
     def __init__(self,
                  folder_path: str,
-                 config: ModelConfig):
+                 config: ModelConfig,
+                 model_wrapper_type):
         self.folder_path = folder_path
         self.iteration = 0
         file_list = os.listdir(folder_path)
@@ -41,9 +41,9 @@ class NetworkStorage():
             iterations = [int(f.split('.')[1]) for f in file_list]
             self.iteration = max(iterations)
             print("Loading Network saved in file {}".format(self.file_name))
-            self.model = ModelWrapper(config, self.file_name)
+            self.model = model_wrapper_type(config, self.file_name)
         else:
-            self.model = ModelWrapper(config)
+            self.model = model_wrapper_type(config)
 
     @property
     def file_name(self):

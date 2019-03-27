@@ -69,8 +69,14 @@ class TrainingLoop():
         os.makedirs(self.save_dir + '/games', exist_ok=True)
         os.makedirs(self.save_dir + '/stats', exist_ok=True)
 
+        if config.use_pytorch:
+            from connect4.neural.nn_pytorch import ModelWrapper
+        else:
+            from connect4.neural.nn_tf import ModelWrapper
+
         self.nn_storage = NetworkStorage(self.save_dir + '/net',
-                                         config.model_config)
+                                         config.model_config,
+                                         ModelWrapper)
         self.replay_storage = ReplayStorage()
         self.game_storage = GameStorage(self.save_dir + '/games')
 

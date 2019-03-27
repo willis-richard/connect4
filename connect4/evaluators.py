@@ -5,7 +5,6 @@ from copy import copy
 from functools import partial
 import numpy as np
 from scipy.special import softmax
-import torch
 from typing import List, Set
 
 
@@ -47,14 +46,6 @@ def evaluate_centre_with_prior(board: Board):
 def evaluate_nn(board: Board,
                 model):
     value, prior = model(board)
-    assert not torch.isnan(value).any()
-    assert not torch.isnan(prior).any()
-    value = value.cpu()
-    value = value.view(-1)
-    value = value.data.numpy()
-    prior = prior.cpu()
-    prior = prior.view(-1)
-    prior = prior.data.numpy()
     prior = softmax(prior)
     return value, prior
 

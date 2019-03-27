@@ -1,7 +1,5 @@
 from connect4 import tree
 
-from connect4.neural.network import Net
-
 from typing import Dict, Optional
 
 

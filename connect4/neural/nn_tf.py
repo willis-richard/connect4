@@ -5,6 +5,7 @@ from connect4.utils import NetworkStats as net_info
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import Stats
 
+import numpy as np
 from tensorflow.keras.initializers import Constant, Ones
 from tensorflow.keras.layers import (Activation,
                           add,
@@ -12,15 +13,21 @@ from tensorflow.keras.layers import (Activation,
                           Conv2D,
                           Dense,
                           Input,
-                          Layer)
+                          Layer,
+                          Reshape)
 import tensorflow.keras.losses
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import Sequence
-
 from typing import Callable, Dict, Optional, Tuple
 
+# FIXME: CPU tensorflow cannot do NCHW right now. Added move axis_hack and set
+# steps to undo:
+# uncomment data_format lines in conv2D
+# change axis=3 to axis=1 in batch norm layers
+# delete np.moveaxis lines
+# revert Inputs to NCHW
 
 # N = batch size
 # Input with N * channels * (6,7)
@@ -31,11 +38,11 @@ class ConvolutionalLayer():
                            kernel_size=3,
                            strides=(1, 1),
                            padding='same',
-                           data_format='channels_first', # to be consistent with pytorch
+                           # data_format='channels_first', # to be consistent with pytorch
                            activation=None,
                            use_bias=False,
                            kernel_regularizer=l2(weight_decay))
-        self.batch_norm = BatchNormalization(axis=1) # due to channels_first
+        self.batch_norm = BatchNormalization(axis=3) # due to channels_first
         self.relu = Activation('relu') # what about alpha=0.01 for LeakyRelu consistency?
 
     def build(self, input_: Input):
@@ -49,10 +56,20 @@ class ConvolutionalLayer():
 # Output with N * filters * (6,7)
 class ResidualLayer():
     def __init__(self, weight_decay: float, filters: int=net_info.filters):
-        self.conv1 = Conv2D(filters=filters, kernel_size=3, padding='same', use_bias=False, data_format='channels_first', kernel_regularizer=l2(weight_decay))
-        self.conv2 = Conv2D(filters=filters, kernel_size=3, padding='same', use_bias=False, data_format='channels_first', kernel_regularizer=l2(weight_decay))
-        self.batch_norm1 = BatchNormalization(axis=1)
-        self.batch_norm2 = BatchNormalization(axis=1)
+        self.conv1 = Conv2D(filters=filters,
+                            kernel_size=3,
+                            padding='same',
+                            use_bias=False,
+                            # data_format='channels_first',
+                            kernel_regularizer=l2(weight_decay))
+        self.conv2 = Conv2D(filters=filters,
+                            kernel_size=3,
+                            padding='same',
+                            use_bias=False,
+                            # data_format='channels_first',
+                            kernel_regularizer=l2(weight_decay))
+        self.batch_norm1 = BatchNormalization(axis=3)
+        self.batch_norm2 = BatchNormalization(axis=3)
         self.relu = Activation('relu')
 
     def build(self, input_: Input):
@@ -113,9 +130,13 @@ class ValueHead():
                  weight_decay: float,
                  filters: int=net_info.filters,
                  fc_layers: int=net_info.n_fc_layers):
-        self.conv1 = Conv2D(filters=1, kernel_size=1, data_format='channels_first', kernel_regularizer=l2(weight_decay))
-        self.batch_norm = BatchNormalization(axis=1)
+        self.conv1 = Conv2D(filters=1,
+                            kernel_size=1,
+                            # data_format='channels_first',
+                            kernel_regularizer=l2(weight_decay))
+        self.batch_norm = BatchNormalization(axis=3)
         self.relu = Activation('relu')
+        # Keeps the 'area' of the input, but... only 8 params in the model definition...
         self.fcN = Sequential([Dense(net_info.area, kernel_regularizer=l2(weight_decay)) for _ in range(fc_layers)])
         self.fc1 = Dense(1, kernel_regularizer=l2(weight_decay))
         self.tanh = Activation('tanh')
@@ -129,7 +150,7 @@ class ValueHead():
         x = self.conv1(input_)
         x = self.batch_norm(x)
         x = self.relu(x)
-        # x = x.view(x.shape[0], 1, -1)
+        x = Reshape((net_info.area,))(x)
         x = self.fcN(x)
         x = self.relu(x)
         x = self.fc1(x)
@@ -147,8 +168,11 @@ class ValueHead():
 # Output with N * 7
 class PolicyHead():
     def __init__(self, weight_decay: float):
-        self.conv1 = Conv2D(filters=2, kernel_size=1, data_format='channels_first', kernel_regularizer=l2(weight_decay))
-        self.batch_norm = BatchNormalization(axis=1)
+        self.conv1 = Conv2D(filters=2,
+                            kernel_size=1,
+                            # data_format='channels_first',
+                            kernel_regularizer=l2(weight_decay))
+        self.batch_norm = BatchNormalization(axis=3)
         self.relu = Activation('relu')
         self.fc1 = Dense(net_info.width, kernel_regularizer=l2(weight_decay))
 
@@ -157,6 +181,7 @@ class PolicyHead():
         x = self.batch_norm(x)
         x = self.relu(x)
         # x = x.view(x.shape[0], 1, -1)
+        x = Reshape((2 * net_info.area,))(x)
         x = self.fc1(x)
         # x = x.view(-1, net_info.width)
         return x
@@ -174,8 +199,8 @@ class ValueNet():
         return x
 
 # value_net has no need of 'player to move' channel as it is only tested on 8ply boards
-input_ = Input((2, info.height, info.width), dtype='float32')
-x = Conv2D(filters=net_info.filters, kernel_size=3, use_bias=False, data_format='channels_first')(input_)
+# input_ = Input((2, info.height, info.width), dtype='float32')
+input_ = Input((info.height, info.width, 2), dtype='float32')
 value_net = ValueNet(0.0001).build(input_)
 
 
@@ -203,7 +228,8 @@ class ModelWrapper():
                  checkpoint: Optional[str] = None):
         self.config = config
 
-        input_ = Input((net_info.channels, info.height, info.width), dtype='float32')
+        # input_ = Input((net_info.channels, info.height, info.width), dtype='float32')
+        input_ = Input((info.height, info.width, net_info.channels), dtype='float32')
 
         self.model = Net(config.weight_decay).build(input_)
         # sth about a model creation
@@ -215,9 +241,9 @@ class ModelWrapper():
                              # FIXME: hack
                              decay=config.gamma / config.milestones[0])
         self.model.compile(optimizer=self.optimiser,
-                      loss=['mean_squared_error', 'categorical_crossentropy'],
-                      #FIXME: investigate
-                      metrics=None)
+                           loss=['mean_squared_error', 'categorical_crossentropy'],
+                           # FIXME: investigate
+                           metrics=None)
 
         # NOTE: can pass 8 ply as additional validation?!
 
@@ -226,10 +252,13 @@ class ModelWrapper():
 
         #FIXME: initializers for the layers?
 
-        print(model.sumary())
+        print(self.model.summary())
 
     def __call__(self, board: Board):
-        return self.model.evaluate(board)
+        board_array = np.expand_dims(board.to_array(), 0)
+        board_array = np.moveaxis(board_array, 1, -1)
+        value, prior = self.model.predict(board_array)
+        return value.flatten(), prior.flatten()
 
     def save(self, file_name: str):
         self.model.save(file_name)
@@ -251,6 +280,7 @@ class ModelWrapper():
         return stats
 
     def create_sequence(self, boards, values, policies):
+        boards = np.move_array(boards, 1, -1)
         return Connect4Sequence(boards, values, policies, self.batch_size)
 
 
@@ -268,7 +298,4 @@ class Connect4Sequence(Sequence):
     def __getitem__(self, idx):
         return np.array([self.boards[idx * self.batch_size:(idx + 1) * self.batch_size],
                          self.values[idx * self.batch_size:(idx + 1) * self.batch_size],
-                         self.policies[idx * self.batch_size:(idx + 1) * self.batch_size]]
-
-
-model = ModelWrapper(ModelConfig())
+                         self.policies[idx * self.batch_size:(idx + 1) * self.batch_size]])

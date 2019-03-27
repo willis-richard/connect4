@@ -41,6 +41,7 @@ class AlphaZeroConfig():
                  n_eval=5,
                  n_training_epochs=5,
                  n_training_games=500,
+                 use_pytorch=True,
                  visdom_enabled=False):
         self.model_config = model_config
         self.storage_config = storage_config
@@ -52,6 +53,7 @@ class AlphaZeroConfig():
         self.n_eval = n_eval
         self.n_training_epochs = n_training_epochs
         self.n_training_games = n_training_games
+        self.use_pytorch = use_pytorch
         self.visdom_enabled = visdom_enabled
 
 

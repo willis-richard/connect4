@@ -61,11 +61,12 @@ class ResidualLayer(nn.Module):
 class ValueHead(nn.Module):
     def __init__(self, filters=net_info.filters, fc_layers=net_info.n_fc_layers):
         super(ValueHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 1, 1)
+        self.conv1 = nn.Conv2d(filters, 1, 1) # N*f*H*W -> N*1*H*W
         self.batch_norm = nn.BatchNorm2d(1)
         self.relu = nn.LeakyReLU()
+        # in the linear we go from N*(H*W) -> N*(H*W)
         self.fcN = nn.Sequential(*[nn.Linear(net_info.area, net_info.area) for _ in range(fc_layers)])
-        self.fc1 = nn.Linear(net_info.area, 1)
+        self.fc1 = nn.Linear(net_info.area, 1) # N*(H*W) -> N*(1)
         self.tanh = torch.nn.Tanh()
         self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
         self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
@@ -74,6 +75,7 @@ class ValueHead(nn.Module):
         x = self.conv1(x)
         x = self.batch_norm(x)
         x = self.relu(x)
+        # Flatten before linear layers
         x = x.view(x.shape[0], 1, -1)
         x = self.fcN(x)
         x = self.relu(x)
@@ -81,6 +83,7 @@ class ValueHead(nn.Module):
         x = self.tanh(x)
 #         map from [-1, 1] to [0, 1]
         x = (x + self.w1) * self.w2
+        # FIXME: Is this needed?
         x = x.view(-1, 1)
         return x
 
@@ -90,16 +93,17 @@ class ValueHead(nn.Module):
 class PolicyHead(nn.Module):
     def __init__(self, filters=net_info.filters):
         super(PolicyHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 2, 1)
+        self.conv1 = nn.Conv2d(filters, 2, 1) # N * f * H * W -> N * 2 * H * W
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
-        self.fc1 = nn.Linear(2 * net_info.area, net_info.width)
+        self.fc1 = nn.Linear(2 * net_info.area, net_info.width) # N * f * (2 * H * W) -> N * f * W
         # self.softmax = nn.Softmax(dim=2)
 
     def forward(self, x):
         x = self.conv1(x)
         x = self.batch_norm(x)
         x = self.relu(x)
+        # Must flatten before linear layer
         x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
         # x = self.softmax(x)
@@ -123,6 +127,7 @@ class Net(nn.Module):
         self.policy_head = PolicyHead()
 
     def forward(self, x):
+        # FIXME: Needed?
         x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
@@ -173,7 +178,16 @@ class ModelWrapper():
     def __call__(self, board: Board):
         board_tensor = torch.FloatTensor(board.to_array())
         board_tensor = board_tensor.to(self.device)
-        return self.net(board_tensor)
+        value, prior = self.net(board_tensor)
+        assert not torch.isnan(value).any()
+        assert not torch.isnan(prior).any()
+        value = value.cpu()
+        value = value.view(-1)
+        value = value.data.numpy()
+        prior = prior.cpu()
+        prior = prior.view(-1)
+        prior = prior.data.numpy()
+        return value, prior
 
     def save(self, file_name: str):
         torch.save(
