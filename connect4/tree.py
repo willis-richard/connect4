@@ -4,7 +4,7 @@ from connect4.utils import Connect4Stats as info, Result, Side, value_to_side
 from anytree import Node
 from copy import copy
 import numpy as np
-from typing import Dict, Tuple
+from typing import Dict, Optional, Tuple
 
 
 class BaseNodeData():
@@ -52,13 +52,18 @@ class Tree():
         self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
 
-    def get_node_value(self, node):
-        return node.data.value(self.side)
+    def get_node_value(self, node, side: Optional[Side]=None):
+        if side is None:
+            return node.data.value(self.side)
+        else:
+            return node.data.value(side)
 
-    def select_best_move(self) -> Tuple[int, float]:
-        value, action = max(((self.get_node_value(c), c.name)
-                             for c in self.root.children))
-        return action, value
+    def select_best_move(self):
+        _, move, value = max(((self.get_node_value(c),
+                               c.name,
+                               self.get_node_value(c, Side.o))
+                              for c in self.root.children))
+        return move, value
 
     def get_policy(self):
         policy = np.zeros((info.width,))

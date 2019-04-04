@@ -49,16 +49,7 @@ class TrainingGame():
         return board.result, history, (boards, values, policies)
 
     def create_values(self, mcts_values, result):
-        length = len(values)
-        # label board data with result
-        result_values = np.ones((length,), dtype=np.float64)
-        if result == Result.o_win:
-            result_values[1::2] = 0.0
-        elif result == Result.x_win:
-            result_values[0::2] = 0.0
-        else:
-            result_values *= 0.5
-        merged_values = (np.array(mcts_values) + result_values) / 2.0
+        merged_values = (mcts_values + result.value) / 2.0
         return merged_values
 
 

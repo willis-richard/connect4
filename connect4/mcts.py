@@ -127,25 +127,34 @@ class MCTS(BasePlayer):
 
         search(self.config, tree, self.evaluator)
 
+        move, value = self.select_best_move(tree)
+
+        board.make_move(move)
+        # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
+        # We need to return the value of the position to 'player_o'
+        return move, value, tree
+
+    def select_best_move(self, tree) -> Tuple[int, float]:
         if tree.root.data.terminal_result is None:
             move, value = tree.select_best_move()
         # choose shortest win
         elif same_side(tree.root.data.terminal_result.result, tree.side):
-            value, _, move = max((tree.get_node_value(c),
-                                  info.area - c.data.terminal_result.age,
-                                  c.name)
-                                 for c in tree.root.children
+            _, _, move, value = max((tree.get_node_value(c),
+                                     info.area - c.data.terminal_result.age,
+                                     c.name,
+                                     tree.get_node_value(c, Side.o))
+                                    for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
-            value, _, move = max((tree.get_node_value(c),
-                                  c.data.terminal_result.age,
-                                  c.name)
-                                 for c in tree.root.children
-                                 if c.name in tree.root.data.terminal_moves)
-        board.make_move(move)
-        # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
-        return move, value, tree
+            _, _, move, value = max((tree.get_node_value(c),
+                                     c.data.terminal_result.age,
+                                     c.name,
+                                     tree.get_node_value(c, Side.o))
+                                    for c in tree.root.children
+                                    if c.name in tree.root.data.terminal_moves)
+
+        return move, value
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
