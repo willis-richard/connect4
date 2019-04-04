@@ -31,31 +31,35 @@ class TrainingGame():
     def play(self):
         board = Board()
         boards = []
+        values = []
         policies = []
         history = []
         while board.result is None:
             move, value, tree = self.player.make_move(board)
 
             boards.append(board.to_array())
+            values.append(value)
             policy = tree.get_policy()
             policies.append(policy)
 
             history.append((move, value, policy))
 
-        values = self.create_values(board.result, len(boards))
+        values = self.create_values(values, board.result)
 
         return board.result, history, (boards, values, policies)
 
-    def create_values(self, result, length):
+    def create_values(self, mcts_values, result):
+        length = len(values)
         # label board data with result
-        values = np.ones((length,), dtype=np.float64)
+        result_values = np.ones((length,), dtype=np.float64)
         if result == Result.o_win:
-            values[1::2] = 0.0
+            result_values[1::2] = 0.0
         elif result == Result.x_win:
-            values[0::2] = 0.0
+            result_values[0::2] = 0.0
         else:
-            values *= 0.5
-        return values
+            result_values *= 0.5
+        merged_values = (np.array(mcts_values) + result_values) / 2.0
+        return merged_values
 
 
 class TrainingLoop():

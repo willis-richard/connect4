@@ -4,11 +4,12 @@ from connect4.player import BasePlayer
 from connect4.tree import BaseNodeData, Tree
 from connect4.utils import Connect4Stats as info
 from connect4.utils import (same_side,
-                                Side,
-                                value_to_side,
-                                Result)
+                            Side,
+                            value_to_side,
+                            Result)
 
 from anytree import Node
+from collections import namedtuple
 import math
 import numpy as np
 from typing import Callable, Dict, List, Set, Tuple
@@ -68,10 +69,13 @@ class SearchEvaluation():
             ",  visit_count: " + str(self.visit_count)
 
 
+TerminalResult = namedtuple('TerminalResult', ['result', 'age'])
+
+
 class NodeData(BaseNodeData):
     def __init__(self, board: Board):
         super().__init__(board)
-        self.terminal_result = None
+        self.terminal_result: Optional[TerminalResult] = None
         self.terminal_moves: Set[int] = set()
         self.search_value = SearchEvaluation()
 
@@ -93,7 +97,7 @@ class NodeData(BaseNodeData):
 
     def value(self, side: Side):
         if self.terminal_result is not None:
-            return value_to_side(float(self.terminal_result[0].value),
+            return value_to_side(float(self.terminal_result.result.value),
                                  side)
         return super().value(side)
 
@@ -126,21 +130,21 @@ class MCTS(BasePlayer):
         if tree.root.data.terminal_result is None:
             move, value = tree.select_best_move()
         # choose shortest win
-        # elif same_side(tree.root.data.terminal_result, tree.side):
-        elif tree.get_node_value(tree.root) == 1.0:
+        elif same_side(tree.root.data.terminal_result.result, tree.side):
             value, _, move = max((tree.get_node_value(c),
-                                 info.area - c.data.terminal_result[1],
-                                 c.name)
+                                  info.area - c.data.terminal_result.age,
+                                  c.name)
                                  for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
             value, _, move = max((tree.get_node_value(c),
-                                 c.data.terminal_result[1],
-                                 c.name)
+                                  c.data.terminal_result.age,
+                                  c.name)
                                  for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
         board.make_move(move)
+        # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
         return move, value, tree
 
     def __str__(self):
@@ -152,11 +156,8 @@ def search(config: MCTSConfig,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
     # First evaluate root and add noise
-    if tree.root.data.position_value is not None:
-        root_prior = tree.root.data.position_evaluation.prior
-    else:
-        value, root_prior = evaluator(tree.root.data.board)
-        tree.root.data.position_value = PositionEvaluation(value, root_prior)
+    value, root_prior = evaluator(tree.root.data.board)
+    tree.root.data.position_value = PositionEvaluation(value, root_prior)
     # later we will return the root prior to it's true value so the transition table is accurate
     noisy_prior = add_exploration_noise(config, tree.root.data.position_value.prior)
     tree.root.data.position_value.prior = noisy_prior
@@ -178,12 +179,10 @@ def search(config: MCTSConfig,
         board = node.data.board
         # encountered a new terminal position
         if board.result is not None:
-            value = board.result.value
-            node.data.position_value = PositionEvaluation(value,
-                                                          np.zeros((info.width)))
             node = backpropagate_terminal(node,
                                           board.result,
                                           board.age)
+            value = board.result.value
         else:
             value, prior = evaluator(board)
             node.data.position_value = PositionEvaluation(value, prior)
@@ -227,7 +226,7 @@ def ucb_score(config: MCTSConfig,
 def backpropagate_terminal(node: Node,
                            result: Result,
                            age: int):
-    node.data.terminal_result = (result, age)
+    node.data.terminal_result = TerminalResult(result, age)
 
     if node.is_root:
         return node
@@ -237,7 +236,7 @@ def backpropagate_terminal(node: Node,
 
     # The side to move can choose a win - they choose the quickest forcing line
     if same_side(result, node.data.board._player_to_move):
-        age = min((c.data.terminal_result[1]
+        age = min((c.data.terminal_result.age
                    for c in node.children
                    if c.name in node.data.terminal_moves))
         return backpropagate_terminal(node, result, age)
@@ -249,13 +248,12 @@ def backpropagate_terminal(node: Node,
         # the parent will now choose a draw if possible
         # if forced to choose a loss, will choose the longest one
         # N.B. in connect4 all draws have age 42
-        _, age, idx = max((value_to_side(
-            c.data.terminal_result[0].value,
-            node.data.board._player_to_move),
-                             c.data.terminal_result[1],
-                             i)
-                            for i, c in enumerate(node.children))
-        result = node.children[idx].data.terminal_result[0]
+        _, age, idx = max((value_to_side(c.data.terminal_result.result.value,
+                                         node.data.board._player_to_move),
+                           c.data.terminal_result.age,
+                           i)
+                          for i, c in enumerate(node.children))
+        result = node.children[idx].data.terminal_result.result
         return backpropagate_terminal(node, result, age)
 
     # nothing to do

@@ -17,9 +17,9 @@ class BaseNodeData():
         self.search_value = None
 
     def value(self, side: Side):
-        # if self.board.result:
-        #     return value_to_side(self.board.result.value, side)
-        if self.search_value is not None:
+        if self.board.result:
+            return value_to_side(self.board.result.value, side)
+        elif self.search_value is not None:
             return value_to_side(float(self.search_value), side)
         elif self.position_value is not None:
             return value_to_side(float(self.position_value), side)

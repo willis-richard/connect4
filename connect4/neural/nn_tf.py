@@ -280,8 +280,8 @@ class ModelWrapper():
         return stats
 
     def create_sequence(self, boards, values, policies):
-        boards = np.move_array(boards, 1, -1)
-        return Connect4Sequence(boards, values, policies, self.batch_size)
+        boards = np.moveaxis(boards, 1, -1)
+        return Connect4Sequence(boards, values, policies, self.config.batch_size)
 
 
 class Connect4Sequence(Sequence):
