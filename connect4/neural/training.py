@@ -52,6 +52,8 @@ class TrainingGame():
         merged_values = (mcts_values + result.value) / 2.0
         return merged_values
 
+    # FIXME: TD(lambda) algorithm?
+
 
 class TrainingLoop():
     def __init__(self,
