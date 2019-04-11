@@ -11,7 +11,6 @@ from connect4.neural.storage import (GameStorage,
                                      NetworkStorage,
                                      ReplayStorage)
 
-from copy import copy
 import matplotlib.pyplot as plt
 import numpy as np
 import os
@@ -23,6 +22,7 @@ from visdom import Visdom
 
 def top_level_defined_play(x):
     return TrainingGame(x).play()
+
 
 class TrainingGame():
     def __init__(self, player: BasePlayer):
@@ -49,10 +49,11 @@ class TrainingGame():
         return board.result, history, (boards, values, policies)
 
     def create_values(self, mcts_values, result):
-        merged_values = (mcts_values + result.value) / 2.0
-        return merged_values
+        # FIXME: TD(lambda) algorithm?
+        # merged_values = (np.array(mcts_values, dtype='float') + result.value) / 2.0
+        # return merged_values
+        return np.array(mcts_values, dtype='float')
 
-    # FIXME: TD(lambda) algorithm?
 
 
 class TrainingLoop():
@@ -83,8 +84,8 @@ class TrainingLoop():
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
                                         e.Evaluator(e.evaluate_centre))
-        self.hard_opponent = MCTS("mcts:2500",
-                                  MCTSConfig(simulations=2500,
+        self.hard_opponent = MCTS("mcts:" + str(config.simulations),
+                                  MCTSConfig(simulations=config.simulations,
                                              pb_c_init=9999),
                                   e.Evaluator(e.evaluate_centre_with_prior))
 
@@ -175,12 +176,11 @@ class TrainingLoop():
         self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
         self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
 
-
         if self.config.visdom_enabled:
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
                              win=self.win_8ply)
 
-        alpha_zero = self.create_alpha_zero(training=False)
+        # alpha_zero = self.create_alpha_zero(training=False)
 
         # results = self.match(alpha_zero, self.easy_opponent)
         # self.easy_results = self.easy_results.append(results, ignore_index=True)

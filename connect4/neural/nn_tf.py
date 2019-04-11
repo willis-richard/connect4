@@ -8,14 +8,14 @@ from connect4.neural.stats import Stats
 import numpy as np
 from tensorflow.keras.initializers import Constant, Ones
 from tensorflow.keras.layers import (Activation,
-                          add,
-                          BatchNormalization,
-                          Conv2D,
-                          Dense,
-                          Input,
-                          Layer,
-                          Reshape)
-import tensorflow.keras.losses
+                                     add,
+                                     BatchNormalization,
+                                     Conv2D,
+                                     Dense,
+                                     Input,
+                                     Layer,
+                                     Reshape)
+import tensorflow.keras.losses as losses
 from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
@@ -266,7 +266,7 @@ class ModelWrapper():
     def train(self,
               data: Sequence,
               n_epochs: int):
-        #FIXME: check batch_size
+        # FIXME: check batch_size
         self.model.fit(self.create_sequence(*data), epochs=n_epochs)
 
     def evaluate_value_only(self, data: Sequence):

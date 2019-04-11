@@ -13,7 +13,7 @@ class Stats():
 
     @property
     def loss(self):
-        return self.total_loss / self.n
+        return float(self.total_loss) / self.n
 
     @property
     def accuracy(self):
@@ -26,7 +26,7 @@ class Stats():
     def to_dict(self):
         dict_ = {'Average loss': self.loss,
                  'Accuracy': self.accuracy,
-                 'Smallest':self.smallest,
+                 'Smallest': self.smallest,
                  'Largest': self.largest,
                  'Average': self.average}
         dict_['correct'] = {}
@@ -52,7 +52,7 @@ class Stats():
 
     def update(self, outputs, values, loss):
         self.n += len(values)
-        self.average_value += np.sum(outputs.sum())
+        self.average_value += np.sum(outputs)
         self.total_loss += loss * len(values)
         self.smallest = min(self.smallest, np.min(outputs).item())
         self.largest = max(self.largest, np.max(outputs).item())
@@ -61,8 +61,9 @@ class Stats():
 
         for k in self.correct:
             idx = np.where(values == k)[0]
+            # print(np.equal(categories[idx], values[idx]).nonzero()[0])
             self.total[k] += len(idx)
-            self.correct[k] += len(np.where(categories[idx] == values[idx])[0])
+            self.correct[k] += len(np.equal(categories[idx], values[idx]).nonzero()[0])
 
     def categorise_predictions(self, preds):
         preds = preds * 3.0

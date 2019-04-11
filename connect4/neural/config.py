@@ -10,13 +10,15 @@ class ModelConfig():
                  gamma=0.1,
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
-                 batch_size=1):
-         self.weight_decay = weight_decay
-         self.momentum = momentum
-         self.initial_lr = initial_lr
-         self.milestones = milestones
-         self.gamma = gamma
-         self.batch_size = batch_size
+                 batch_size=1,
+                 use_gpu=True):
+        self.weight_decay = weight_decay
+        self.momentum = momentum
+        self.initial_lr = initial_lr
+        self.milestones = milestones
+        self.gamma = gamma
+        self.batch_size = batch_size
+        self.use_gpu = use_gpu
 
 
 class StorageConfig():
@@ -42,6 +44,7 @@ class AlphaZeroConfig():
                  n_training_epochs=5,
                  n_training_games=500,
                  use_pytorch=True,
+                 enable_gpu=True,
                  visdom_enabled=False):
         self.model_config = model_config
         self.storage_config = storage_config
@@ -55,5 +58,3 @@ class AlphaZeroConfig():
         self.n_training_games = n_training_games
         self.use_pytorch = use_pytorch
         self.visdom_enabled = visdom_enabled
-
-

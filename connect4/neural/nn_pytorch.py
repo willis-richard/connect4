@@ -12,24 +12,27 @@ import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 from torch.optim.lr_scheduler import MultiStepLR
 
-from typing import Callable, Dict, Optional, Tuple
+from typing import (List,
+                    Optional,
+                    Sequence)
 
 # import torch.nn.functional as F
 
 
 # Input with N * channels * (6,7)
 # Output with N * filters * (6,7)
-convolutional_layer = \
-    nn.Sequential(nn.Conv2d(in_channels=net_info.channels,
-                            out_channels=net_info.filters,
-                            kernel_size=3,
-                            stride=1,
-                            padding=1,
-                            dilation=1,
-                            groups=1,
-                            bias=False),
-                  nn.BatchNorm2d(net_info.filters),
-                  nn.LeakyReLU())
+def create_convolutional_layer(in_channels=net_info.channels,
+                               out_channels=net_info.filters):
+    return nn.Sequential(nn.Conv2d(in_channels,
+                                   out_channels,
+                                   kernel_size=3,
+                                   stride=1,
+                                   padding=1,
+                                   dilation=1,
+                                   groups=1,
+                                   bias=False),
+                         nn.BatchNorm2d(net_info.filters),
+                         nn.LeakyReLU())
 
 
 # Input with N * filters * (6,7)
@@ -59,7 +62,9 @@ class ResidualLayer(nn.Module):
 # Input with N * filters * (6,7)
 # Output with N * 1
 class ValueHead(nn.Module):
-    def __init__(self, filters=net_info.filters, fc_layers=net_info.n_fc_layers):
+    def __init__(self,
+                 filters=net_info.filters,
+                 fc_layers=net_info.n_fc_layers):
         super(ValueHead, self).__init__()
         self.conv1 = nn.Conv2d(filters, 1, 1) # N*f*H*W -> N*1*H*W
         self.batch_norm = nn.BatchNorm2d(1)
@@ -113,22 +118,25 @@ class PolicyHead(nn.Module):
 
 
 # Used in 8-ply testing
-value_net= nn.Sequential(convolutional_layer,
-                         nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]),
-                         ValueHead())
+def build_value_net(n_residual_layers=net_info.n_residuals,
+                    value_head_fc_layers=net_info.n_fc_layers):
+    value_net = nn.Sequential(create_convolutional_layer(2),
+                              nn.Sequential(*[ResidualLayer() for _ in range(n_residual_layers)]),
+                              ValueHead(fc_layers=value_head_fc_layers))
+    return value_net
 
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.body = nn.Sequential(convolutional_layer,
+        self.body = nn.Sequential(create_convolutional_layer(),
                                   nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
         self.value_head = ValueHead()
         self.policy_head = PolicyHead()
 
     def forward(self, x):
         # FIXME: Needed?
-        x = x.view(-1, net_info.channels, info.height, info.width)
+        # x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
         policy = self.policy_head(x)
@@ -141,8 +149,12 @@ class ModelWrapper():
                  file_name: Optional[str] = None):
         self.config = config
         self.net = Net()
-        self.device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
-        self.net.to(self.device)
+        if config.use_gpu and torch.cuda.is_available():
+            self.device = torch.device("cuda:0")
+            self.net.to(self.device)
+        else:
+            self.device = torch.device("cpu")
+
         self.optimiser = optim.SGD(self.net.parameters(),
                                    lr=config.initial_lr,
                                    momentum=config.momentum,
@@ -167,26 +179,28 @@ class ModelWrapper():
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
         # self.net.train(False)
+        self.print_test_boards()
+
+    def print_test_boards(self):
         board_1 = Board()
         board_2 = Board()
         board_3 = Board()
-        board_2.o_pieces=np.ones((info.height, info.width))
-        board_3.x_pieces=np.ones((info.height, info.width))
+        board_2.o_pieces = np.ones((info.height, info.width))
+        board_3.x_pieces = np.ones((info.height, info.width))
         print("Test board output: empty board:  {}, full o board:  {}, full x board:  {}"
-              .format(self.__call__(board_1), self.__call__(board_2), self.__call__(board_3)))
+              .format(self.__call__(board_1),
+                      self.__call__(board_2),
+                      self.__call__(board_3)))
 
     def __call__(self, board: Board):
         board_tensor = torch.FloatTensor(board.to_array())
+        board_tensor = board_tensor.view(1, *board_tensor.size())
         board_tensor = board_tensor.to(self.device)
         value, prior = self.net(board_tensor)
         assert not torch.isnan(value).any()
         assert not torch.isnan(prior).any()
-        value = value.cpu()
-        value = value.view(-1)
-        value = value.data.numpy()
-        prior = prior.cpu()
-        prior = prior.view(-1)
-        prior = prior.data.numpy()
+        value = value.cpu().view(-1).data.numpy()
+        prior = prior.cpu().view(-1).data.numpy()
         return value, prior
 
     def save(self, file_name: str):
@@ -212,7 +226,7 @@ class ModelWrapper():
     def train(self,
               data,
               n_epochs: int):
-        data = self.create_dataset(*data, batch_size=self.config.batch_size)
+        data = self.create_dataset(self.config.batch_size, *data)
         self.net.train()
         for epoch in range(n_epochs):
 
@@ -236,11 +250,14 @@ class ModelWrapper():
         # Epic post in this one
         # https://discuss.pytorch.org/t/performance-highly-degraded-when-eval-is-activated-in-the-test-phase/3323/33
         # self.net.train(False)
+        # Perhaps it is to do with the batchnorm: https://arxiv.org/abs/1702.03275
+        self.print_test_boards()
         self.net.eval()
+        self.print_test_boards()
 
     def evaluate_value_only(self, boards, values):
         # Note no policy here, 3rd arg unused
-        data = self.create_dataset(boards, values, values, batch_size=4096)
+        data = self.create_dataset(4096, boards, values)
         """Get an idea of how the initialisation is"""
         stats = Stats()
 
@@ -250,11 +267,17 @@ class ModelWrapper():
                 x_value, _ = self.net(board)
                 loss = self.value_loss(x_value, y_value)
                 # FIXME: flatten is the right way here yes?
-                stats.update(x_value.numpy().flatten(), y_value.numpy().flatten(), loss.item())
+                stats.update(x_value.cpu().numpy().flatten(),
+                             y_value.cpu().numpy().flatten(),
+                             loss.item())
 
         return stats
 
-    def create_dataset(self, boards, values, policies, batch_size):
+    def create_dataset(self,
+                       batch_size: int,
+                       boards: List[Board],
+                       values: Sequence[float],
+                       policies: Sequence[Sequence[float]]=None):
         data = Connect4Dataset(boards,
                                values,
                                policies)
@@ -263,29 +286,36 @@ class ModelWrapper():
 
 
 def weights_init(m):
-    return
-    # classname = m.__class__.__name__
-    # if classname.find('Conv2d') != -1:
-    #     nn.init.constant_(m.weight, 1)
-    # elif classname.find('BatchNorm2d') != -1:
-    #     nn.init.constant_(m.weight, 1)
-    #     nn.init.constant_(m.bias, 0)
-    # elif classname.find('Linear') != -1:
-    #     nn.init.constant_(m.weight, 1)
-    #     nn.init.constant_(m.bias, 0)
+    classname = m.__class__.__name__
+    if classname.find('Conv2d') != -1:
+        nn.init.constant_(m.weight, 0)
+    elif classname.find('BatchNorm2d') != -1:
+        nn.init.constant_(m.weight, 0)
+        nn.init.constant_(m.bias, 0)
+    elif classname.find('Linear') != -1:
+        nn.init.constant_(m.weight, 0)
+        nn.init.constant_(m.bias, 0)
 
 
 class Connect4Dataset(Dataset):
-    def __init__(self, boards, values, policies):
-        assert len(boards) == len(values) == len(policies)
+    def __init__(self, boards, values, policies=None):
+        assert len(boards) == len(values)
         self.boards = torch.FloatTensor(boards)
         self.values = torch.FloatTensor(values)
-        self.policies = torch.FloatTensor(policies)
+        if policies is None:
+            self.policies = None
+        else:
+            assert len(boards) == len(policies)
+            self.policies = torch.FloatTensor(policies)
 
     def __len__(self):
         return len(self.boards)
 
     def __getitem__(self, idx: int):
-        return (self.boards[idx],
-                self.values[idx],
-                self.policies[idx])
+        if self.policies is None:
+            return (self.boards[idx],
+                    self.values[idx])
+        else:
+            return (self.boards[idx],
+                    self.values[idx],
+                    self.policies[idx])
