@@ -31,7 +31,7 @@ def create_convolutional_layer(in_channels=net_info.channels,
                                    dilation=1,
                                    groups=1,
                                    bias=False),
-                         nn.BatchNorm2d(net_info.filters),
+                         nn.BatchNorm2d(out_channels),
                          nn.LeakyReLU())
 
 
@@ -118,11 +118,12 @@ class PolicyHead(nn.Module):
 
 
 # Used in 8-ply testing
-def build_value_net(n_residual_layers=net_info.n_residuals,
+def build_value_net(filters=net_info.filters,
+                    n_residual_layers=net_info.n_residuals,
                     value_head_fc_layers=net_info.n_fc_layers):
-    value_net = nn.Sequential(create_convolutional_layer(2),
-                              nn.Sequential(*[ResidualLayer() for _ in range(n_residual_layers)]),
-                              ValueHead(fc_layers=value_head_fc_layers))
+    value_net = nn.Sequential(create_convolutional_layer(2, filters),
+                              nn.Sequential(*[ResidualLayer(filters) for _ in range(n_residual_layers)]),
+                              ValueHead(filters, value_head_fc_layers))
     return value_net
 
 
@@ -168,8 +169,8 @@ class ModelWrapper():
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
-        else:
-            self.net.apply(weights_init)
+        # else:
+        #     self.net.apply(weights_init)
 
         self.value_loss = nn.MSELoss()
         # FIXME: that this needs to be with logits, not just the class index
@@ -213,6 +214,12 @@ class ModelWrapper():
             file_name)
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
+        # FIXME: Correct?
+        x_value = x_value.view(-1)
+        assert x_value.shape == y_value.shape
+        assert x_policy.shape[0] == y_policy.shape[0]
+        assert x_policy.shape[1] == net_info.width
+
         value_loss = self.value_loss(x_value, y_value)
         policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
@@ -241,6 +248,7 @@ class ModelWrapper():
 
                 # forward + backward + optimise
                 x_value, x_policy = self.net(board)
+
                 loss = self.criterion(x_value, x_policy, y_value, y_policy)
                 loss.backward()
                 self.optimiser.step()
@@ -262,7 +270,7 @@ class ModelWrapper():
         stats = Stats()
 
         with torch.set_grad_enabled(False):
-            for board, value, _ in data:
+            for board, value in data:
                 board, y_value = board.to(self.device), value.to(self.device)
                 x_value, _ = self.net(board)
                 loss = self.value_loss(x_value, y_value)
@@ -298,7 +306,10 @@ def weights_init(m):
 
 
 class Connect4Dataset(Dataset):
-    def __init__(self, boards, values, policies=None):
+    def __init__(self,
+                 boards: List[Board],
+                 values: Sequence[float],
+                 policies: Sequence[Sequence[float]] = None):
         assert len(boards) == len(values)
         self.boards = torch.FloatTensor(boards)
         self.values = torch.FloatTensor(values)

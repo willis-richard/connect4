@@ -20,7 +20,7 @@ from tensorflow.keras.models import Model, Sequential
 from tensorflow.keras.optimizers import SGD
 from tensorflow.keras.regularizers import l2
 from tensorflow.keras.utils import Sequence
-from typing import Callable, Dict, Optional, Tuple
+from typing import Callable, Dict, List, Optional, Tuple, Sequence
 
 # FIXME: CPU tensorflow cannot do NCHW right now. Added move axis_hack and set
 # steps to undo:
@@ -189,7 +189,7 @@ class PolicyHead():
 
 # Used in 8-ply testing
 class ValueNet():
-    def __init__(self, weight_decay: float):
+    def __init__(self, weight_decay: float = 0.0001):
         self.body = Body(weight_decay)
         self.value_head = ValueHead(weight_decay)
 
@@ -201,7 +201,7 @@ class ValueNet():
 # value_net has no need of 'player to move' channel as it is only tested on 8ply boards
 # input_ = Input((2, info.height, info.width), dtype='float32')
 input_ = Input((info.height, info.width, 2), dtype='float32')
-value_net = ValueNet(0.0001).build(input_)
+value_net = Model(inputs=input_, outputs=ValueNet().build(input_))
 
 
 # One can subclass their own models but better to avoid?
@@ -279,23 +279,38 @@ class ModelWrapper():
         stats.update(values, true_values, loss)
         return stats
 
+    # FIXME: pytorch one you can specify batch_size. but ofc currently I hate pytorch thanks to the matrix output of the loss function
     def create_sequence(self, boards, values, policies):
         boards = np.moveaxis(boards, 1, -1)
-        return Connect4Sequence(boards, values, policies, self.config.batch_size)
+        return Connect4Sequence(self.config.batch_size,
+                                boards,
+                                values,
+                                policies)
 
 
 class Connect4Sequence(Sequence):
-    def __init__(self, boards, values, policies, batch_size: int):
-        assert len(boards) == len(values) == len(policies)
+    def __init__(self,
+                 batch_size: int,
+                 boards: List[Board],
+                 values: Sequence[float],
+                 policies: Sequence[Sequence[float]] = None):
+        assert len(boards) == len(values)
+        self.batch_size = batch_size
         self.boards = np.array(boards)
         self.values = np.array(values)
-        self.policies = np.array(policies)
-        self.batch_size = batch_size
+        if policies is None:
+            self.policies = None
+        else:
+            assert len(boards) == len(policies)
+            self.policies = np.array(policies)
 
     def __len__(self):
         return int(np.ceil(len(self.values) / float(self.batch_size)))
 
     def __getitem__(self, idx):
-        return np.array([self.boards[idx * self.batch_size:(idx + 1) * self.batch_size],
-                         self.values[idx * self.batch_size:(idx + 1) * self.batch_size],
-                         self.policies[idx * self.batch_size:(idx + 1) * self.batch_size]])
+        start = idx * self.batch_size
+        end = (idx + 1) * self.batch_size
+        if self.policies is None:
+            return self.boards[start:end], self.values[start:end]
+        else:
+            return self.boards[start:end], self.values[start:end], self.policies[start:end]
