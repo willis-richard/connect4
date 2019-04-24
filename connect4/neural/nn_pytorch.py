@@ -102,7 +102,7 @@ class PolicyHead(nn.Module):
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
         self.fc1 = nn.Linear(2 * net_info.area, net_info.width) # N * f * (2 * H * W) -> N * f * W
-        # self.softmax = nn.Softmax(dim=2)
+        # self.softmax = nn.LogSoftmax(dim=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -111,9 +111,9 @@ class PolicyHead(nn.Module):
         # Must flatten before linear layer
         x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
-        # x = self.softmax(x)
         # No idea why but if I had [[[ output then classifier bitched and wanted [[
         x = x.view(-1, net_info.width)
+        # x = self.softmax(x)
         return x
 
 
@@ -175,8 +175,8 @@ class ModelWrapper():
         self.value_loss = nn.MSELoss()
         # FIXME: that this needs to be with logits, not just the class index
         # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
-        # self.policy_loss = nn.CrossEntropyLoss()
-        self.policy_loss = nn.MultiLabelSoftMarginLoss()
+        self.policy_loss = nn.CrossEntropyLoss()
+        # self.policy_loss = nn.MultiLabelSoftMarginLoss()
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
         # self.net.train(False)
@@ -198,8 +198,12 @@ class ModelWrapper():
         board_tensor = board_tensor.view(1, *board_tensor.size())
         board_tensor = board_tensor.to(self.device)
         value, prior = self.net(board_tensor)
-        assert not torch.isnan(value).any()
-        assert not torch.isnan(prior).any()
+        try:
+            assert not torch.isnan(value).any()
+            assert not torch.isnan(prior).any()
+        except:
+            print(board, value, prior)
+            assert False
         value = value.cpu().view(-1).data.numpy()
         prior = prior.cpu().view(-1).data.numpy()
         return value, prior
@@ -221,10 +225,12 @@ class ModelWrapper():
         assert x_policy.shape[1] == net_info.width
 
         value_loss = self.value_loss(x_value, y_value)
-        policy_loss = self.policy_loss(x_policy, y_policy)
+        # policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        return value_loss - policy_loss
+        # return value_loss - policy_loss
+        return value_loss
+        # return policy_loss
 
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
@@ -317,7 +323,7 @@ class Connect4Dataset(Dataset):
             self.policies = None
         else:
             assert len(boards) == len(policies)
-            self.policies = torch.FloatTensor(policies)
+            self.policies = torch.LongTensor(policies)
 
     def __len__(self):
         return len(self.boards)

@@ -10,7 +10,7 @@ class ModelConfig():
                  gamma=0.1,
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
-                 batch_size=1,
+                 batch_size=4096,
                  use_gpu=True):
         self.weight_decay = weight_decay
         self.momentum = momentum
@@ -36,10 +36,11 @@ class AlphaZeroConfig():
                  model_config=ModelConfig(),
                  storage_config=StorageConfig(),
                  agents=1,
-                 simulations=100,
+                 simulations=800,
                  pb_c_init=1.25,
                  root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
+                 num_sampling_moves=10,
                  n_eval=5,
                  n_training_epochs=5,
                  n_training_games=500,
@@ -53,6 +54,7 @@ class AlphaZeroConfig():
         self.pb_c_init = pb_c_init
         self.root_dirichlet_alpha = root_dirichlet_alpha
         self.root_exploration_fraction = root_exploration_fraction
+        self.num_sampling_moves = num_sampling_moves
         self.n_eval = n_eval
         self.n_training_epochs = n_training_epochs
         self.n_training_games = n_training_games

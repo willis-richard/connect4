@@ -4,6 +4,7 @@ from connect4.utils import Connect4Stats as info, Result, Side, value_to_side
 from anytree import Node
 from copy import copy
 import numpy as np
+from scipy.special import softmax
 from typing import Dict, Optional, Tuple
 
 
@@ -65,7 +66,20 @@ class Tree():
                               for c in self.root.children))
         return move, value
 
-    def get_policy(self):
+    def select_softmax_move(self):
+        moves = []
+        values = []
+        for c in self.root.children:
+            moves.append(c.name)
+            values.append(self.get_node_value(c))
+        values = softmax(values)
+
+        idx = np.random.choice(range(len(moves), p=values))
+
+        return moves[idx], values[idx]
+
+    def get_policy_all(self):
+        # If using that multiclass stuff
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)
@@ -76,10 +90,12 @@ class Tree():
             return policy / len(self.root.children)
         else:
             return policy / policy_sum
+
+    def get_policy_max(self):
         # If pytorch CrossEntropy
-        # _, action = max((self.get_node_value(c), c.name)
-        #                 for c in self.root.children)
-        # return action
+        _, action = max((self.get_node_value(c), c.name)
+                        for c in self.root.children)
+        return action
 
     def create_node(self, name, board, parent=None):
         if board in self.result_table:

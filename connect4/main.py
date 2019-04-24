@@ -6,7 +6,8 @@ from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
 from connect4.player import HumanPlayer
 
-from connect4.neural.config import AlphaZeroConfig
+from connect4.neural.config import AlphaZeroConfig, ModelConfig
+from connect4.neural.nn_pytorch import ModelWrapper
 from connect4.neural.training import TrainingLoop
 
 import argparse
@@ -42,6 +43,8 @@ class Parser():
                             help='how many processes to run')
         parser.add_argument('-p', '--plies', default=1, type=int,
                             help='the number of pre-made half-moves for each game')
+        parser.add_argument('-n', '--net_filepath', type=str, required=False,
+                            help='filepath to a pytorch network')
         self.args = parser.parse_args(sys.argv[3:])
 
     def training(self):
@@ -59,17 +62,25 @@ if __name__ == "__main__":
         match = Match(True, player_1, player_2, switch=False)
         match.play()
     elif parser.mode.mode == 'match':
-        player_1 = GridSearch("grid_1",
+        player_1 = GridSearch("grid_det",
                               4,
                               ev.Evaluator(ev.evaluate_centre))
-        player_2 = MCTS("mcts_2",
-                        MCTSConfig(simulations=2500,
-                                   pb_c_init=9999),
+
+        player_2 = MCTS("mcts_det",
+                        MCTSConfig(simulations=2500),
                         ev.Evaluator(ev.evaluate_centre_with_prior))
 
+        model = ModelWrapper(ModelConfig(),
+                             file_name=parser.args.net_filepath)
+
+        player_3 = MCTS("mcts_nn",
+                        MCTSConfig(simulations=2500),
+                        ev.NetEvaluator(ev.evaluate_nn,
+                                        model))
+
         match = Match(True,
-                      player_1,
                       player_2,
+                      player_3,
                       plies=parser.args.plies,
                       switch=True)
         match.play(agents=parser.args.agents)
@@ -81,4 +92,5 @@ if __name__ == "__main__":
             config = config.config
         else:
             config = AlphaZeroConfig()
+
         TrainingLoop(config).run()

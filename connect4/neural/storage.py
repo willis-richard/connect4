@@ -5,7 +5,7 @@ from connect4.neural.config import ModelConfig
 import numpy as np
 import os
 import pickle
-from typing import List
+from typing import List, Sequence
 
 
 class GameStorage():
@@ -73,13 +73,19 @@ class ReplayStorage():
         self.value_buffer = []
         self.policy_buffer = []
 
-    def save_game(self, boards, values, policies):
+    def save_game(self,
+                  boards: List[Board],
+                  values: Sequence[float],
+                  policies: List[Sequence[float]]):
         self.board_buffer = self.board_buffer + boards
         self.value_buffer = np.concatenate((self.value_buffer, values), 0)
         self.policy_buffer = self.policy_buffer + policies
 
     def get_data(self):
-        return (self. board_buffer, self.value_buffer, self.policy_buffer)
+        assert len(self.board_buffer == self.value_buffer)
+        assert len(self.board_buffer == self.policy_buffer)
+        print("Returning {} positions".format(len(self.value_buffer)))
+        return (self.board_buffer, self.value_buffer, self.policy_buffer)
 
 
 def game_str(game: List):

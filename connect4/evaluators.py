@@ -46,13 +46,15 @@ def evaluate_centre_with_prior(board: Board):
 def evaluate_nn(board: Board,
                 model):
     value, prior = model(board)
-    prior = softmax(prior)
+    # prior = softmax(prior)
+    # return value, prior
+    prior = copy(info.prior)
     return value, prior
 
 
 def normalise_prior(valid_moves: Set, prior: np.ndarray):
     invalid_moves = set(range(info.width)).difference(valid_moves)
     if invalid_moves:
-        np.put(prior, invalid_moves, 0.0)
+        np.put(prior, list(invalid_moves), 0.0)
     prior = prior / np.sum(prior)
     return prior

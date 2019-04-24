@@ -39,7 +39,7 @@ class TrainingGame():
 
             boards.append(board.to_array())
             values.append(value)
-            policy = tree.get_policy()
+            policy = tree.get_policy_max()
             policies.append(policy)
 
             history.append((move, value, policy))
@@ -50,9 +50,9 @@ class TrainingGame():
 
     def create_values(self, mcts_values, result):
         # FIXME: TD(lambda) algorithm?
-        # merged_values = (np.array(mcts_values, dtype='float') + result.value) / 2.0
-        # return merged_values
-        return np.array(mcts_values, dtype='float')
+        merged_values = (np.array(mcts_values, dtype='float') + result.value) / 2.0
+        return merged_values
+        # return np.array(mcts_values, dtype='float')
 
 
 
@@ -208,6 +208,7 @@ class TrainingLoop():
                       MCTSConfig(self.config.simulations,
                                  self.config.pb_c_init,
                                  self.config.root_dirichlet_alpha if training else 0.0,
-                                 self.config.root_exploration_fraction if training else 0.0),
+                                 self.config.root_exploration_fraction if training else 0.0,
+                                 self.config.num_sampling_moves if training else 0),
                       evaluator)
         return player

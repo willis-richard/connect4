@@ -21,12 +21,14 @@ class MCTSConfig():
             pb_c_base: int=19652,
             pb_c_init: int=1.25,
             root_dirichlet_alpha: float=0.0,
-            root_exploration_fraction: float=0.0):
+            root_exploration_fraction: float=0.0,
+            num_sampling_moves=0):
         self.simulations = simulations
         self.pb_c_base = pb_c_base
         self.pb_c_init = pb_c_init
         self.root_dirichlet_alpha = root_dirichlet_alpha
         self.root_exploration_fraction = root_exploration_fraction
+        self.num_sampling_moves = num_sampling_moves
 
 
 class PositionEvaluation():
@@ -127,7 +129,10 @@ class MCTS(BasePlayer):
 
         search(self.config, tree, self.evaluator)
 
-        move, value = self.select_best_move(tree)
+        if board.age >= self.config.num_sampling_moves:
+            move, value = self.select_best_move(tree)
+        else:
+            move, value = self.select_softmax_move(tree)
 
         board.make_move(move)
         # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
@@ -165,11 +170,14 @@ def search(config: MCTSConfig,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
     # First evaluate root and add noise
-    value, root_prior = evaluator(tree.root.data.board)
-    tree.root.data.position_value = PositionEvaluation(value, root_prior)
+    board = tree.root.data.board
+    value, root_prior = evaluator(board)
     # later we will return the root prior to it's true value so the transition table is accurate
-    noisy_prior = add_exploration_noise(config, tree.root.data.position_value.prior)
-    tree.root.data.position_value.prior = noisy_prior
+    noisy_prior = add_exploration_noise(config,
+                                        root_prior,
+                                        board.valid_moves)
+    tree.root.data.position_value = PositionEvaluation(value,
+                                                       noisy_prior)
 
     for _ in range(config.simulations):
         node = tree.root
@@ -278,10 +286,13 @@ def backpropagate(node: Node,
 
 
 def add_exploration_noise(config: MCTSConfig,
-                          prior: np.ndarray):
+                          prior: np.ndarray,
+                          valid_moves: Set):
     if config.root_dirichlet_alpha and config.root_exploration_fraction:
-        noise = np.random.gamma(config.root_dirichlet_alpha, 1, info.width)
+        noise = np.random.gamma(config.root_dirichlet_alpha,
+                                1,
+                                info.width)
         frac = config.root_exploration_fraction
-        prior = prior * (1 - frac) + n * frac
-        prior = normalise_prior(board.valid_moves, prior)
+        prior = prior * (1 - frac) + noise * frac
+        prior = normalise_prior(valid_moves, prior)
     return prior
