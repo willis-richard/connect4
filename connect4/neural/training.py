@@ -6,7 +6,9 @@ from connect4.mcts import MCTS, MCTSConfig
 from connect4.player import BasePlayer
 from connect4.utils import Result
 
-from connect4.neural.async_evaluator import evaluate_nn, NetEvaluator
+from connect4.neural.async_evaluator import (evaluate_nn,
+                                             NetEvaluator,
+                                             AsyncNetEvaluator)
 from connect4.neural.config import AlphaZeroConfig
 from connect4.neural.storage import (GameStorage,
                                      NetworkStorage,
@@ -212,12 +214,18 @@ class TrainingLoop():
             mgr = Manager()
             position_table = mgr.dict()
             result_table = mgr.dict()
-            evaluator = NetEvaluator(
-                evaluate_nn,
-                model,
-                # position_table,
-                # result_table,
-                initialise_cache_depth=4)
+            # evaluator = NetEvaluator(
+            #     evaluate_nn,
+            #     model,
+            #     # position_table,
+            #     # result_table,
+            #     initialise_cache_depth=4)
+            evaluator = AsyncNetEvaluator(model,
+                                          10,
+                                          0.1,
+                                          int(1e6),
+                                          position_table,
+                                          result_table)
         else:
             evaluator = NetEvaluator(
                 evaluate_nn,
