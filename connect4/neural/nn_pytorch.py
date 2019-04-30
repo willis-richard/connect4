@@ -216,7 +216,6 @@ class ModelWrapper():
         value = value.cpu().view(-1).data.numpy()
         prior = prior.cpu().view(-1).data.numpy()
         return value, prior
-        return
 
     def call_list(self, board_list: List[Board]):
         board_tensor = torch.FloatTensor(list(map(lambda x: x.to_array(),
@@ -231,7 +230,7 @@ class ModelWrapper():
             assert False
         values = values.cpu().data.numpy()
         priors = priors.cpu().data.numpy()
-        return values, priors
+        return board_list, values, priors
 
     def save(self, file_name: str):
         torch.save(

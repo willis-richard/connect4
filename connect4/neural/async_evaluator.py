@@ -46,8 +46,8 @@ class AsyncNetEvaluator():
                  max_wait_microseconds: int,
                  position_table: Optional[Dict] = None,
                  result_table: Optional[Dict] = None):
-        self.position_table = {}
-        self.result_table = {}
+        self.position_table = position_table if position_table is not None else {}
+        self.result_table = result_table if result_table is not None else {}
         # self.position_lock = Lock()
         # self.result_lock = Lock()
         self.requester = Requester(model,
@@ -72,7 +72,6 @@ class AsyncNetEvaluator():
         #     if board in self.position_table:
         #         position_eval = self.position_table[board]
         if board in self.position_table:
-            print("Cached posn")
             position_eval = self.position_table[board]
 
         if position_eval is not None:
@@ -84,11 +83,11 @@ class AsyncNetEvaluator():
 
     def start(self):
         # start the receiver
-        listener_receive, listener_send = Pipe(False)
-        listener_p = Process(target=AsyncNetEvaluator.listen,
-                             args=(listener_receive,
-                                   # self.lock,
-                                   self.position_table))
+        self.listener_receive, listener_send = Pipe(False)
+        listener_p = Process(target=self.listen)
+                             # args=(listener_receive,
+                             #       # self.lock,
+                             #       self.position_table))
         listener_p.start()
         # listener_p.join()
 
@@ -102,20 +101,17 @@ class AsyncNetEvaluator():
     def stop(self):
         self.requester_send.close()
 
-    @staticmethod
-    def listen(conn,
-               # lock,
-               position_table):
+    def listen(self):
         while True:
             try:
-                boards, position_evals = conn.recv()
+                boards, values, priors = self.listener_receive.recv()
             except EOFError:
                 break
                 # with lock:
             #     for board, position_eval in zip(boards, position_evals):
-            #         position_table[board] = position_eval
-            for board, position_eval in zip(boards, position_evals):
-                position_table[board] = position_eval
+            #         self.position_table[board] = position_eval
+            for board, value, prior in zip(boards, values, priors):
+                self.position_table[board] = (value, prior)
 
 
 class Requester():
@@ -149,8 +145,8 @@ class Requester():
                 self.evaluate()
 
     def evaluate(self):
-        position_eval = self.model(list(self.requests))
-        self.listener_send.send((self.requests, position_eval))
+        boards, values, priors = self.model(list(self.requests))
+        self.listener_send.send((boards, values, priors))
         self.requests = set()
 
     def check_time(self):
