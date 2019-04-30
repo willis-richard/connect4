@@ -82,8 +82,8 @@ class ReplayStorage():
         self.policy_buffer = self.policy_buffer + policies
 
     def get_data(self):
-        assert len(self.board_buffer == self.value_buffer)
-        assert len(self.board_buffer == self.policy_buffer)
+        assert len(self.board_buffer) == len(self.value_buffer)
+        assert len(self.board_buffer) == len(self.policy_buffer)
         print("Returning {} positions".format(len(self.value_buffer)))
         return (self.board_buffer, self.value_buffer, self.policy_buffer)
 

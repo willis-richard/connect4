@@ -1,10 +1,9 @@
 from connect4.utils import Connect4Stats as info
 from connect4.utils import Side, Result
 
-import numpy as np
-import torch
-
 from copy import copy
+import numpy as np
+from typing import Set
 
 
 class Board():
@@ -139,3 +138,22 @@ class Board():
         o_hash = np.dot(np.concatenate(self.o_pieces), info.hash_value)
         x_hash = np.dot(np.concatenate(self.x_pieces), info.hash_value)
         return hash((o_hash, x_hash))
+
+
+def make_random_ips(plies):
+    ips = set()
+    board = Board()
+    expand(ips, board, plies)
+    return ips
+
+
+def expand(ips: Set,
+           board: Board,
+           plies: int) -> None:
+    if plies == 0:
+        ips.add(board)
+        return
+    for move in board.valid_moves:
+        new_board = copy(board)
+        new_board.make_move(move)
+        expand(ips, new_board, plies - 1)

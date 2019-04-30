@@ -2,17 +2,18 @@ from connect4.board import Board
 from connect4.utils import Connect4Stats as info
 
 from copy import copy
-from functools import partial
 import numpy as np
-from scipy.special import softmax
-from typing import List, Set
+from typing import Callable, Dict, List, Optional, Set
 
 
 class Evaluator():
-    def __init__(self, evaluate_fn):
+    def __init__(self,
+                 evaluate_fn: Callable,
+                 position_table: Optional[Dict] = None,
+                 result_table: Optional[Dict] = None):
         self.evaluate_fn = evaluate_fn
-        self.position_table = {}
-        self.result_table = {}
+        self.position_table = position_table if position_table is not None else {}
+        self.result_table = result_table if result_table is not None else {}
 
     def __call__(self, board: Board):
         if board in self.position_table:
@@ -20,13 +21,8 @@ class Evaluator():
         else:
             position_eval = self.evaluate_fn(board)
             self.position_table[board] = position_eval
+            # print("evaluated position, now contains {} positions".format(len(self.position_table)))
         return position_eval
-
-
-class NetEvaluator(Evaluator):
-    def __init__(self, evaluate_fn, model):
-        self.model = model
-        super().__init__(partial(evaluate_fn, model=self.model))
 
 
 def evaluate_centre(board: Board):
@@ -41,20 +37,3 @@ def evaluate_centre_with_prior(board: Board):
     value = evaluate_centre(board)
     prior = copy(info.prior)
     return value, prior
-
-
-def evaluate_nn(board: Board,
-                model):
-    value, prior = model(board)
-    # prior = softmax(prior)
-    # return value, prior
-    prior = copy(info.prior)
-    return value, prior
-
-
-def normalise_prior(valid_moves: Set, prior: np.ndarray):
-    invalid_moves = set(range(info.width)).difference(valid_moves)
-    if invalid_moves:
-        np.put(prior, list(invalid_moves), 0.0)
-    prior = prior / np.sum(prior)
-    return prior

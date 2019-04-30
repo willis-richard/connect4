@@ -14,7 +14,8 @@ from torch.optim.lr_scheduler import MultiStepLR
 
 from typing import (List,
                     Optional,
-                    Sequence)
+                    Sequence,
+                    Union)
 
 # import torch.nn.functional as F
 
@@ -193,7 +194,15 @@ class ModelWrapper():
                       self.__call__(board_2),
                       self.__call__(board_3)))
 
-    def __call__(self, board: Board):
+    def __call__(self, input_: Union[Board, List[Board]]):
+        if isinstance(input_, Board):
+            return self.call_board(input_)
+        elif isinstance(input_, list):
+            return self.call_list(input_)
+        else:
+            raise TypeError('ModelWrapper called with {}. It accepts either a Board nor a list(Board)'.format(type(input_)))
+
+    def call_board(self, board: Board):
         board_tensor = torch.FloatTensor(board.to_array())
         board_tensor = board_tensor.view(1, *board_tensor.size())
         board_tensor = board_tensor.to(self.device)
@@ -201,12 +210,28 @@ class ModelWrapper():
         try:
             assert not torch.isnan(value).any()
             assert not torch.isnan(prior).any()
-        except:
+        except AssertionError:
             print(board, value, prior)
             assert False
         value = value.cpu().view(-1).data.numpy()
         prior = prior.cpu().view(-1).data.numpy()
         return value, prior
+        return
+
+    def call_list(self, board_list: List[Board]):
+        board_tensor = torch.FloatTensor(list(map(lambda x: x.to_array(),
+                                                  board_list)))
+        board_tensor = board_tensor.to(self.device)
+        values, priors = self.net(board_tensor)
+        try:
+            assert not torch.isnan(values).any()
+            assert not torch.isnan(priors).any()
+        except AssertionError:
+            print(board_tensor, values, priors)
+            assert False
+        values = values.cpu().data.numpy()
+        priors = priors.cpu().data.numpy()
+        return values, priors
 
     def save(self, file_name: str):
         torch.save(

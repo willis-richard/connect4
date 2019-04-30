@@ -1,10 +1,9 @@
-from connect4.board import Board
+from connect4.board import make_random_ips
 from connect4.game import Game
 from connect4.player import BasePlayer
 
 from copy import copy
 import numpy as np
-from typing import Set
 
 
 def top_level_defined_play(x):
@@ -21,7 +20,7 @@ class Match():
         self._player_1 = player_1
         self._player_2 = player_2
 
-        ips = self.make_random_ips(plies)
+        ips = make_random_ips(plies)
 
         self.games = [Game(display,
                            copy(player_1),
@@ -82,23 +81,3 @@ class Match():
             results = pool.map(top_level_defined_play, self.games)
 
         return results
-
-    def make_random_ips(self, plies):
-        ips = set()
-        board = Board()
-        self.expand(ips, board, plies)
-        return ips
-
-    def expand(self,
-               ips: Set,
-               board: Board,
-               plies: int) -> None:
-        if plies == 0:
-            ips.add(board)
-            return
-        for move in board.valid_moves:
-            new_board = copy(board)
-            new_board.make_move(move)
-            self.expand(ips, new_board, plies - 1)
-
-        return

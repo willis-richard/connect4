@@ -1,5 +1,7 @@
+from copy import copy
 from enum import Enum, IntEnum
 import numpy as np
+from typing import Set
 
 
 class Connect4Stats():

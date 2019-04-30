@@ -1,11 +1,12 @@
 from connect4.board import Board
-import connect4.evaluators as e
+import connect4.evaluators as evl
 from connect4.grid_search import GridSearch
 from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
 from connect4.player import BasePlayer
 from connect4.utils import Result
 
+from connect4.neural.async_evaluator import evaluate_nn, NetEvaluator
 from connect4.neural.config import AlphaZeroConfig
 from connect4.neural.storage import (GameStorage,
                                      NetworkStorage,
@@ -55,7 +56,6 @@ class TrainingGame():
         # return np.array(mcts_values, dtype='float')
 
 
-
 class TrainingLoop():
     def __init__(self,
                  config: AlphaZeroConfig):
@@ -83,11 +83,11 @@ class TrainingLoop():
 
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
-                                        e.Evaluator(e.evaluate_centre))
+                                        evl.Evaluator(evl.evaluate_centre))
         self.hard_opponent = MCTS("mcts:" + str(config.simulations),
                                   MCTSConfig(simulations=config.simulations,
                                              pb_c_init=9999),
-                                  e.Evaluator(e.evaluate_centre_with_prior))
+                                  evl.Evaluator(evl.evaluate_centre_with_prior))
 
         if os.path.exists(self.save_dir + '/stats/easy_results.pkl'):
             self.easy_results = pd.read_pickle(self.save_dir + '/stats/easy_results.pkl')
@@ -137,16 +137,14 @@ class TrainingLoop():
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
         else:
-            from torch.multiprocessing import Pool, Process, set_start_method
-            try:
-                set_start_method('spawn')
-            except RuntimeError as e:
-                if str(e) == 'context has already been set':
-                    pass
-
+            from torch.multiprocessing import (Pool,
+                                               Process,
+                                               set_start_method)
+            # FIXME: necessary to copy the a0?
             a0 = [alpha_zero for _ in range(self.config.n_training_games)]
             with Pool(processes=self.config.agents) as pool:
                 results = pool.map(top_level_defined_play, a0)
+                # results = pool.apply_async(top_level_defined_play, args=alpha_zero)
             for result, history, data in results:
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
@@ -161,6 +159,7 @@ class TrainingLoop():
         self.nn_storage.train(self.replay_storage.get_data(),
                               self.config.n_training_epochs)
         end_t = time.time()
+        print('Time now: {}'.format(time.asctime(time.localtime(end_t))))
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             game_results.count(Result.o_win),
@@ -201,9 +200,29 @@ class TrainingLoop():
 
     def create_alpha_zero(self, training=False):
         model = self.nn_storage.get_model()
-        evaluator = e.NetEvaluator(
-            e.evaluate_nn,
-            model)
+        if training and self.config.agents > 1:
+            from torch.multiprocessing import (Manager,
+                                               set_start_method)
+            try:
+                set_start_method('spawn')
+            except RuntimeError as e:
+                if str(e) == 'context has already been set':
+                    pass
+
+            mgr = Manager()
+            position_table = mgr.dict()
+            result_table = mgr.dict()
+            evaluator = NetEvaluator(
+                evaluate_nn,
+                model,
+                # position_table,
+                # result_table,
+                initialise_cache_depth=4)
+        else:
+            evaluator = NetEvaluator(
+                evaluate_nn,
+                model,
+                initialise_cache_depth=4)
         player = MCTS('AlphaZero',
                       MCTSConfig(self.config.simulations,
                                  self.config.pb_c_init,

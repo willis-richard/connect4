@@ -1,5 +1,5 @@
 from connect4.board import Board
-from connect4.evaluators import Evaluator, normalise_prior
+from connect4.evaluators import Evaluator
 from connect4.player import BasePlayer
 from connect4.tree import BaseNodeData, Tree
 from connect4.utils import Connect4Stats as info
@@ -295,4 +295,12 @@ def add_exploration_noise(config: MCTSConfig,
         frac = config.root_exploration_fraction
         prior = prior * (1 - frac) + noise * frac
         prior = normalise_prior(valid_moves, prior)
+    return prior
+
+
+def normalise_prior(valid_moves: Set, prior: np.ndarray):
+    invalid_moves = set(range(info.width)).difference(valid_moves)
+    if invalid_moves:
+        np.put(prior, list(invalid_moves), 0.0)
+    prior = prior / np.sum(prior)
     return prior

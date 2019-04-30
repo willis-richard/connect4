@@ -9,6 +9,7 @@ import sys
 if __name__ == "__main__":
     with open(sys.argv[1], 'rb') as f:
         games = pickle.load(f)
+        print('{} games loaded'.format(len(games)))
         game = games[int(sys.argv[2])]
 
         print(game_str(game))

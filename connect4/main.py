@@ -67,19 +67,19 @@ if __name__ == "__main__":
                               ev.Evaluator(ev.evaluate_centre))
 
         player_2 = MCTS("mcts_det",
-                        MCTSConfig(simulations=2500),
+                        MCTSConfig(simulations=800),
                         ev.Evaluator(ev.evaluate_centre_with_prior))
 
         model = ModelWrapper(ModelConfig(),
                              file_name=parser.args.net_filepath)
 
         player_3 = MCTS("mcts_nn",
-                        MCTSConfig(simulations=2500),
+                        MCTSConfig(simulations=800),
                         ev.NetEvaluator(ev.evaluate_nn,
                                         model))
 
         match = Match(True,
-                      player_2,
+                      player_3,
                       player_3,
                       plies=parser.args.plies,
                       switch=True)
