@@ -1,4 +1,5 @@
 from connect4.board import Board
+from connect4.mcts import MCTSConfig, PositionEvaluation
 from connect4.evaluators import Evaluator
 from connect4.player import BasePlayer
 from connect4.tree import BaseNodeData, Tree
@@ -9,58 +10,38 @@ from connect4.utils import (same_side,
                             Result)
 
 from anytree import Node
-from collections import namedtuple
+from collections import deque, namedtuple
 import math
 import numpy as np
-from typing import Callable, Dict, List, Set, Tuple
-
-
-class MCTSConfig():
-    def __init__(self,
-                 simulations: int,
-                 pb_c_base: int = 19652,
-                 pb_c_init: float = 1.25,
-                 root_dirichlet_alpha: float = 0.0,
-                 root_exploration_fraction: float = 0.0,
-                 num_sampling_moves=0):
-        self.simulations = simulations
-        self.pb_c_base = pb_c_base
-        self.pb_c_init = pb_c_init
-        self.root_dirichlet_alpha = root_dirichlet_alpha
-        self.root_exploration_fraction = root_exploration_fraction
-        self.num_sampling_moves = num_sampling_moves
-
-
-class PositionEvaluation():
-    def __init__(self,
-                 value: float,
-                 prior: np.ndarray):
-        self.value = value
-        self.prior = prior
-
-    def __float__(self):
-        return float(self.value)
-
-    def __str__(self):
-        return str(self.__float__())
-
-    def __repr__(self):
-        return "position_value: " + str(self.value) + \
-            ", prior: " + str(self.prior)
+from typing import (Callable,
+                    Dict,
+                    List,
+                    Optional,
+                    Set,
+                    Tuple)
 
 
 class SearchEvaluation():
     def __init__(self):
         self.value_sum = 0.0
         self.visit_count = 0
+        self.ghost_count = 0
 
     def add(self, value: float):
         self.value_sum += value
         self.visit_count += 1
 
+    def add_ghost(self):
+        self.ghost_count += 1
+
+    def replace_ghost(self, value: float):
+        assert self.ghost_count > 0
+        self.ghost_count -= 1
+        self.add(value)
+
     def __float__(self):
-        assert self.visit_count != 0
-        return float(self.value_sum / self.visit_count)
+        assert (self.visit_count + self.ghost_count) != 0
+        return float(self.value_sum / (self.visit_count + self.ghost_count))
 
     def __str__(self):
         return str(self.__float__())
@@ -68,7 +49,8 @@ class SearchEvaluation():
     def __repr__(self):
         return "value: " + str(self.__float__()) + \
             ",  value_sum: " + str(self.value_sum) + \
-            ",  visit_count: " + str(self.visit_count)
+            ",  visit_count: " + str(self.visit_count) + \
+            ",  ghost_count: " + str(self.ghost_count)
 
 
 TerminalResult = namedtuple('TerminalResult', ['result', 'age'])
@@ -113,7 +95,7 @@ class NodeData(BaseNodeData):
             ",  terminal_moves: " + str(self.terminal_moves)
 
 
-class MCTS(BasePlayer):
+class MCTS_PARALLEL(BasePlayer):
     def __init__(self,
                  name: str,
                  config: MCTSConfig,
@@ -132,7 +114,7 @@ class MCTS(BasePlayer):
         if board.age >= self.config.num_sampling_moves:
             move, value = self.select_best_move(tree)
         else:
-            move, value = tree.select_softmax_move()
+            move, value = self.select_softmax_move(tree)
 
         board.make_move(move)
         # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
@@ -149,7 +131,7 @@ class MCTS(BasePlayer):
                                      c.name,
                                      tree.get_node_value(c, Side.o))
                                     for c in tree.root.children
-                                    if c.name in tree.root.data.terminal_moves)
+                                 if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
             _, _, move, value = max((tree.get_node_value(c),
@@ -169,16 +151,7 @@ def search(config: MCTSConfig,
            tree: Tree,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
-    # First evaluate root and add noise
-    board = tree.root.data.board
-    value, root_prior = evaluator(board)
-    # later we will return the root prior to it's true value so the transition table is accurate
-    noisy_prior = add_exploration_noise(config,
-                                        root_prior,
-                                        board.valid_moves)
-    tree.root.data.position_value = PositionEvaluation(value,
-                                                       noisy_prior)
-
+    ghost_nodes = deque()
     for _ in range(config.simulations):
         node = tree.root
 
@@ -202,9 +175,35 @@ def search(config: MCTSConfig,
             value = board.result.value
         else:
             value, prior = evaluator(board)
-            node.data.position_value = PositionEvaluation(value, prior)
+            if value is None:
+                ghost_nodes.append(node)
+                # give it a loss and a flat prior
+                node.data.position_value = PositionEvaluation(
+                    value_to_side(0.0, board._player_to_move),
+                    np.ones((info.width,)))
+            else:
+                node.data.position_value = PositionEvaluation(value, prior)
 
-        backpropagate(node, value)
+        if value is not None:
+            backpropagate(node, value)
+        else:
+            backpropagate_ghost(node)
+
+        if ghost_nodes:
+            print("yes ghost nodes")
+            while ghost_nodes[0].data.board in evaluator.position_table:
+                node = ghost_nodes.popleft()
+                value, prior = evaluator.position_table[node.data.board]
+                node.data.position_value = PositionEvaluation(value, prior)
+                backpropagate_replace_ghost(node, value)
+        print("outside ghost")
+
+    while ghost_nodes:
+        if ghost_nodes[0].data.board in evaluator.position_table:
+            node = ghost_nodes.popleft()
+            value, prior = evaluator.position_table[node.data.board]
+            node.data.position_value = PositionEvaluation(value, prior)
+            backpropagate_replace_ghost(node, value)
 
     # Return the root prior to it's true value
     # FIXME: Check that this works for parallelism
@@ -283,6 +282,21 @@ def backpropagate(node: Node,
     while not node.is_root:
         node = node.parent
         node.data._search_value.add(value)
+
+
+def backpropagate_ghost(node: Node):
+    node.data._search_value.add_ghost()
+    while not node.is_root:
+        node = node.parent
+        node.data._search_value.add_ghost()
+
+
+def backpropagate_replace_ghost(node: Node,
+                                value: float):
+    node.data._search_value.replace_ghost(value)
+    while not node.is_root:
+        node = node.parent
+        node.data._search_value.replace_ghost(value)
 
 
 def add_exploration_noise(config: MCTSConfig,

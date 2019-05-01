@@ -3,6 +3,7 @@ import connect4.evaluators as evl
 from connect4.grid_search import GridSearch
 from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
+from connect4.mcts_parallel import MCTS_PARALLEL
 from connect4.player import BasePlayer
 from connect4.utils import Result
 
@@ -202,7 +203,30 @@ class TrainingLoop():
 
     def create_alpha_zero(self, training=False):
         model = self.nn_storage.get_model()
-        if training and self.config.agents > 1:
+        if training:
+            mcts_config = MCTSConfig(self.config.simulations,
+                                     self.config.pb_c_base,
+                                     self.config.pb_c_init,
+                                     self.config.root_dirichlet_alpha,
+                                     self.config.root_exploration_fraction,
+                                     self.config.num_sampling_moves)
+        else:
+            mcts_config = MCTSConfig(self.config.simulations,
+                                     self.config.pb_c_base,
+                                     self.config.pb_c_init,
+                                     0.0,
+                                     0.0,
+                                     0)
+
+        if self.config.agents == 1:
+            evaluator = NetEvaluator(
+                evaluate_nn,
+                model,
+                initialise_cache_depth=4)
+            player = MCTS('AlphaZero',
+                          mcts_config,
+                          evaluator)
+        else:
             from torch.multiprocessing import (Manager,
                                                set_start_method)
             try:
@@ -214,28 +238,13 @@ class TrainingLoop():
             mgr = Manager()
             position_table = mgr.dict()
             result_table = mgr.dict()
-            # evaluator = NetEvaluator(
-            #     evaluate_nn,
-            #     model,
-            #     # position_table,
-            #     # result_table,
-            #     initialise_cache_depth=4)
             evaluator = AsyncNetEvaluator(model,
                                           10,
                                           0.1,
                                           int(1e6),
                                           position_table,
                                           result_table)
-        else:
-            evaluator = NetEvaluator(
-                evaluate_nn,
-                model,
-                initialise_cache_depth=4)
-        player = MCTS('AlphaZero',
-                      MCTSConfig(self.config.simulations,
-                                 self.config.pb_c_init,
-                                 self.config.root_dirichlet_alpha if training else 0.0,
-                                 self.config.root_exploration_fraction if training else 0.0,
-                                 self.config.num_sampling_moves if training else 0),
-                      evaluator)
+            player = MCTS_PARALLEL('AlphaZero',
+                                   mcts_config,
+                                   evaluator)
         return player

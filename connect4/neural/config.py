@@ -37,6 +37,7 @@ class AlphaZeroConfig():
                  storage_config=StorageConfig(),
                  agents=1,
                  simulations=800,
+                 pb_c_base=19652,
                  pb_c_init=1.25,
                  root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
@@ -51,6 +52,7 @@ class AlphaZeroConfig():
         self.storage_config = storage_config
         self.agents = agents
         self.simulations = simulations
+        self.pb_c_base = pb_c_base
         self.pb_c_init = pb_c_init
         self.root_dirichlet_alpha = root_dirichlet_alpha
         self.root_exploration_fraction = root_exploration_fraction

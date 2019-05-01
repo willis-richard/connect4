@@ -74,7 +74,7 @@ class Tree():
             values.append(self.get_node_value(c))
         values = softmax(values)
 
-        idx = np.random.choice(range(len(moves), p=values))
+        idx = np.random.choice(range(len(moves)), p=values)
 
         return moves[idx], values[idx]
 
