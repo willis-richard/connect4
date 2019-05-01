@@ -78,8 +78,8 @@ class AsyncNetEvaluator():
             return position_eval
 
         self.requester_send.send(board)
-        # return None
-        return 0.5, np.ones((7,))
+        return None, None
+        # return 0.5, np.ones((7,))
 
     def start(self):
         # start the receiver

@@ -114,7 +114,7 @@ class MCTS_PARALLEL(BasePlayer):
         if board.age >= self.config.num_sampling_moves:
             move, value = self.select_best_move(tree)
         else:
-            move, value = self.select_softmax_move(tree)
+            move, value = tree.select_softmax_move()
 
         board.make_move(move)
         # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
@@ -190,13 +190,11 @@ def search(config: MCTSConfig,
             backpropagate_ghost(node)
 
         if ghost_nodes:
-            print("yes ghost nodes")
-            while ghost_nodes[0].data.board in evaluator.position_table:
+            while ghost_nodes and ghost_nodes[0].data.board in evaluator.position_table:
                 node = ghost_nodes.popleft()
                 value, prior = evaluator.position_table[node.data.board]
                 node.data.position_value = PositionEvaluation(value, prior)
                 backpropagate_replace_ghost(node, value)
-        print("outside ghost")
 
     while ghost_nodes:
         if ghost_nodes[0].data.board in evaluator.position_table:
@@ -205,9 +203,6 @@ def search(config: MCTSConfig,
             node.data.position_value = PositionEvaluation(value, prior)
             backpropagate_replace_ghost(node, value)
 
-    # Return the root prior to it's true value
-    # FIXME: Check that this works for parallelism
-    tree.root.data.position_value.prior = root_prior
     return
 
 

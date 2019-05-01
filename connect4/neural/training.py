@@ -218,7 +218,7 @@ class TrainingLoop():
                                      0.0,
                                      0)
 
-        if self.config.agents == 1:
+        if self.config.agents >= 1:
             evaluator = NetEvaluator(
                 evaluate_nn,
                 model,
@@ -226,7 +226,7 @@ class TrainingLoop():
             player = MCTS('AlphaZero',
                           mcts_config,
                           evaluator)
-        else:
+        # else:
             from torch.multiprocessing import (Manager,
                                                set_start_method)
             try:
@@ -235,16 +235,16 @@ class TrainingLoop():
                 if str(e) == 'context has already been set':
                     pass
 
-            mgr = Manager()
-            position_table = mgr.dict()
-            result_table = mgr.dict()
-            evaluator = AsyncNetEvaluator(model,
-                                          10,
-                                          0.1,
-                                          int(1e6),
-                                          position_table,
-                                          result_table)
-            player = MCTS_PARALLEL('AlphaZero',
-                                   mcts_config,
-                                   evaluator)
+        #     mgr = Manager()
+        #     position_table = mgr.dict()
+        #     result_table = mgr.dict()
+        #     evaluator = AsyncNetEvaluator(model,
+        #                                   10,
+        #                                   0.1,
+        #                                   int(1e6),
+        #                                   position_table,
+        #                                   result_table)
+        #     player = MCTS_PARALLEL('AlphaZero',
+        #                            mcts_config,
+        #                            evaluator)
         return player
