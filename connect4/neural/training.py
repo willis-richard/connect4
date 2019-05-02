@@ -5,6 +5,7 @@ from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
 from connect4.mcts_parallel import MCTS_PARALLEL
 from connect4.player import BasePlayer
+from connect4.utils import Connect4Stats as info
 from connect4.utils import Result
 
 from connect4.neural.async_evaluator import (evaluate_nn,
@@ -50,6 +51,7 @@ class TrainingGame():
 
         values = self.create_values(values, board.result)
 
+        print("Game finished")
         return board.result, history, (boards, values, policies)
 
     def create_values(self, mcts_values, result):
@@ -218,7 +220,7 @@ class TrainingLoop():
                                      0.0,
                                      0)
 
-        if self.config.agents >= 1:
+        if self.config.agents == 1:
             evaluator = NetEvaluator(
                 evaluate_nn,
                 model,
@@ -226,7 +228,7 @@ class TrainingLoop():
             player = MCTS('AlphaZero',
                           mcts_config,
                           evaluator)
-        # else:
+        else:
             from torch.multiprocessing import (Manager,
                                                set_start_method)
             try:
@@ -235,16 +237,18 @@ class TrainingLoop():
                 if str(e) == 'context has already been set':
                     pass
 
-        #     mgr = Manager()
-        #     position_table = mgr.dict()
-        #     result_table = mgr.dict()
-        #     evaluator = AsyncNetEvaluator(model,
-        #                                   10,
-        #                                   0.1,
-        #                                   int(1e6),
-        #                                   position_table,
-        #                                   result_table)
-        #     player = MCTS_PARALLEL('AlphaZero',
-        #                            mcts_config,
-        #                            evaluator)
+            mgr = Manager()
+            position_table = mgr.dict()
+            result_table = mgr.dict()
+            updates_published = mgr.Value(int, 0)
+            evaluator = AsyncNetEvaluator(model,
+                                          self.config.agents * (info.width - 1),
+                                          0.001, # check every x for request
+                                          int(1e4), # send a batch after this time
+                                          position_table,
+                                          result_table,
+                                          updates_published)
+            player = MCTS_PARALLEL('AlphaZero',
+                                   mcts_config,
+                                   evaluator)
         return player

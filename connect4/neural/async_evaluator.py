@@ -10,6 +10,7 @@ from scipy.special import softmax
 from typing import Callable, Dict, List, Optional, Set
 
 import numpy as np
+import os
 
 class NetEvaluator(Evaluator):
     def __init__(self,
@@ -44,27 +45,20 @@ class AsyncNetEvaluator():
                  batch_size: int,
                  timeout_seconds: float,
                  max_wait_microseconds: int,
-                 position_table: Optional[Dict] = None,
-                 result_table: Optional[Dict] = None):
-        self.position_table = position_table if position_table is not None else {}
-        self.result_table = result_table if result_table is not None else {}
+                 position_table: Dict,
+                 result_table: Dict,
+                 updates_published: int):
+        self.position_table = position_table
+        self.result_table = result_table
+        self.updates_published = updates_published
         # self.position_lock = Lock()
         # self.result_lock = Lock()
         self.requester = Requester(model,
                                    batch_size,
                                    timeout_seconds,
                                    max_wait_microseconds)
+        self.seen_update = 0
         self.start()
-
-    # @property
-    # def result_table(self):
-    #     return
-
-    # # err help
-    # @result_table.setter
-    # def result_table(self, board):
-    #     with self.result_lock:
-    #         self._result_table[board]
 
     def __call__(self, board: Board):
         position_eval = None
@@ -81,20 +75,25 @@ class AsyncNetEvaluator():
         return None, None
         # return 0.5, np.ones((7,))
 
+    def has_update(self):
+        updates_published = self.updates_published.value
+        if updates_published > self.seen_update:
+            self.seen_update = updates_published
+            return True
+        return False
+
     def start(self):
         # start the receiver
         self.listener_receive, listener_send = Pipe(False)
+        self.requester_receive, self.requester_send = Pipe(False)
+
         listener_p = Process(target=self.listen)
-                             # args=(listener_receive,
-                             #       # self.lock,
-                             #       self.position_table))
         listener_p.start()
         # listener_p.join()
 
         # start the requester
-        requester_receive, self.requester_send = Pipe(False)
         requester_p = Process(target=self.requester.start,
-                              args=(requester_receive, listener_send))
+                              args=(self.requester_receive, listener_send))
         requester_p.start()
         # requester_p.join()
 
@@ -112,6 +111,9 @@ class AsyncNetEvaluator():
             #         self.position_table[board] = position_eval
             for board, value, prior in zip(boards, values, priors):
                 self.position_table[board] = (value, prior)
+            # send an event so players know to re-check the table
+            # self.listener
+            self.updates_published.value += 1
 
 
 class Requester():

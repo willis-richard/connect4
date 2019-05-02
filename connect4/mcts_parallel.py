@@ -20,6 +20,8 @@ from typing import (Callable,
                     Set,
                     Tuple)
 
+import os
+
 
 class SearchEvaluation():
     def __init__(self):
@@ -185,23 +187,24 @@ def search(config: MCTSConfig,
                 node.data.position_value = PositionEvaluation(value, prior)
 
         if value is not None:
-            backpropagate(node, value)
+            backpropagate(node, lambda x: x.data._search_value.add(value))
         else:
-            backpropagate_ghost(node)
+            backpropagate(node, lambda x: x.data._search_value.add_ghost())
 
-        if ghost_nodes:
+        if ghost_nodes and evaluator.has_update():
             while ghost_nodes and ghost_nodes[0].data.board in evaluator.position_table:
                 node = ghost_nodes.popleft()
                 value, prior = evaluator.position_table[node.data.board]
                 node.data.position_value = PositionEvaluation(value, prior)
-                backpropagate_replace_ghost(node, value)
+                backpropagate(node, lambda x: x.data._search_value.replace_ghost(value))
 
     while ghost_nodes:
-        if ghost_nodes[0].data.board in evaluator.position_table:
-            node = ghost_nodes.popleft()
-            value, prior = evaluator.position_table[node.data.board]
-            node.data.position_value = PositionEvaluation(value, prior)
-            backpropagate_replace_ghost(node, value)
+        if evaluator.has_update():
+            while ghost_nodes and ghost_nodes[0].data.board in evaluator.position_table:
+                node = ghost_nodes.popleft()
+                value, prior = evaluator.position_table[node.data.board]
+                node.data.position_value = PositionEvaluation(value, prior)
+                backpropagate(node, lambda x: x.data._search_value.replace_ghost(value))
 
     return
 
@@ -272,11 +275,17 @@ def backpropagate_terminal(node: Node,
 
 
 def backpropagate(node: Node,
-                  value: float):
-    node.data._search_value.add(value)
+                  function: Callable):
+    function(node)
     while not node.is_root:
         node = node.parent
-        node.data._search_value.add(value)
+        function(node)
+# def backpropagate(node: Node,
+#                   value: float):
+#     node.data._search_value.add(value)
+#     while not node.is_root:
+#         node = node.parent
+#         node.data._search_value.add(value)
 
 
 def backpropagate_ghost(node: Node):
