@@ -230,7 +230,7 @@ class ModelWrapper():
             assert False
         values = values.cpu().data.numpy()
         priors = priors.cpu().data.numpy()
-        return board_list, values, priors
+        return values, priors
 
     def save(self, file_name: str):
         torch.save(

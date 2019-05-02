@@ -35,7 +35,8 @@ class AlphaZeroConfig():
     def __init__(self,
                  model_config=ModelConfig(),
                  storage_config=StorageConfig(),
-                 agents=1,
+                 game_processes=1,
+                 game_threads=1,
                  simulations=800,
                  pb_c_base=19652,
                  pb_c_init=1.25,
@@ -50,7 +51,8 @@ class AlphaZeroConfig():
                  visdom_enabled=False):
         self.model_config = model_config
         self.storage_config = storage_config
-        self.agents = agents
+        self.game_processes = game_processes
+        self.game_threads = game_threads
         self.simulations = simulations
         self.pb_c_base = pb_c_base
         self.pb_c_init = pb_c_init

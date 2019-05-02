@@ -12,7 +12,7 @@ from anytree import Node
 from collections import namedtuple
 import math
 import numpy as np
-from typing import Callable, Dict, List, Set, Tuple
+from typing import Callable, List, Optional, Set, Tuple
 
 
 class MCTSConfig():

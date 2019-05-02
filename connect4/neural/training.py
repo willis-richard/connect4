@@ -3,62 +3,23 @@ import connect4.evaluators as evl
 from connect4.grid_search import GridSearch
 from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
-from connect4.mcts_parallel import MCTS_PARALLEL
-from connect4.player import BasePlayer
-from connect4.utils import Connect4Stats as info
 from connect4.utils import Result
 
-from connect4.neural.async_evaluator import (evaluate_nn,
-                                             NetEvaluator,
-                                             AsyncNetEvaluator)
 from connect4.neural.config import AlphaZeroConfig
+from connect4.neural.game_pool import game_pool
+from connect4.neural.inference_server import InferenceServer
 from connect4.neural.storage import (GameStorage,
                                      NetworkStorage,
                                      ReplayStorage)
+from connect4.neural.training_game import training_game
 
+from functools import partial
 import matplotlib.pyplot as plt
-import numpy as np
 import os
 import pandas as pd
+import time
 import torch
-import torch.utils.data as data
 from visdom import Visdom
-
-
-def top_level_defined_play(x):
-    return TrainingGame(x).play()
-
-
-class TrainingGame():
-    def __init__(self, player: BasePlayer):
-        self.player = player
-
-    def play(self):
-        board = Board()
-        boards = []
-        values = []
-        policies = []
-        history = []
-        while board.result is None:
-            move, value, tree = self.player.make_move(board)
-
-            boards.append(board.to_array())
-            values.append(value)
-            policy = tree.get_policy_max()
-            policies.append(policy)
-
-            history.append((move, value, policy))
-
-        values = self.create_values(values, board.result)
-
-        print("Game finished")
-        return board.result, history, (boards, values, policies)
-
-    def create_values(self, mcts_values, result):
-        # FIXME: TD(lambda) algorithm?
-        merged_values = (np.array(mcts_values, dtype='float') + result.value) / 2.0
-        return merged_values
-        # return np.array(mcts_values, dtype='float')
 
 
 class TrainingLoop():
@@ -127,29 +88,65 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        alpha_zero = self.create_alpha_zero(training=True)
-
+        model = self.nn_storage.get_model()
+        mcts_config = self.create_alpha_zero_config(training=True)
         self.replay_storage.reset()
         game_results = []
 
-        import time
         start_t = time.time()
-        if self.config.agents == 1:
+        if self.config.game_processes == 1:
+            if self.config.agents == 1:
+                evaluator = evl.Evaluator(partial(evl.evaluate_nn,
+                                                  model=model))
+                alpha_zero = MCTS('AlphaZero',
+                                  mcts_config,
+                                  evaluator)
             for _ in range(self.config.n_training_games):
-                result, history, data = TrainingGame(alpha_zero).play()
-                # N.B. ideally these would be saved inside play(), but... multiprocess?
+                result, history, data = training_game(alpha_zero).play()
+                # N.B. ideally these would be saved inside play(), but...
+                # multiprocessing?
                 game_results.append(result)
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
         else:
-            from torch.multiprocessing import (Pool,
-                                               Process,
+            from torch.multiprocessing import (Manager,
+                                               Pipe,
+                                               Pool,
                                                set_start_method)
-            # FIXME: necessary to copy the a0?
-            a0 = [alpha_zero for _ in range(self.config.n_training_games)]
-            with Pool(processes=self.config.agents) as pool:
-                results = pool.map(top_level_defined_play, a0)
-                # results = pool.apply_async(top_level_defined_play, args=alpha_zero)
+            try:
+                set_start_method('spawn')
+            except RuntimeError as e:
+                if str(e) == 'context has already been set':
+                    pass
+
+            # mgr = Manager()
+            # position_table = mgr.dict()
+            # result_table = mgr.dict()
+
+            connections = [[Pipe() for
+                            _ in range(self.config.game_threads)] for
+                           _ in range(self.config.game_processes)]
+
+            inference_server = InferenceServer(model,
+                                               int(1e5),
+                                               int(1e6),
+                                               # position_table,
+                                               None,
+                                               [item[1] for sublist in connections for item in sublist],
+                                               initialise_cache_depth=4)
+
+            game_pool_args = [(mcts_config,
+                               self.config.game_threads,
+                               conns,
+                               self.config.n_training_games / self.config.game_processes,
+                               # position_table,
+                               # result_table,
+                               None,
+                               None) for
+                              conns in connections]
+
+            with Pool(processes=self.config.game_processes) as pool:
+                results = pool.starmap(game_pool, game_pool_args)
             for result, history, data in results:
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
@@ -203,8 +200,7 @@ class TrainingLoop():
         match = Match(False, alpha_zero, opponent, plies=1, switch=True)
         return match.play(agents=self.config.agents)
 
-    def create_alpha_zero(self, training=False):
-        model = self.nn_storage.get_model()
+    def create_alpha_zero_config(self, training=False):
         if training:
             mcts_config = MCTSConfig(self.config.simulations,
                                      self.config.pb_c_base,
@@ -220,35 +216,4 @@ class TrainingLoop():
                                      0.0,
                                      0)
 
-        if self.config.agents == 1:
-            evaluator = NetEvaluator(
-                evaluate_nn,
-                model,
-                initialise_cache_depth=4)
-            player = MCTS('AlphaZero',
-                          mcts_config,
-                          evaluator)
-        else:
-            from torch.multiprocessing import (Manager,
-                                               set_start_method)
-            try:
-                set_start_method('spawn')
-            except RuntimeError as e:
-                if str(e) == 'context has already been set':
-                    pass
-
-            mgr = Manager()
-            position_table = mgr.dict()
-            result_table = mgr.dict()
-            updates_published = mgr.Value(int, 0)
-            evaluator = AsyncNetEvaluator(model,
-                                          self.config.agents * (info.width - 1),
-                                          0.001, # check every x for request
-                                          int(1e4), # send a batch after this time
-                                          position_table,
-                                          result_table,
-                                          updates_published)
-            player = MCTS_PARALLEL('AlphaZero',
-                                   mcts_config,
-                                   evaluator)
-        return player
+        return mcts_config
