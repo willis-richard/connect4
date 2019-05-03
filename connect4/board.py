@@ -93,20 +93,20 @@ class Board():
             self._check_diagonal(pieces) or \
             self._check_diagonal(np.fliplr(pieces))
 
-    def check_terminal_position(self):
-        if self.check_for_winner(self.o_pieces):
+    def check_terminal_position(self, check_all: bool = True):
+        if (check_all or self._player_to_move == Side.x) and \
+           self.check_for_winner(self.o_pieces):
             self.result = Result.o_win
-        elif self.check_for_winner(self.x_pieces):
+        elif (check_all or self._player_to_move == Side.o) and \
+             self.check_for_winner(self.x_pieces):
             self.result = Result.x_win
         elif np.all(self._get_pieces()):
             self.result = Result.draw
         return self.result
 
     def _make_move(self, move):
-        assert move in self.valid_moves
         board = self._get_pieces()
         idx = info.height - np.count_nonzero(board[:, move]) - 1
-        assert board[idx, move] == 0
         if self._player_to_move == Side.o:
             self.o_pieces[idx, move] = 1
         else:

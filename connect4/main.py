@@ -11,6 +11,7 @@ from connect4.neural.nn_pytorch import ModelWrapper
 from connect4.neural.training import TrainingLoop
 
 import argparse
+from functools import partial
 from importlib.util import module_from_spec, spec_from_file_location
 import sys
 
@@ -67,22 +68,24 @@ if __name__ == "__main__":
                               ev.Evaluator(ev.evaluate_centre))
 
         player_2 = MCTS("mcts_det",
-                        MCTSConfig(simulations=800),
+                        MCTSConfig(simulations=2500,
+                                   pb_c_init=99999),
                         ev.Evaluator(ev.evaluate_centre_with_prior))
 
         model = ModelWrapper(ModelConfig(),
                              file_name=parser.args.net_filepath)
 
         player_3 = MCTS("mcts_nn",
-                        MCTSConfig(simulations=800),
-                        ev.NetEvaluator(ev.evaluate_nn,
-                                        model))
+                        MCTSConfig(simulations=2500,
+                                   pb_c_init=99999),
+                        ev.Evaluator(partial(ev.evaluate_nn,
+                                             model=model)))
 
         match = Match(True,
-                      player_3,
-                      player_3,
+                      player_2,
+                      player_2,
                       plies=parser.args.plies,
-                      switch=True)
+                      switch=False)
         match.play(agents=parser.args.agents)
     else:
         if parser.args.config:

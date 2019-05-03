@@ -102,10 +102,9 @@ class Tree():
             board_result = self.result_table[board]
             board.result = board_result
         else:
-            board_result = board.check_terminal_position()
+            board_result = board.check_terminal_position(False)
             self.result_table[board] = board_result
-        # FIXME: copy required?
-        node_data = self.node_data_type(copy(board))
+        node_data = self.node_data_type(board)
 
         node = Node(name, parent=parent, data=node_data)
         return node
