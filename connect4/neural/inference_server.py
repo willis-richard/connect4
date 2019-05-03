@@ -16,27 +16,17 @@ class InferenceServer():
                  model,
                  timeout_microseconds: int,
                  max_wait_microseconds: int,
-                 position_table: Dict,
                  conn_list: List,
                  initialise_cache_depth: int = 0):
         self.model = model
         self.timeout_seconds = float(timeout_microseconds / 1e6)
         self.max_wait_microseconds = dt.timedelta(
             microseconds=max_wait_microseconds)
-        self.position_table = position_table
         self.conn_list = conn_list
 
         self.batch_size = math.ceil(len(self.conn_list) * 0.75)
         self.request_conns: List[Connection] = list()
         self.request_boards: List[Board] = list()
-
-        # if initialise_cache_depth > 0:
-        #     ips = make_random_ips(initialise_cache_depth)
-        #     boards = list(ips)
-        #     values, priors = self.model(boards)
-        #     self.position_table.update([
-        #         (b, (v, p)) for b, v, p in
-        #         zip(boards, values, priors)])
 
         self.start()
 
@@ -46,7 +36,7 @@ class InferenceServer():
 
     def run(self):
         while True:
-            for c in wait(self.conn_list, self.timeout_seconds):
+            for c in wait(self.conn_list): #, self.timeout_seconds):
                 try:
                     board = c.recv()
                 except EOFError:
@@ -54,16 +44,12 @@ class InferenceServer():
                 else:
                     self.request_conns.append(c)
                     self.request_boards.append(board)
-            if self.request_boards and (len(self.request_boards) >= self.batch_size or self.check_time()):
+            if self.request_boards: # and (len(self.request_boards) >= self.batch_size or self.check_time()):
                 self.evaluate()
 
     def evaluate(self):
-        print("send {} positions to GPU".format(len(self.request_boards)))
+        # print("send {} positions to GPU".format(len(self.request_boards)))
         values, priors = self.model(self.request_boards)
-
-        # self.position_table.update([
-        #     (b, (v, p)) for b, v, p in
-        #     zip(self.request_boards, values, priors)])
 
         # send the results to the connections
         # FIXME: very dumb lambda here
@@ -71,7 +57,7 @@ class InferenceServer():
         #     [(c, (v, p)) for c, v, p in
         #     zip(self.request_conns, values, priors)])
         for c, v, p in zip(self.request_conns, values, priors):
-            c.send((v,p))
+            c.send((v, p))
 
         self.request_conns = list()
         self.request_boards = list()

@@ -109,8 +109,7 @@ class TrainingLoop():
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
         else:
-            from torch.multiprocessing import (Manager,
-                                               Pipe,
+            from torch.multiprocessing import (Pipe,
                                                Pool,
                                                set_start_method)
             try:
@@ -119,35 +118,30 @@ class TrainingLoop():
                 if str(e) == 'context has already been set':
                     pass
 
-            # mgr = Manager()
-            # position_table = mgr.dict()
-            # result_table = mgr.dict()
-
             connections = [[Pipe() for
                             _ in range(self.config.game_threads)] for
                            _ in range(self.config.game_processes)]
 
             inference_server = InferenceServer(model,
                                                int(1e5),
-                                               int(1e6),
-                                               # position_table,
-                                               None,
+                                               int(2e5),
                                                [item[1] for sublist in connections for item in sublist],
                                                initialise_cache_depth=4)
 
             game_pool_args = [(mcts_config,
                                self.config.game_threads,
                                conns,
-                               self.config.n_training_games / self.config.game_processes,
-                               # position_table,
-                               # result_table,
-                               None,
-                               None) for
+                               self.config.n_training_games / self.config.game_processes) for
                               conns in connections]
 
             with Pool(processes=self.config.game_processes) as pool:
                 results = pool.starmap(game_pool, game_pool_args)
             for result, history, data in results:
+# Error given when 11 processes, 19 threads:
+# TypeError: save_game() takes 4 positional arguments but 20 were given
+# Error given when 10 processes, 21 threads:
+# TypeError: save_game() takes 4 positional arguments but 22 were given
+# passed n threads + 1 (aka self)
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
                 game_results.append(result)

@@ -14,13 +14,11 @@ from typing import Dict, List, Tuple, Optional
 def game_pool(mcts_config: MCTSConfig,
               n_threads: int,
               conn_list: List[Tuple[Connection, Connection]],
-              n_games: int,
-              position_table: Optional[Dict] = None,
-              result_table: Optional[Dict] = None):
+              n_games: int):
     assert n_threads == len(conn_list)
 
-    position_table = position_table if position_table is not None else {}
-    result_table = result_table if result_table is not None else {}
+    position_table = {}
+    result_table = {}
 
     thread_args = [MCTS('AlphaZero:{}:{}'.format(os.getpid(), i),
                         mcts_config,
@@ -28,7 +26,7 @@ def game_pool(mcts_config: MCTSConfig,
                                           conn=conn[0]),
                                   position_table,
                                   result_table,
-                                  store_position=True))
+                                  store_position=False))
                    for i, conn in enumerate(conn_list)]
 
     result_list = []

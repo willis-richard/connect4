@@ -137,6 +137,7 @@ class MCTS(BasePlayer):
         board.make_move(move)
         # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
         # We need to return the value of the position to 'player_o'
+        print(self.name)
         return move, value, tree
 
     def select_best_move(self, tree) -> Tuple[int, float]:
