@@ -98,12 +98,11 @@ class Tree():
         return action
 
     def create_node(self, name, board, parent=None):
-        if board in self.result_table:
-            board_result = self.result_table[board]
-            board.result = board_result
+        b_value = board.to_int_tuple()
+        if b_value in self.result_table:
+            board.result = self.result_table[b_value]
         else:
-            board_result = board.check_terminal_position(False)
-            self.result_table[board] = board_result
+            self.result_table[b_value] = board.check_terminal_position()
         node_data = self.node_data_type(board)
 
         node = Node(name, parent=parent, data=node_data)

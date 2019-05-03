@@ -36,6 +36,14 @@ class Board():
             and np.array_equal(obj.o_pieces, self.o_pieces) \
             and np.array_equal(obj.x_pieces, self.x_pieces)
 
+    def to_int_tuple(self):
+        o_int = np.dot(np.concatenate(self.o_pieces), info.hash_value)
+        x_int = np.dot(np.concatenate(self.x_pieces), info.hash_value)
+        return (o_int, x_int)
+
+    def __hash__(self):
+        return hash(self.to_int_tuple())
+
     @property
     def player_to_move(self):
         return 'o' if self._player_to_move == Side.o else 'x'
@@ -115,7 +123,7 @@ class Board():
 
     def make_move(self, move):
         self._make_move(move)
-        return self.check_terminal_position()
+        return self.check_terminal_position(False)
 
     def _check_valid(self):
         assert self.o_pieces.shape == (info.height, info.width)
@@ -133,11 +141,6 @@ class Board():
         # check the player to move has not already won
         assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o)
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == Side.x)
-
-    def __hash__(self):
-        o_hash = np.dot(np.concatenate(self.o_pieces), info.hash_value)
-        x_hash = np.dot(np.concatenate(self.x_pieces), info.hash_value)
-        return hash((o_hash, x_hash))
 
 
 def make_random_ips(plies):
