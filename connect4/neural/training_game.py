@@ -23,7 +23,7 @@ def training_game(player: BasePlayer):
     values = create_values(values, board.result)
     print("Game finished by {}".format(player.name))
 
-    return board.result, history, (boards, values, policies)
+    return board.result, history, boards, values, policies
 
 
 def create_values(mcts_values, result):

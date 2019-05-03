@@ -102,11 +102,11 @@ class TrainingLoop():
                                   mcts_config,
                                   evaluator)
             for _ in range(self.config.n_training_games):
-                result, history, data = training_game(alpha_zero).play()
+                result, history, boards, values, policies = training_game(alpha_zero).play()
                 # N.B. ideally these would be saved inside play(), but...
                 # multiprocessing?
                 game_results.append(result)
-                self.replay_storage.save_game(*data)
+                self.replay_storage.save_game(boards, values, policies)
                 self.game_storage.save_game(history)
         else:
             from torch.multiprocessing import (Pipe,

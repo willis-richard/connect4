@@ -7,6 +7,7 @@ from connect4.neural.training_game import training_game
 from functools import partial
 from multiprocessing.connection import Connection
 from multiprocessing.pool import ThreadPool
+import numpy as np
 import os
 from typing import Dict, List, Tuple, Optional
 
@@ -31,13 +32,17 @@ def game_pool(mcts_config: MCTSConfig,
 
     result_list = []
     history_list = []
-    data_list = []
+    board_list = []
+    value_list = []
+    policy_list = []
 
     with ThreadPool(n_threads) as pool:
         results = pool.map(training_game, thread_args)
-        for result, history, data in results:
+        for result, history, board, value, policy in results:
             result_list.append(result)
-            history_list.append(history)
-            data_list.append(data)
+            history_list.extend(history)
+            board_list.extend(board)
+            value_list.extend(value)
+            policy_list.extend(policy)
 
-    return result_list, history_list, data_list
+    return result_list, history_list, (board_list, value_list, policy_list)
