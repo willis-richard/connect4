@@ -78,8 +78,6 @@ class ReplayStorage():
                   values: Sequence[float],
                   # FIXME: Actually just the positions as pytorch thing
                   policies: List[Sequence[float]]):
-        print(values)
-        print(policies)
         self.board_buffer = self.board_buffer + boards
         self.value_buffer = np.concatenate((self.value_buffer, values), 0)
         self.policy_buffer = self.policy_buffer + policies

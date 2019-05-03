@@ -37,6 +37,7 @@ def game_pool(mcts_config: MCTSConfig,
     policy_list = []
 
     with ThreadPool(n_threads) as pool:
+        # FIXME: USE PARAMETER n_games
         results = pool.map(training_game, thread_args)
         for result, history, board, value, policy in results:
             result_list.append(result)

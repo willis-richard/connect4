@@ -12,16 +12,15 @@ def training_game(player: BasePlayer):
     history = []
     while board.result is None:
         move, value, tree = player.make_move(board)
+        policy = tree.get_policy_max()
 
         boards.append(board.to_array())
         values.append(value)
-        policy = tree.get_policy_max()
         policies.append(policy)
 
         history.append((move, value, policy))
 
     values = create_values(values, board.result)
-    print("Game finished by {}".format(player.name))
 
     return board.result, history, boards, values, policies
 

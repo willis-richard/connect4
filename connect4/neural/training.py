@@ -123,10 +123,7 @@ class TrainingLoop():
                            _ in range(self.config.game_processes)]
 
             inference_server = InferenceServer(model,
-                                               int(1e5),
-                                               int(2e5),
-                                               [item[1] for sublist in connections for item in sublist],
-                                               initialise_cache_depth=4)
+                                               [item[1] for sublist in connections for item in sublist])
 
             game_pool_args = [(mcts_config,
                                self.config.game_threads,
@@ -137,11 +134,6 @@ class TrainingLoop():
             with Pool(processes=self.config.game_processes) as pool:
                 results = pool.starmap(game_pool, game_pool_args)
             for result, history, data in results:
-# Error given when 11 processes, 19 threads:
-# TypeError: save_game() takes 4 positional arguments but 20 were given
-# Error given when 10 processes, 21 threads:
-# TypeError: save_game() takes 4 positional arguments but 22 were given
-# passed n threads + 1 (aka self)
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)
                 game_results.append(result)

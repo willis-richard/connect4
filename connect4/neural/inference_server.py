@@ -14,17 +14,10 @@ from typing import Dict, List
 class InferenceServer():
     def __init__(self,
                  model,
-                 timeout_microseconds: int,
-                 max_wait_microseconds: int,
-                 conn_list: List,
-                 initialise_cache_depth: int = 0):
+                 conn_list: List):
         self.model = model
-        self.timeout_seconds = float(timeout_microseconds / 1e6)
-        self.max_wait_microseconds = dt.timedelta(
-            microseconds=max_wait_microseconds)
         self.conn_list = conn_list
 
-        self.batch_size = math.ceil(len(self.conn_list) * 0.75)
         self.request_conns: List[Connection] = list()
         self.request_boards: List[Board] = list()
 
@@ -36,7 +29,7 @@ class InferenceServer():
 
     def run(self):
         while True:
-            for c in wait(self.conn_list): #, self.timeout_seconds):
+            for c in wait(self.conn_list):
                 try:
                     board = c.recv()
                 except EOFError:
@@ -44,7 +37,7 @@ class InferenceServer():
                 else:
                     self.request_conns.append(c)
                     self.request_boards.append(board)
-            if self.request_boards: # and (len(self.request_boards) >= self.batch_size or self.check_time()):
+            if self.request_boards:
                 self.evaluate()
 
     def evaluate(self):
@@ -61,16 +54,6 @@ class InferenceServer():
 
         self.request_conns = list()
         self.request_boards = list()
-        self.first_request_t = None
-
-    def check_time(self):
-        if self.first_request_t is None:
-            self.first_request_t = dt.datetime.now()
-            return False
-        elif (dt.datetime.now() - self.first_request_t) > self.max_wait_microseconds:
-            return True
-        else:
-            return False
 
 
 def evaluate_server(board: Board, conn: Connection):
