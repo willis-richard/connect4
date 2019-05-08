@@ -27,7 +27,7 @@ def game_pool(mcts_config: MCTSConfig,
                                           conn=conn[0]),
                                   position_table,
                                   result_table,
-                                  store_position=False))
+                                  store_position=True))
                    for i, conn in enumerate(conn_list)]
 
     result_list = []
