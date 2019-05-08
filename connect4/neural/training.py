@@ -103,25 +103,12 @@ class TrainingLoop():
                               mcts_config,
                               evaluator)
             for _ in range(self.config.n_training_games):
-                result, history, boards, values, policies = training_game(alpha_zero).play()
+                result, boards, moves, values, policies = training_game(alpha_zero).play()
                 # N.B. ideally these would be saved inside play(), but...
                 # multiprocessing?
                 game_results.append(result)
                 self.replay_storage.save_game(boards, values, policies)
-                self.game_storage.save_game(history)
-        # elif True:
-        #     evaluator = evl.Evaluator(partial(evl.evaluate_nn,
-        #                                       model=model))
-        #     alpha_zero = MCTS('AlphaZero',
-        #                       mcts_config,
-        #                       evaluator)
-        #     a0 = [alpha_zero for _ in range(self.config.n_training_games)]
-        #     with Pool(processes=self.config.game_processes) as pool:
-        #         results = pool.map(training_game, a0)
-        #     for result, history, data in results:
-        #         self.replay_storage.save_game(*data)
-        #         self.game_storage.save_game(history)
-        #         game_results.append(result)
+                self.game_storage.save_game(moves, values, policies)
         else:
             connections = [[Pipe() for
                             _ in range(self.config.game_threads)] for
@@ -142,9 +129,9 @@ class TrainingLoop():
                 results = pool.starmap(game_pool,
                                        game_pool_args,
                                        chunksize=1)
-            for result, history, data in results:
-                self.replay_storage.save_game(*data)
-                self.game_storage.save_game(history)
+            for results, boards, moves, values, policies in results:
+                self.replay_storage.save_game(boards, values, policies)
+                self.game_storage.save_game(moves, values, policies)
                 game_results.append(result)
 
         if self.config.visdom_enabled:

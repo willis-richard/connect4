@@ -4,6 +4,6 @@ config = AlphaZeroConfig(storage_config=StorageConfig(save_dir='/home/richard/Do
                          game_processes=10,
                          game_threads=20,
                          n_training_epochs=2,
-                         n_training_games=6000,
+                         n_training_games=600,
                          use_pytorch=True,
                          n_eval=1)

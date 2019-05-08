@@ -19,9 +19,8 @@ class Evaluator():
 
     def __call__(self, board: Board):
         b_value = board.to_int_tuple()
-        if b_value in self.position_table:
-            position_eval = self.position_table[b_value]
-        else:
+        position_eval = self.position_table.get(b_value)
+        if position_eval is None:
             position_eval = self.evaluate_fn(board)
             if self.store_position:
                 self.position_table[b_value] = position_eval

@@ -4,6 +4,7 @@ from connect4.mcts import MCTS, MCTSConfig
 from connect4.neural.inference_server import evaluate_server
 from connect4.neural.training_game import training_game
 
+from collections import deque
 from functools import partial
 from multiprocessing.connection import Connection
 from multiprocessing.pool import ThreadPool
@@ -31,7 +32,7 @@ def game_pool(mcts_config: MCTSConfig,
                    for i, conn in enumerate(conn_list)]
 
     result_list = []
-    history_list = []
+    moves_list = []
     board_list = []
     value_list = []
     policy_list = []
@@ -40,11 +41,21 @@ def game_pool(mcts_config: MCTSConfig,
         with ThreadPool(n_threads) as pool:
             # FIXME: USE PARAMETER n_games
             results = pool.map(training_game, thread_args)
-            for result, history, board, value, policy in results:
+            for result, board, move, value, policy in results:
                 result_list.append(result)
-                history_list.extend(history)
                 board_list.extend(board)
+                moves_list.extend(move)
                 value_list.extend(value)
                 policy_list.extend(policy)
 
-    return result_list, history_list, (board_list, value_list, policy_list)
+    return result_list, board_list, moves_list, value_list, policy_list
+
+
+def run_training_game(player_deque):
+    player = player_deque.pop()
+
+    results = training_game(player)
+
+    player_deque.push(player)
+
+    return results

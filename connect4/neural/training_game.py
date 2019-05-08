@@ -7,22 +7,21 @@ import numpy as np
 def training_game(player: BasePlayer):
     board = Board()
     boards = []
+    moves = []
     values = []
     policies = []
-    history = []
     while board.result is None:
         move, value, tree = player.make_move(board)
         policy = tree.get_policy_max()
 
         boards.append(board.to_array())
+        moves.append(move)
         values.append(value)
         policies.append(policy)
 
-        history.append((move, value, policy))
-
     values = create_values(values, board.result)
 
-    return board.result, history, boards, values, policies
+    return board.result, boards, moves, values, policies
 
 
 def create_values(mcts_values, result):

@@ -22,8 +22,11 @@ class GameStorage():
             pickle.dump(self.games, f)
         self.games = []
 
-    def save_game(self, game: List):
-        self.games.append(game)
+    def save_game(self,
+                  moves: List[int],
+                  values: Sequence[float],
+                  policies: List[Sequence[float]]):
+        self.games.append((moves, values, policies))
 
     def last_game_str(self):
         return game_str(self.games[-1])
