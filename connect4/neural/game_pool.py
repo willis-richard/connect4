@@ -36,14 +36,15 @@ def game_pool(mcts_config: MCTSConfig,
     value_list = []
     policy_list = []
 
-    with ThreadPool(n_threads) as pool:
-        # FIXME: USE PARAMETER n_games
-        results = pool.map(training_game, thread_args)
-        for result, history, board, value, policy in results:
-            result_list.append(result)
-            history_list.extend(history)
-            board_list.extend(board)
-            value_list.extend(value)
-            policy_list.extend(policy)
+    for _ in range(n_games):
+        with ThreadPool(n_threads) as pool:
+            # FIXME: USE PARAMETER n_games
+            results = pool.map(training_game, thread_args)
+            for result, history, board, value, policy in results:
+                result_list.append(result)
+                history_list.extend(history)
+                board_list.extend(board)
+                value_list.extend(value)
+                policy_list.extend(policy)
 
     return result_list, history_list, (board_list, value_list, policy_list)

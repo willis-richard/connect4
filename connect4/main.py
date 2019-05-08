@@ -14,6 +14,7 @@ import argparse
 from functools import partial
 from importlib.util import module_from_spec, spec_from_file_location
 import sys
+from torch.multiprocessing import set_start_method
 
 
 class Parser():
@@ -55,6 +56,12 @@ class Parser():
         self.args = parser.parse_args(sys.argv[3:])
 
 if __name__ == "__main__":
+    try:
+        set_start_method('spawn')
+    except RuntimeError as e:
+        if str(e) == 'context has already been set':
+            pass
+
     parser = Parser()
     if parser.mode.mode == 'game':
         player_1 = HumanPlayer(parser.args.names[0])

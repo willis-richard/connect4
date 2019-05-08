@@ -19,6 +19,8 @@ import os
 import pandas as pd
 import time
 import torch
+from torch.multiprocessing import (Pipe,
+                                   Pool)
 from visdom import Visdom
 
 
@@ -95,12 +97,11 @@ class TrainingLoop():
 
         start_t = time.time()
         if self.config.game_processes == 1:
-            if self.config.agents == 1:
-                evaluator = evl.Evaluator(partial(evl.evaluate_nn,
-                                                  model=model))
-                alpha_zero = MCTS('AlphaZero',
-                                  mcts_config,
-                                  evaluator)
+            evaluator = evl.Evaluator(partial(evl.evaluate_nn,
+                                              model=model))
+            alpha_zero = MCTS('AlphaZero',
+                              mcts_config,
+                              evaluator)
             for _ in range(self.config.n_training_games):
                 result, history, boards, values, policies = training_game(alpha_zero).play()
                 # N.B. ideally these would be saved inside play(), but...
@@ -108,31 +109,39 @@ class TrainingLoop():
                 game_results.append(result)
                 self.replay_storage.save_game(boards, values, policies)
                 self.game_storage.save_game(history)
+        # elif True:
+        #     evaluator = evl.Evaluator(partial(evl.evaluate_nn,
+        #                                       model=model))
+        #     alpha_zero = MCTS('AlphaZero',
+        #                       mcts_config,
+        #                       evaluator)
+        #     a0 = [alpha_zero for _ in range(self.config.n_training_games)]
+        #     with Pool(processes=self.config.game_processes) as pool:
+        #         results = pool.map(training_game, a0)
+        #     for result, history, data in results:
+        #         self.replay_storage.save_game(*data)
+        #         self.game_storage.save_game(history)
+        #         game_results.append(result)
         else:
-            from torch.multiprocessing import (Pipe,
-                                               Pool,
-                                               set_start_method)
-            try:
-                set_start_method('spawn')
-            except RuntimeError as e:
-                if str(e) == 'context has already been set':
-                    pass
-
             connections = [[Pipe() for
                             _ in range(self.config.game_threads)] for
                            _ in range(self.config.game_processes)]
 
-            inference_server = InferenceServer(model,
-                                               [item[1] for sublist in connections for item in sublist])
+            InferenceServer(model,
+                            [item[1]
+                             for sublist in connections
+                             for item in sublist])
 
             game_pool_args = [(mcts_config,
                                self.config.game_threads,
                                conns,
-                               self.config.n_training_games / self.config.game_processes) for
+                               int(self.config.n_training_games / (self.config.game_processes * self.config.game_threads))) for
                               conns in connections]
 
             with Pool(processes=self.config.game_processes) as pool:
-                results = pool.starmap(game_pool, game_pool_args)
+                results = pool.starmap(game_pool,
+                                       game_pool_args,
+                                       chunksize=1)
             for result, history, data in results:
                 self.replay_storage.save_game(*data)
                 self.game_storage.save_game(history)

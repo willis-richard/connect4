@@ -4,6 +4,7 @@ from connect4.player import BasePlayer
 
 from copy import copy
 import numpy as np
+from torch.multiprocessing import Pool
 
 
 def top_level_defined_play(x):
@@ -69,13 +70,6 @@ class Match():
         return {'wins': wins, 'draws': draws, 'losses': losses, 'return': return_}
 
     def play_parallel(self, agents):
-        from torch.multiprocessing import Pool, Process, set_start_method
-        try:
-            set_start_method('spawn')
-        except RuntimeError as e:
-            if str(e) == 'context has already been set':
-                pass
-
         with Pool(processes=agents) as pool:
             # results = pool.map(lambda x: x.play(), self.games)
             results = pool.map(top_level_defined_play, self.games)
