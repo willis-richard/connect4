@@ -94,6 +94,7 @@ class TrainingLoop():
         results = []
 
         start_t = time.time()
+        print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
         if self.config.game_processes == 1:
             evaluator = evl.Evaluator(partial(evl.evaluate_nn,
                                               model=model))
@@ -141,7 +142,6 @@ class TrainingLoop():
         self.nn_storage.train(training_data)
 
         end_t = time.time()
-        print('Time now: {}'.format(time.asctime(time.localtime(end_t))))
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             results.count(Result.o_win),
