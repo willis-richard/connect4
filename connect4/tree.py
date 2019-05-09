@@ -91,12 +91,6 @@ class Tree():
         else:
             return policy / policy_sum
 
-    def get_policy_max(self):
-        # If pytorch CrossEntropy
-        _, action = max((self.get_node_value(c), c.name)
-                        for c in self.root.children)
-        return action
-
     def create_node(self, name, board, parent=None):
         b_value = board.to_int_tuple()
         board_result = self.result_table.get(b_value)

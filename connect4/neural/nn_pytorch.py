@@ -4,6 +4,7 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import Stats
+from connect4.neural.training_game import TrainingData
 
 import numpy as np
 import torch
@@ -260,12 +261,13 @@ class ModelWrapper():
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
-    def train(self,
-              data,
-              n_epochs: int):
-        data = self.create_dataset(self.config.batch_size, *data)
+    def train(self, training_data: TrainingData):
+        data = self.create_dataset(self.config.batch_size,
+                                   training_data.boards,
+                                   training_data.values,
+                                   training_data.policies)
         self.net.train()
-        for epoch in range(n_epochs):
+        for epoch in range(self.config.n_training_epochs):
 
             for board, y_value, y_policy in data:
                 self.scheduler.step()
@@ -313,9 +315,12 @@ class ModelWrapper():
 
     def create_dataset(self,
                        batch_size: int,
+                       # FIXME: actually already an array
                        boards: List[Board],
                        values: Sequence[float],
-                       policies: Sequence[Sequence[float]]=None):
+                       # FIXME: Either an int or an array of floats depending
+                       # on pytorch cross-entropy
+                       policies: Sequence[Sequence[float]] = None):
         data = Connect4Dataset(boards,
                                values,
                                policies)
@@ -348,6 +353,7 @@ class Connect4Dataset(Dataset):
         else:
             assert len(boards) == len(policies)
             self.policies = torch.LongTensor(policies)
+        print("Creating dataset with {} positions".format(self.__len__()))
 
     def __len__(self):
         return len(self.boards)

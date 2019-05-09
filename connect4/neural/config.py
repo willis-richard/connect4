@@ -11,6 +11,7 @@ class ModelConfig():
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
                  batch_size=4096,
+                 n_training_epochs=1,
                  use_gpu=True):
         self.weight_decay = weight_decay
         self.momentum = momentum
@@ -18,6 +19,7 @@ class ModelConfig():
         self.milestones = milestones
         self.gamma = gamma
         self.batch_size = batch_size
+        self.n_training_epochs = n_training_epochs
         self.use_gpu = use_gpu
 
 
@@ -44,7 +46,6 @@ class AlphaZeroConfig():
                  root_exploration_fraction=0.25,
                  num_sampling_moves=10,
                  n_eval=5,
-                 n_training_epochs=1,
                  n_training_games=500,
                  use_pytorch=True,
                  enable_gpu=True,
@@ -60,7 +61,6 @@ class AlphaZeroConfig():
         self.root_exploration_fraction = root_exploration_fraction
         self.num_sampling_moves = num_sampling_moves
         self.n_eval = n_eval
-        self.n_training_epochs = n_training_epochs
         self.n_training_games = n_training_games
         self.use_pytorch = use_pytorch
         self.visdom_enabled = visdom_enabled

@@ -2,7 +2,7 @@ from connect4.evaluators import Evaluator
 from connect4.mcts import MCTS, MCTSConfig
 
 from connect4.neural.inference_server import evaluate_server
-from connect4.neural.training_game import training_game
+from connect4.neural.training_game import TrainingData, training_game
 
 from collections import deque
 from functools import partial
@@ -28,27 +28,22 @@ def game_pool(mcts_config: MCTSConfig,
                                           conn=conn[0]),
                                   position_table,
                                   result_table,
-                                  store_position=True))
+                                  store_position=False))
                    for i, conn in enumerate(conn_list)]
 
-    result_list = []
-    moves_list = []
-    board_list = []
-    value_list = []
-    policy_list = []
+    results = []
+    games = []
+    training_data = TrainingData()
 
     for _ in range(n_games):
         with ThreadPool(n_threads) as pool:
-            # FIXME: USE PARAMETER n_games
-            results = pool.map(training_game, thread_args)
-            for result, board, move, value, policy in results:
-                result_list.append(result)
-                board_list.extend(board)
-                moves_list.extend(move)
-                value_list.extend(value)
-                policy_list.extend(policy)
+            training_games = pool.map(training_game, thread_args)
+            for game_data in training_games:
+                results.append(game_data.result)
+                games.append(game_data.game)
+                training_data.add(game_data.data)
 
-    return result_list, board_list, moves_list, value_list, policy_list
+    return results, games, training_data
 
 
 def run_training_game(player_deque):

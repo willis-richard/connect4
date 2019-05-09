@@ -9,9 +9,8 @@ from connect4.neural.config import AlphaZeroConfig
 from connect4.neural.game_pool import game_pool
 from connect4.neural.inference_server import InferenceServer
 from connect4.neural.storage import (GameStorage,
-                                     NetworkStorage,
-                                     ReplayStorage)
-from connect4.neural.training_game import training_game
+                                     NetworkStorage)
+from connect4.neural.training_game import TrainingData, training_game
 
 from functools import partial
 import matplotlib.pyplot as plt
@@ -43,7 +42,6 @@ class TrainingLoop():
         self.nn_storage = NetworkStorage(self.save_dir + '/net',
                                          config.model_config,
                                          ModelWrapper)
-        self.replay_storage = ReplayStorage()
         self.game_storage = GameStorage(self.save_dir + '/games')
 
         self.boards = torch.load(config.storage_config.path_8ply_boards)
@@ -92,8 +90,8 @@ class TrainingLoop():
     def loop(self):
         model = self.nn_storage.get_model()
         mcts_config = self.create_alpha_zero_config(training=True)
-        self.replay_storage.reset()
-        game_results = []
+        training_data = TrainingData()
+        results = []
 
         start_t = time.time()
         if self.config.game_processes == 1:
@@ -103,12 +101,12 @@ class TrainingLoop():
                               mcts_config,
                               evaluator)
             for _ in range(self.config.n_training_games):
-                result, boards, moves, values, policies = training_game(alpha_zero).play()
+                game_data = training_game(alpha_zero).play()
                 # N.B. ideally these would be saved inside play(), but...
                 # multiprocessing?
-                game_results.append(result)
-                self.replay_storage.save_game(boards, values, policies)
-                self.game_storage.save_game(moves, values, policies)
+                results.append(game_data.result)
+                training_data.add(game_data.data)
+                self.game_storage.save_game(game_data.game)
         else:
             connections = [[Pipe() for
                             _ in range(self.config.game_threads)] for
@@ -129,10 +127,10 @@ class TrainingLoop():
                 results = pool.starmap(game_pool,
                                        game_pool_args,
                                        chunksize=1)
-            for results, boards, moves, values, policies in results:
-                self.replay_storage.save_game(boards, values, policies)
-                self.game_storage.save_game(moves, values, policies)
-                game_results.append(result)
+            for results, games, data in results:
+                training_data.add(data)
+                self.game_storage.save_games(games)
+                results.append(results)
 
         if self.config.visdom_enabled:
             self.vis.text(self.game_storage.last_game_str(),
@@ -140,15 +138,15 @@ class TrainingLoop():
         self.game_storage.save()
         train_t = time.time()
 
-        self.nn_storage.train(self.replay_storage.get_data(),
-                              self.config.n_training_epochs)
+        self.nn_storage.train(training_data)
+
         end_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(end_t))))
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
-            game_results.count(Result.o_win),
-            game_results.count(Result.draw),
-            game_results.count(Result.x_win)))
+            results.count(Result.o_win),
+            results.count(Result.draw),
+            results.count(Result.x_win)))
 
     def evaluate(self):
         model = self.nn_storage.get_model()

@@ -10,6 +10,9 @@ class BasePlayer():
     def __str__(self):
         return "Player: " + self.name
 
+    def make_move(self, board):
+        raise NotImplementedError
+
 
 class HumanPlayer(BasePlayer):
     def __init__(self, name):

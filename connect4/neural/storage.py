@@ -1,11 +1,12 @@
 from connect4.board import Board
 
 from connect4.neural.config import ModelConfig
+from connect4.neural.training_game import TrainingData
 
 import numpy as np
 import os
 import pickle
-from typing import List, Sequence
+from typing import List, Sequence, Tuple
 
 
 class GameStorage():
@@ -22,11 +23,11 @@ class GameStorage():
             pickle.dump(self.games, f)
         self.games = []
 
-    def save_game(self,
-                  moves: List[int],
-                  values: Sequence[float],
-                  policies: List[Sequence[float]]):
-        self.games.append((moves, values, policies))
+    def save_game(self, game: List[Tuple[int, float]]):
+        self.games.append(game)
+
+    def save_games(self, games: List[List[Tuple[int, float]]]):
+        self.games.extend(games)
 
     def last_game_str(self):
         return game_str(self.games[-1])
@@ -52,10 +53,8 @@ class NetworkStorage():
     def file_name(self):
         return self.folder_path + '/net.' + str(self.iteration) + '.pth'
 
-    def train(self,
-              data,
-              n_epochs: int):
-        self.model.train(data, n_epochs)
+    def train(self, data: TrainingData):
+        self.model.train(data)
         self.save_model(self.model)
         self.iteration += 1
 
@@ -67,37 +66,12 @@ class NetworkStorage():
         return self.model
 
 
-class ReplayStorage():
-    def __init__(self):
-        self.reset()
-
-    def reset(self):
-        self.board_buffer = []
-        self.value_buffer = []
-        self.policy_buffer = []
-
-    def save_game(self,
-                  boards: List[Board],
-                  values: Sequence[float],
-                  # FIXME: Actually just the positions as pytorch thing
-                  policies: List[Sequence[float]]):
-        self.board_buffer = self.board_buffer + boards
-        self.value_buffer = np.concatenate((self.value_buffer, values), 0)
-        self.policy_buffer = self.policy_buffer + policies
-
-    def get_data(self):
-        assert len(self.board_buffer) == len(self.value_buffer)
-        assert len(self.board_buffer) == len(self.policy_buffer)
-        print("Returning {} positions".format(len(self.value_buffer)))
-        return (self.board_buffer, self.value_buffer, self.policy_buffer)
-
-
 def game_str(game: List):
-        board = Board()
-        out_str = str(board)
-        for move, value, policy in game:
-            out_str += '\nMove: ' + str(move) + '  Value: ' + str(value) + '  Policy: ' + str(policy)
-            board.make_move(move)
-            out_str += '\n' + str(board)
+    board = Board()
+    out_str = str(board)
+    for move, value in game:
+        out_str += '\nMove: ' + str(move) + '  Value: ' + str(value)
+        board.make_move(move)
+        out_str += '\n' + str(board)
 
         return out_str
