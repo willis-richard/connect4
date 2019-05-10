@@ -13,8 +13,8 @@ class Evaluator():
                  result_table: Optional[Dict] = None,
                  store_position: Optional[bool] = True):
         self.evaluate_fn = evaluate_fn
-        self.position_table = position_table if position_table is not None else {}
-        self.result_table = result_table if result_table is not None else {}
+        self.position_table = {} if position_table is None else position_table
+        self.result_table = {} if result_table is None else result_table
         self.store_position = store_position
 
     def __call__(self, board: Board):
@@ -41,10 +41,10 @@ def evaluate_centre_with_prior(board: Board):
     return value, prior
 
 
-# FIXME: This is temporary until I have the net outputting priors
 def evaluate_nn(board: Board,
                 model):
     value, prior = model(board)
+    # FIXME: This is temporary until I have the net outputting priors
     # prior = softmax(prior)
     prior = copy(info.prior)
     return value, prior

@@ -1,6 +1,7 @@
 from connect4.board import Board, make_random_ips
 from connect4.utils import Connect4Stats as info
 
+from collections import deque
 from copy import copy
 import datetime as dt
 import math
@@ -63,3 +64,10 @@ def evaluate_server(board: Board, conn: Connection):
     # priors = softmax(prior)
     prior = copy(info.prior)
     return value, prior
+
+
+def evaluate_server_deque(board: Board, conn_deque: deque):
+    conn = conn_deque.pop()
+    result = evaluate_server(board, conn)
+    conn_deque.append(conn)
+    return result

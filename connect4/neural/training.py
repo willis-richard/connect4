@@ -121,7 +121,8 @@ class TrainingLoop():
             game_pool_args = [(mcts_config,
                                self.config.game_threads,
                                conns,
-                               int(self.config.n_training_games / (self.config.game_processes * self.config.game_threads))) for
+                               int(self.config.n_training_games /
+                                   self.config.game_processes)) for
                               conns in connections]
 
             with Pool(processes=self.config.game_processes) as pool:

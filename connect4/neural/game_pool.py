@@ -1,7 +1,7 @@
 from connect4.evaluators import Evaluator
 from connect4.mcts import MCTS, MCTSConfig
 
-from connect4.neural.inference_server import evaluate_server
+from connect4.neural.inference_server import evaluate_server, evaluate_server_deque
 from connect4.neural.training_game import TrainingData, training_game
 
 from collections import deque
@@ -21,36 +21,38 @@ def game_pool(mcts_config: MCTSConfig,
 
     position_table = {}
     result_table = {}
+    conn_deque = deque([c[0] for c in conn_list])
 
-    thread_args = [MCTS('AlphaZero:{}:{}'.format(os.getpid(), i),
-                        mcts_config,
-                        Evaluator(partial(evaluate_server,
-                                          conn=conn[0]),
-                                  position_table,
-                                  result_table,
-                                  store_position=False))
-                   for i, conn in enumerate(conn_list)]
+    evaluator = Evaluator(partial(evaluate_server_deque,
+                                  conn_deque=conn_deque),
+                          position_table,
+                          result_table,
+                          store_position=True)
+
+    player_deque = deque([MCTS('AlphaZero:{}:{}'.format(os.getpid(), i),
+                               mcts_config,
+                               evaluator)
+                          for i in range(n_threads)])
 
     results = []
     games = []
     training_data = TrainingData()
+    thread_args = [i for i in range(n_games)]
 
-    for _ in range(n_games):
-        with ThreadPool(n_threads) as pool:
-            training_games = pool.map(training_game, thread_args)
-            for game_data in training_games:
-                results.append(game_data.result)
-                games.append(game_data.game)
-                training_data.add(game_data.data)
+    with ThreadPool(n_threads) as pool:
+        training_games = pool.map(partial(run_training_game,
+                                          player_deque=player_deque),
+                                  thread_args)
+        for game_data in training_games:
+            results.append(game_data.result)
+            games.append(game_data.game)
+            training_data.add(game_data.data)
 
     return results, games, training_data
 
 
-def run_training_game(player_deque):
+def run_training_game(useless_int, player_deque: deque):
     player = player_deque.pop()
-
     results = training_game(player)
-
-    player_deque.push(player)
-
+    player_deque.append(player)
     return results
