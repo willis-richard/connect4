@@ -13,14 +13,16 @@ import os
 from typing import Dict, List, Tuple, Optional
 
 
-def game_pool(mcts_config: MCTSConfig,
+def game_pool(conn_list: List[Tuple[Connection, Connection]],
               n_threads: int,
-              conn_list: List[Tuple[Connection, Connection]],
-              n_games: int):
+              mcts_config: MCTSConfig,
+              n_games: int,
+              position_table: Optional[Dict] = None,
+              result_table: Optional[Dict] = None):
     assert n_threads == len(conn_list)
 
-    position_table = {}
-    result_table = {}
+    position_table = {} if position_table is None else position_table
+    result_table = {} if result_table is None else result_table
     conn_deque = deque([c[0] for c in conn_list])
 
     evaluator = Evaluator(partial(evaluate_server_deque,

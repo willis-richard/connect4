@@ -55,8 +55,8 @@ class NetworkStorage():
 
     def train(self, data: TrainingData):
         self.model.train(data)
-        self.save_model(self.model)
         self.iteration += 1
+        self.save_model(self.model)
 
     def save_model(self, model):
         self.model = model

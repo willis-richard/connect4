@@ -81,11 +81,11 @@ class TrainingLoop():
     def run(self):
         i = 0
         while True:
-            i += 1
             print("Loop: ", i)
             self.loop()
-            if i % self.config.n_eval == 1:
+            if i % self.config.n_eval == 0:
                 self.evaluate()
+            i += 1
 
     def loop(self):
         model = self.nn_storage.get_model()
@@ -117,22 +117,27 @@ class TrainingLoop():
                             [item[1]
                              for sublist in connections
                              for item in sublist])
+            from torch.multiprocessing import Manager
 
-            game_pool_args = [(mcts_config,
-                               self.config.game_threads,
-                               conns,
-                               int(self.config.n_training_games /
-                                   self.config.game_processes)) for
-                              conns in connections]
+            mgr = Manager()
+            position_table = mgr.dict()
+            result_table = mgr.dict()
+
 
             with Pool(processes=self.config.game_processes) as pool:
-                results = pool.starmap(game_pool,
-                                       game_pool_args,
-                                       chunksize=1)
-            for results, games, data in results:
-                training_data.add(data)
-                self.game_storage.save_games(games)
-                results.append(results)
+                for results, games, data in pool.imap_unordered(
+                        partial(game_pool,
+                                mcts_config=mcts_config,
+                                n_threads=self.config.game_threads,
+                                n_games=int(self.config.n_training_games /
+                                            self.config.game_processes),
+                                position_table=position_table,
+                                result_table=result_table),
+                        connections,
+                        chunksize=1):
+                    training_data.add(data)
+                    self.game_storage.save_games(games)
+                    results.extend(results)
 
         if self.config.visdom_enabled:
             self.vis.text(self.game_storage.last_game_str(),
