@@ -28,8 +28,14 @@ class InferenceServer():
         self.p = Process(target=self.run)
         self.p.start()
 
+    def close(self):
+        self.p.close()
+
+    def terminate(self):
+        self.p.terminate()
+
     def run(self):
-        while True:
+        while self.conn_list:
             for c in wait(self.conn_list):
                 try:
                     board = c.recv()

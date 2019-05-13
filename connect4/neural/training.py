@@ -113,31 +113,26 @@ class TrainingLoop():
                             _ in range(self.config.game_threads)] for
                            _ in range(self.config.game_processes)]
 
-            InferenceServer(model,
-                            [item[1]
-                             for sublist in connections
-                             for item in sublist])
-            from torch.multiprocessing import Manager
-
-            mgr = Manager()
-            position_table = mgr.dict()
-            result_table = mgr.dict()
-
+            inference_server = InferenceServer(model,
+                                               [item[1]
+                                                for sublist in connections
+                                                for item in sublist])
 
             with Pool(processes=self.config.game_processes) as pool:
-                for results, games, data in pool.imap_unordered(
+                # for results, games, data in pool.imap_unordered(
+                for results, games, data in pool.map(
                         partial(game_pool,
                                 mcts_config=mcts_config,
                                 n_threads=self.config.game_threads,
                                 n_games=int(self.config.n_training_games /
-                                            self.config.game_processes),
-                                position_table=position_table,
-                                result_table=result_table),
+                                            self.config.game_processes)),
                         connections,
                         chunksize=1):
                     training_data.add(data)
                     self.game_storage.save_games(games)
                     results.extend(results)
+
+            inference_server.terminate()
 
         if self.config.visdom_enabled:
             self.vis.text(self.game_storage.last_game_str(),

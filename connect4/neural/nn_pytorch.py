@@ -268,7 +268,6 @@ class ModelWrapper():
                                    training_data.policies)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
-
             for board, y_value, y_policy in data:
                 self.scheduler.step()
                 board = board.to(self.device)
@@ -291,9 +290,7 @@ class ModelWrapper():
         # https://discuss.pytorch.org/t/performance-highly-degraded-when-eval-is-activated-in-the-test-phase/3323/33
         # self.net.train(False)
         # Perhaps it is to do with the batchnorm: https://arxiv.org/abs/1702.03275
-        self.print_test_boards()
         self.net.eval()
-        self.print_test_boards()
 
     def evaluate_value_only(self, boards, values):
         # Note no policy here, 3rd arg unused

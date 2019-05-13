@@ -3,22 +3,27 @@ from connect4.board import Board
 from connect4.neural.config import ModelConfig
 from connect4.neural.training_game import TrainingData
 
-import numpy as np
 import os
 import pickle
-from typing import List, Sequence, Tuple
+from typing import List, Tuple
 
 
 class GameStorage():
     def __init__(self, folder_path: str):
-        self.file_name = folder_path + '/games.pkl'
+        self.folder_path = folder_path
+        self.iteration = 0
+        file_list = os.listdir(folder_path)
+        if file_list:
+            iterations = [int(f.split('.')[1]) for f in file_list]
+            self.iteration = max(iterations)
         self.games = []
 
+    @property
+    def file_name(self):
+        return self.folder_path + '/8ply.' + str(self.iteration) + '.pkl'
+
     def save(self):
-        if os.path.exists(self.file_name):
-            with open(self.file_name, 'rb') as f:
-                old_games = pickle.load(f)
-            self.games = old_games + self.games
+        self.iteration += 1
         with open(self.file_name, 'wb') as f:
             pickle.dump(self.games, f)
         self.games = []
@@ -56,10 +61,6 @@ class NetworkStorage():
     def train(self, data: TrainingData):
         self.model.train(data)
         self.iteration += 1
-        self.save_model(self.model)
-
-    def save_model(self, model):
-        self.model = model
         self.model.save(self.file_name)
 
     def get_model(self):
