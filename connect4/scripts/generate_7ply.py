@@ -18,16 +18,14 @@ if __name__ == '__main__':
     # boards_8ply, values_8ply = read_8ply_data(False)
     # table = {b: v for b, v in zip(boards_8ply, values_8ply)}
     # table.update([(b.create_fliplr(), v) for b, v in zip(boards_8ply, values_8ply)])
-    # with open('/home/richard/Downloads/8ply_table.pkl', 'wb') as f:
-    #     pickle.dump(table, f)
 
     # board_ips = make_random_ips(7)
-    # with open('/home/richard/Downloads/8ply_ips.pkl', 'wb') as f:
+    # with open('/home/richard/data/connect4/7ply_ips.pkl', 'wb') as f:
     #     pickle.dump(board_ips, f)
 
-    with open('/home/richard/Downloads/8ply_table.pkl', 'rb') as f:
+    with open('/home/richard/data/connect4/8ply_table.pkl', 'rb') as f:
         table = pickle.load(f)
-    with open('/home/richard/Downloads/8ply_ips.pkl', 'rb') as f:
+    with open('/home/richard/data/connect4/7ply_ips.pkl', 'rb') as f:
         board_ips = pickle.load(f)
 
     print("Number of 7ply ips: {}".format(len(board_ips)))
@@ -45,6 +43,7 @@ if __name__ == '__main__':
     boards = []
     values = []
     priors = []
+    unknown = []
     for i, board in enumerate(board_ips):
         if i % ten_percent == 0:
             print(i)
@@ -65,11 +64,12 @@ if __name__ == '__main__':
                         _, value, _ = player_2.make_move(
                             copy(new_board))
                         if value == 0.5:
+                            unknown.append(board)
                             undetermined = True
                             break
                     value = np.round(value)
                     table[new_board] = value
-                    table[new_board.fliplr()] = value
+                    table[new_board.create_fliplr()] = value
                 else:
                     value = new_board.result.value
             moves[move] = value
@@ -86,16 +86,27 @@ if __name__ == '__main__':
         priors.append(prior)
 
     print("Finished: {} {} {}".format(len(boards), len(values), len(priors)))
-    print("len of table at end: {}".format(len(table)))
-    with open('/home/richard/Downloads/7ply_boards.pkl', 'wb') as f:
+    print("{} known 8ply non-terminal positions".format(len(table)))
+    print("{} unknown (prior, not necessarily value) 7ply non-terminal positions".format(len(unknown)))
+    with open('/home/richard/data/connect4/8ply_table.pkl', 'wb') as f:
+        pickle.dump(table, f)
+    with open('/home/richard/data/connect4/7ply_boards.pkl', 'wb') as f:
         pickle.dump(boards, f)
-    with open('/home/richard/Downloads/7ply_values.pkl', 'wb') as f:
+    with open('/home/richard/data/connect4/7ply_values.pkl', 'wb') as f:
         pickle.dump(values, f)
-    with open('/home/richard/Downloads/7ply_priors.pkl', 'wb') as f:
+    with open('/home/richard/data/connect4/7ply_priors.pkl', 'wb') as f:
         pickle.dump(priors, f)
-    # torch.save(torch.stack(all_boards),
-    #            open('~/Downloads/7ply_boards.pth'))
-    # torch.save(torch.stack(all_values),
-    #            open('~/Downloads/7ply_values.pth'))
-    # torch.save(torch.stack(all_priors),
-    #            open('~/Downloads/7ply_priors.pth'))
+    with open('/home/richard/data/connect4/7ply_unknown_boards.pkl', 'wb') as f:
+        pickle.dump(unknown, f)
+
+    boards_8ply = []
+    values_8ply = []
+    for b, v in table.items():
+        boards_8ply.append(b)
+        values_8ply.append(v)
+    print("len of boards 8ply: {}".format(len(boards_8ply)))
+
+    with open('/home/richard/data/connect4/8ply_boards.pkl', 'wb') as f:
+        pickle.dump(boards_8ply, f)
+    with open('/home/richard/data/connect4/8ply_values.pkl', 'wb') as f:
+        pickle.dump(values_8ply, f)

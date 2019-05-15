@@ -121,12 +121,30 @@ class Board():
             self._check_diagonal(pieces) or \
             self._check_diagonal(np.fliplr(pieces))
 
+    def check_for_winner_c(self, pieces):
+        pieces = np.dot(np.concatenate(pieces), np.concatenate(info.c_hash_value))
+
+        H = info.height
+        H1 = H + 1
+        H2 = H + 2
+        y = pieces & (pieces >> H)
+        if ((y & (y >> 2*H)) != 0):  # check diagonal \
+            return True
+        y = pieces & (pieces >> H1)
+        if ((y & (y >> 2*H1)) != 0):  # check horizontal -
+            return True
+        y = pieces & (pieces >> H2)
+        if ((y & (y >> 2*H2)) != 0):  # check diagonal /
+            return True
+        y = pieces & (pieces >> 1)
+        return (y & (y >> 2)) != 0  # check vertical |
+
     def check_terminal_position(self, check_all: bool = True):
         if (check_all or self._player_to_move == Side.x) and \
-           self.check_for_winner(self.o_pieces):
+           self.check_for_winner_c(self.o_pieces):
             self.result = Result.o_win
         elif (check_all or self._player_to_move == Side.o) and \
-             self.check_for_winner(self.x_pieces):
+             self.check_for_winner_c(self.x_pieces):
             self.result = Result.x_win
         elif np.all(self._get_pieces()):
             self.result = Result.draw

@@ -25,8 +25,8 @@ class ModelConfig():
 
 class StorageConfig():
     def __init__(self,
-                 path_8ply_boards='/home/richard/Downloads/connect4_boards.pth',
-                 path_8ply_values='/home/richard/Downloads/connect4_values.pth',
+                 path_8ply_boards='/home/richard/data/connect4/connect4_boards.pth',
+                 path_8ply_values='/home/richard/data/connect4/connect4_values.pth',
                  save_dir='/home/richard/Downloads/nn/new_dir'):
         self.path_8ply_boards = path_8ply_boards
         self.path_8ply_values = path_8ply_values

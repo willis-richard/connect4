@@ -89,8 +89,8 @@ if __name__ == "__main__":
                                              model=model)))
 
         match = Match(True,
-                      player_3,
-                      player_3,
+                      player_2,
+                      player_2,
                       plies=parser.args.plies,
                       switch=False)
         match.play(agents=parser.args.agents)

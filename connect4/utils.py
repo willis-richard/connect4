@@ -37,6 +37,9 @@ class Connect4Stats():
 
     hash_value = np.array([2**x for x in range(height * width)])
 
+    c_hash_value = np.flipud(np.transpose(np.reshape(
+        np.array([2**x for x in range(49)]), ((7,7)))))[1:,:]
+
 
 class NetworkStats():
     channels = 3

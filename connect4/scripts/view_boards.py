@@ -23,10 +23,10 @@ def parse_line(line):
     return board, value
 
 
-# f = open('/home/richard/Downloads/connect-4.data')
+# f = open('/home/richard/data/connect4/connect-4.data')
 
 def read_8ply_data(torch_tensor=True):
-    with open('/home/richard/Downloads/connect-4.data') as f:
+    with open('/home/richard/data/connect4/connect-4.data') as f:
         boards = []
         values = []
         for line in f:
@@ -43,7 +43,7 @@ boards, values = read_8ply_data()
 boards = torch.stack(boards)
 values = torch.stack(values)
 
-torch.save(boards, open('/home/richard/Downloads/connect4_boards.pth', 'wb'))
-torch.save(values, open('/home/richard/Downloads/connect4_values.pth', 'wb'))
+torch.save(boards, open('/home/richard/data/connect4/connect4_boards.pth', 'wb'))
+torch.save(values, open('/home/richard/data/connect4/connect4_values.pth', 'wb'))
 # import pickle
-# pickle.dump(posn, open('/home/richard/Downloads/connect4.pkl', 'wb'))
+# pickle.dump(posn, open('/home/richard/data/connect4/connect4.pkl', 'wb'))
