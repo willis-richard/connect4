@@ -98,6 +98,7 @@ class Tree():
             board.result = board_result
         else:
             self.result_table[b_value] = board.check_terminal_position()
+            self.result_table[board.to_fliplr_int_tuple()] = board.result
         node_data = self.node_data_type(board)
 
         node = Node(name, parent=parent, data=node_data)

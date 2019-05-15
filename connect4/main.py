@@ -55,6 +55,7 @@ class Parser():
                             help='An AlphaZero config filepath')
         self.args = parser.parse_args(sys.argv[3:])
 
+
 if __name__ == "__main__":
     try:
         set_start_method('spawn')

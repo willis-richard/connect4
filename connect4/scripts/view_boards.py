@@ -7,11 +7,11 @@ import torch
 def parse_line(line):
     x = line.split(',')
     if x[-1][0] == 'w':
-        value = 1
+        value = 1.0
     elif x[-1][0] == 'd':
         value = 0.5
     else:
-        value = 0
+        value = 0.0
 
     x = np.array([ord(i) for i in x[:-1]])
     x = np.flipud(np.transpose(x.reshape(7,6)))
@@ -25,23 +25,25 @@ def parse_line(line):
 
 # f = open('/home/richard/Downloads/connect-4.data')
 
-with open('/home/richard/Downloads/connect-4.data') as f:
-    boards = []
-    values = []
-    both = []
-    for line in f:
-        board, value = parse_line(line)
-        board = torch.tensor(board.to_array())
-        value = torch.tensor(float(value))
-        boards.append(board)
-        values.append(value)
-        # both.append(torch.cat([board, value]))
-    boards = torch.stack(boards)
-    values = torch.stack(values)
-    # both = torch.stack(both)
+def read_8ply_data(torch_tensor=True):
+    with open('/home/richard/Downloads/connect-4.data') as f:
+        boards = []
+        values = []
+        for line in f:
+            board, value = parse_line(line)
+            if torch_tensor:
+                board = torch.tensor(board.to_array())
+                value = torch.tensor(value)
+            boards.append(board)
+            values.append(value)
+    return boards, values
+
+
+boards, values = read_8ply_data()
+boards = torch.stack(boards)
+values = torch.stack(values)
 
 torch.save(boards, open('/home/richard/Downloads/connect4_boards.pth', 'wb'))
 torch.save(values, open('/home/richard/Downloads/connect4_values.pth', 'wb'))
-# torch.save(both, open('/home/richard/Downloads/connect4_both.pth', 'wb'))
 # import pickle
 # pickle.dump(posn, open('/home/richard/Downloads/connect4.pkl', 'wb'))

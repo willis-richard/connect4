@@ -41,8 +41,28 @@ class Board():
         x_int = np.dot(np.concatenate(self.x_pieces), info.hash_value)
         return (o_int, x_int)
 
+    def to_fliplr_int_tuple(self):
+        o_int = np.dot(np.concatenate(np.fliplr(self.o_pieces)),
+                       info.hash_value)
+        x_int = np.dot(np.concatenate(np.fliplr(self.x_pieces)),
+                       info.hash_value)
+        return (o_int, x_int)
+
     def __hash__(self):
         return hash(self.to_int_tuple())
+
+    def create_fliplr(self):
+        new_board = self.__class__()
+        new_board.o_pieces = np.fliplr(self.o_pieces)
+        new_board.x_pieces = np.fliplr(self.x_pieces)
+        new_board._player_to_move = copy(self._player_to_move)
+        new_board.result = copy(self.result)
+        return new_board
+
+    def fliplr(self):
+        self.o_pieces = np.fliplr(self.o_pieces)
+        self.x_pieces = np.fliplr(self.x_pieces)
+        return self
 
     @property
     def player_to_move(self):
@@ -154,9 +174,11 @@ def expand(ips: Set,
            board: Board,
            plies: int) -> None:
     if plies == 0:
-        ips.add(board)
+        if board.result is None:
+            ips.add(board)
         return
-    for move in board.valid_moves:
+    valid_moves = board.valid_moves
+    for move in valid_moves:
         new_board = copy(board)
         new_board.make_move(move)
         expand(ips, new_board, plies - 1)

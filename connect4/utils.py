@@ -53,8 +53,8 @@ class Side(IntEnum):
 
 
 class Result(Enum):
-    o_win = 1
-    x_win = 0
+    o_win = 1.0
+    x_win = 0.0
     draw = 0.5
 
 
