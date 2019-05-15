@@ -20,13 +20,11 @@ def game_pool(conn_list: List[Tuple[Connection, Connection]],
     assert n_threads == len(conn_list)
 
     position_table = {}
-    result_table = {}
     conn_deque = deque([c[0] for c in conn_list])
 
     evaluator = Evaluator(partial(evaluate_server_deque,
                                   conn_deque=conn_deque),
                           position_table,
-                          result_table,
                           store_position=True)
 
     player_deque = deque([MCTS('AlphaZero:{}:{}'.format(os.getpid(), i),

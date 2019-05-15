@@ -124,7 +124,6 @@ class MCTS(BasePlayer):
 
     def make_move(self, board):
         tree = Tree(board,
-                    self.evaluator.result_table,
                     NodeData)
 
         search(self.config, tree, self.evaluator)

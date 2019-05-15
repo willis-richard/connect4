@@ -10,11 +10,9 @@ class Evaluator():
     def __init__(self,
                  evaluate_fn: Callable,
                  position_table: Optional[Dict] = None,
-                 result_table: Optional[Dict] = None,
                  store_position: Optional[bool] = True):
         self.evaluate_fn = evaluate_fn
         self.position_table = {} if position_table is None else position_table
-        self.result_table = {} if result_table is None else result_table
         self.store_position = store_position
 
     def __call__(self, board: Board):

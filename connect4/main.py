@@ -80,17 +80,17 @@ if __name__ == "__main__":
                                    pb_c_init=99999),
                         ev.Evaluator(ev.evaluate_centre_with_prior))
 
-        model = ModelWrapper(ModelConfig(),
-                             file_name=parser.args.net_filepath)
+        # model = ModelWrapper(ModelConfig(),
+        #                      file_name=parser.args.net_filepath)
 
-        player_3 = MCTS("mcts_nn",
-                        MCTSConfig(simulations=800),
-                        ev.Evaluator(partial(ev.evaluate_nn,
-                                             model=model)))
+        # player_3 = MCTS("mcts_nn",
+        #                 MCTSConfig(simulations=800),
+        #                 ev.Evaluator(partial(ev.evaluate_nn,
+        #                                      model=model)))
 
         match = Match(True,
-                      player_2,
-                      player_2,
+                      player_1,
+                      player_1,
                       plies=parser.args.plies,
                       switch=False)
         match.play(agents=parser.args.agents)

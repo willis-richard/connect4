@@ -46,10 +46,8 @@ class BaseNodeData():
 class Tree():
     def __init__(self,
                  board: Board,
-                 result_table: Dict[int, Result],
                  node_data_type):
         self.side = board._player_to_move
-        self.result_table = result_table
         self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
 
@@ -92,13 +90,6 @@ class Tree():
             return policy / policy_sum
 
     def create_node(self, name, board, parent=None):
-        b_value = board.to_int_tuple()
-        board_result = self.result_table.get(b_value, -1)
-        if board_result != -1:
-            board.result = board_result
-        else:
-            self.result_table[b_value] = board.check_terminal_position()
-            self.result_table[board.to_fliplr_int_tuple()] = board.result
         node_data = self.node_data_type(board)
 
         node = Node(name, parent=parent, data=node_data)
@@ -113,7 +104,7 @@ class Tree():
         if not node.children:
             for move in node.data.valid_moves:
                 new_board = copy(node.data.board)
-                new_board._make_move(move)
+                new_board.make_move(move)
                 child = self.create_node(move, new_board, parent=node)
 
         for child in node.children:

@@ -20,7 +20,6 @@ class GridSearch(BasePlayer):
 
     def make_move(self, board):
         tree = Tree(board,
-                    self.evaluator.result_table,
                     BaseNodeData)
 
         tree.expand_node(tree.root,
