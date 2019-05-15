@@ -32,7 +32,7 @@ def read_8ply_data(torch_tensor=True):
         for line in f:
             board, value = parse_line(line)
             if torch_tensor:
-                board = torch.tensor(board.to_array())
+                board = torch.FloatTensor(board.to_array())
                 value = torch.tensor(value)
             boards.append(board)
             values.append(value)
