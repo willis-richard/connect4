@@ -70,9 +70,10 @@ class NetworkStorage():
 def game_str(game: List):
     board = Board()
     out_str = str(board)
-    for move, value in game:
-        out_str += '\nMove: ' + str(move) + '  Value: ' + str(value)
+    for move, value, policy in game:
         board.make_move(move)
-        out_str += '\n' + str(board)
-
-        return out_str
+        out_str += '\nMove: {}  Value: {} Policy: {}\n{}'.format(move,
+                                                                 value,
+                                                                 policy,
+                                                                 board)
+    return out_str

@@ -44,7 +44,7 @@ class GameData():
         self.policies = []
 
     def add_move(self, board, move, value, policy):
-        self.game.append((move, value))
+        self.game.append((move, value, policy))
         self.boards.append(board.to_array())
         self.values.append(value)
         self.policies.append(policy)
@@ -60,4 +60,6 @@ class GameData():
         return TrainingData(self.boards, self.values, self.policies)
 
     def __str__(self):
-        return "Result: {}, Game: {}, Data: {}".format(self.result, self.game, self.data)
+        return "Result: {}, Game: {}, Data: {}".format(self.result,
+                                                       self.game,
+                                                       self.data)

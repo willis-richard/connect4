@@ -129,6 +129,14 @@ def build_value_net(filters=net_info.filters,
     return value_net
 
 
+def build_policy_net(filters=net_info.filters,
+                     n_residual_layers=net_info.n_residuals):
+    policy_net = nn.Sequential(create_convolutional_layer(2, filters),
+                               nn.Sequential(*[ResidualLayer(filters) for _ in range(n_residual_layers)]),
+                               PolicyHead(filters))
+    return policy_net
+
+
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
@@ -250,22 +258,20 @@ class ModelWrapper():
         assert x_policy.shape[1] == net_info.width
 
         value_loss = self.value_loss(x_value, y_value)
-        # policy_loss = self.policy_loss(x_policy, y_policy)
+        policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        # return value_loss - policy_loss
-        return value_loss
-        # return policy_loss
+        return value_loss - policy_loss
 
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
     def train(self, training_data: TrainingData):
-        data = self.create_dataset(self.config.batch_size,
-                                   training_data.boards,
-                                   training_data.values,
-                                   training_data.policies)
+        data = self.create_dataloader(self.config.batch_size,
+                                      training_data.boards,
+                                      training_data.values,
+                                      training_data.policies)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
@@ -294,7 +300,7 @@ class ModelWrapper():
 
     def evaluate_value_only(self, boards, values):
         # Note no policy here, 3rd arg unused
-        data = self.create_dataset(4096, boards, values)
+        data = self.create_dataloader(4096, boards, values)
         """Get an idea of how the initialisation is"""
         stats = Stats()
 
@@ -310,14 +316,14 @@ class ModelWrapper():
 
         return stats
 
-    def create_dataset(self,
-                       batch_size: int,
-                       # FIXME: actually already an array
-                       boards: List[Board],
-                       values: Sequence[float],
-                       # FIXME: Either an int or an array of floats depending
-                       # on pytorch cross-entropy
-                       policies: Sequence[Sequence[float]] = None):
+    def create_dataloader(self,
+                          batch_size: int,
+                          # FIXME: actually already an array
+                          boards: List[Board],
+                          values: Sequence[float],
+                          # FIXME: Either an int or an array of floats depending
+                          # on pytorch cross-entropy
+                          policies: Sequence[Sequence[float]] = None):
         data = Connect4Dataset(boards,
                                values,
                                policies)
