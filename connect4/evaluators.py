@@ -3,6 +3,7 @@ from connect4.utils import Connect4Stats as info
 
 from copy import copy
 import numpy as np
+from scipy.special import softmax
 from typing import Callable, Dict, List, Optional, Set
 
 
@@ -43,6 +44,6 @@ def evaluate_nn(board: Board,
                 model):
     value, prior = model(board)
     # FIXME: This is temporary until I have the net outputting priors
-    # prior = softmax(prior)
-    prior = copy(info.prior)
+    prior = softmax(prior)
+    # prior = copy(info.prior)
     return value, prior

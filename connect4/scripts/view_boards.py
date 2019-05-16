@@ -25,25 +25,15 @@ def parse_line(line):
 
 # f = open('/home/richard/data/connect4/connect-4.data')
 
-def read_8ply_data(torch_tensor=True):
+def read_8ply_data():
     with open('/home/richard/data/connect4/connect-4.data') as f:
         boards = []
         values = []
         for line in f:
             board, value = parse_line(line)
-            if torch_tensor:
-                board = torch.FloatTensor(board.to_array())
-                value = torch.tensor(value)
             boards.append(board)
             values.append(value)
     return boards, values
 
 
 boards, values = read_8ply_data()
-boards = torch.stack(boards)
-values = torch.stack(values)
-
-torch.save(boards, open('/home/richard/data/connect4/connect4_boards.pth', 'wb'))
-torch.save(values, open('/home/richard/data/connect4/connect4_values.pth', 'wb'))
-# import pickle
-# pickle.dump(posn, open('/home/richard/data/connect4/connect4.pkl', 'wb'))

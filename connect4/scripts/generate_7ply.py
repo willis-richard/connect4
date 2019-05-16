@@ -15,18 +15,18 @@ def return_half(x):
 
 
 if __name__ == '__main__':
-    # boards_8ply, values_8ply = read_8ply_data(False)
-    # table = {b: v for b, v in zip(boards_8ply, values_8ply)}
-    # table.update([(b.create_fliplr(), v) for b, v in zip(boards_8ply, values_8ply)])
+    boards_8ply, values_8ply = read_8ply_data()
+    table = {copy(b): v for b, v in zip(boards_8ply, values_8ply)}
+    table.update([(b.create_fliplr(), v) for b, v in zip(boards_8ply, values_8ply)])
 
-    # board_ips = make_random_ips(7)
-    # with open('/home/richard/data/connect4/7ply_ips.pkl', 'wb') as f:
-    #     pickle.dump(board_ips, f)
+    board_ips = make_random_ips(7)
+    with open('/home/richard/data/connect4/7ply_ips.pkl', 'wb') as f:
+        pickle.dump(board_ips, f)
 
-    with open('/home/richard/data/connect4/8ply_table.pkl', 'rb') as f:
-        table = pickle.load(f)
-    with open('/home/richard/data/connect4/7ply_ips.pkl', 'rb') as f:
-        board_ips = pickle.load(f)
+    # with open('/home/richard/data/connect4/8ply_table.pkl', 'rb') as f:
+    #     table = pickle.load(f)
+    # with open('/home/richard/data/connect4/7ply_ips.pkl', 'rb') as f:
+    #     board_ips = pickle.load(f)
 
     print("Number of 7ply ips: {}".format(len(board_ips)))
     print("len of table at start: {}".format(len(table)))
@@ -64,11 +64,11 @@ if __name__ == '__main__':
                         _, value, _ = player_2.make_move(
                             copy(new_board))
                         if value == 0.5:
-                            unknown.append(board)
+                            unknown.append(copy(board))
                             undetermined = True
                             break
                     value = np.round(value)
-                    table[new_board] = value
+                    table[copy(new_board)] = value
                     table[new_board.create_fliplr()] = value
                 else:
                     value = new_board.result.value
@@ -81,7 +81,7 @@ if __name__ == '__main__':
         prior = np.array([1.0 if moves[x] == value and x in valid_moves
                           else 0.0
                           for x in range(7)])
-        boards.append(board)
+        boards.append(copy(board))
         values.append(value)
         priors.append(prior)
 

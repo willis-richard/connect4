@@ -1,6 +1,7 @@
 from connect4.board import Board
 from connect4.player import BasePlayer
 
+from copy import copy
 import numpy as np
 from typing import List, Optional
 
@@ -13,7 +14,7 @@ def training_game(player: BasePlayer):
         # For use with tensorflow
         # policy = tree.get_policy_all()
         # would also change last arg in line below
-        game_data.add_move(board, move, value, move)
+        game_data.add_move(copy(board), move, value, move)
 
     game_data.create_values(board.result)
 
@@ -45,7 +46,7 @@ class GameData():
 
     def add_move(self, board, move, value, policy):
         self.game.append((move, value, policy))
-        self.boards.append(board.to_array())
+        self.boards.append(board)
         self.values.append(value)
         self.policies.append(policy)
 

@@ -3,7 +3,7 @@ from connect4.utils import Connect4Stats as info
 from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
-from connect4.neural.stats import Stats
+from connect4.neural.stats import CombinedStats, ValueStats
 from connect4.neural.training_game import TrainingData
 
 import numpy as np
@@ -91,7 +91,7 @@ class ValueHead(nn.Module):
 #         map from [-1, 1] to [0, 1]
         x = (x + self.w1) * self.w2
         # FIXME: Is this needed?
-        x = x.view(-1, 1)
+        x = x.view(-1)
         return x
 
 
@@ -104,7 +104,7 @@ class PolicyHead(nn.Module):
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
         self.fc1 = nn.Linear(2 * net_info.area, net_info.width) # N * f * (2 * H * W) -> N * f * W
-        # self.softmax = nn.LogSoftmax(dim=1)
+        self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
         x = self.conv1(x)
@@ -115,7 +115,7 @@ class PolicyHead(nn.Module):
         x = self.fc1(x)
         # No idea why but if I had [[[ output then classifier bitched and wanted [[
         x = x.view(-1, net_info.width)
-        # x = self.softmax(x)
+        x = self.softmax(x)
         return x
 
 
@@ -146,8 +146,6 @@ class Net(nn.Module):
         self.policy_head = PolicyHead()
 
     def forward(self, x):
-        # FIXME: Needed?
-        # x = x.view(-1, net_info.channels, info.height, info.width)
         x = self.body(x)
         value = self.value_head(x)
         policy = self.policy_head(x)
@@ -183,9 +181,10 @@ class ModelWrapper():
         #     self.net.apply(weights_init)
 
         self.value_loss = nn.MSELoss()
+        self.policy_loss = BCELoss()
         # FIXME: that this needs to be with logits, not just the class index
         # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
-        self.policy_loss = nn.CrossEntropyLoss()
+        # self.policy_loss = nn.CrossEntropyLoss()
         # self.policy_loss = nn.MultiLabelSoftMarginLoss()
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
@@ -251,11 +250,8 @@ class ModelWrapper():
             file_name)
 
     def criterion(self, x_value, x_policy, y_value, y_policy):
-        # FIXME: Correct?
-        x_value = x_value.view(-1)
         assert x_value.shape == y_value.shape
-        assert x_policy.shape[0] == y_policy.shape[0]
-        assert x_policy.shape[1] == net_info.width
+        assert x_policy.shape == y_policy.shape
 
         value_loss = self.value_loss(x_value, y_value)
         policy_loss = self.policy_loss(x_policy, y_policy)
@@ -271,7 +267,8 @@ class ModelWrapper():
         data = self.create_dataloader(self.config.batch_size,
                                       training_data.boards,
                                       training_data.values,
-                                      training_data.policies)
+                                      training_data.policies,
+                                      add_fliplr=True)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
@@ -302,7 +299,7 @@ class ModelWrapper():
         # Note no policy here, 3rd arg unused
         data = self.create_dataloader(4096, boards, values)
         """Get an idea of how the initialisation is"""
-        stats = Stats()
+        stats = ValueStats()
 
         with torch.set_grad_enabled(False):
             for board, value in data:
@@ -314,19 +311,24 @@ class ModelWrapper():
                              y_value.cpu().numpy().flatten(),
                              loss.item())
 
-        return stats
+    def evaluate(self, train_gen):
+        return evaluate(train_gen,
+                        self.net,
+                        self.device,
+                        self.value_criterion,
+                        self.prior_criterion)
 
     def create_dataloader(self,
                           batch_size: int,
                           # FIXME: actually already an array
                           boards: List[Board],
                           values: Sequence[float],
-                          # FIXME: Either an int or an array of floats depending
-                          # on pytorch cross-entropy
-                          policies: Sequence[Sequence[float]] = None):
+                          policies: List[Sequence[float]] = None,
+                          add_fliplr: bool = False):
         data = Connect4Dataset(boards,
                                values,
-                               policies)
+                               policies,
+                               add_fliplr)
 
         return DataLoader(data, batch_size=batch_size, shuffle=True)
 
@@ -347,15 +349,27 @@ class Connect4Dataset(Dataset):
     def __init__(self,
                  boards: List[Board],
                  values: Sequence[float],
-                 policies: Sequence[Sequence[float]] = None):
+                 policies: List[Sequence[float]] = None,
+                 to_move_channel: bool = True,
+                 add_fliplr: bool = False):
         assert len(boards) == len(values)
-        self.boards = torch.FloatTensor(boards)
+        if add_fliplr:
+            flip_boards = list(map(lambda x: x.create_fliplr(), boards))
+            boards.extend(flip_boards)
+            values = np.concatenate((values, values), axis=None)
+        self.boards = torch.FloatTensor(list(map(
+            lambda x: x.to_array(), boards)))
+        if not to_move_channel:
+            self.boards = self.boards[:, 1:]
         self.values = torch.FloatTensor(values)
         if policies is None:
             self.policies = None
         else:
             assert len(boards) == len(policies)
-            self.policies = torch.LongTensor(policies)
+            if add_fliplr:
+                flip_policies = list(map(lambda x: np.flip(x), policies))
+                policies.extend(flip_policies)
+            self.policies = torch.FloatTensor(policies)
         print("Creating dataset with {} positions".format(self.__len__()))
 
     def __len__(self):
@@ -369,3 +383,26 @@ class Connect4Dataset(Dataset):
             return (self.boards[idx],
                     self.values[idx],
                     self.policies[idx])
+
+
+def evaluate(train_gen, net, device, value_criterion, prior_criterion):
+    stats = CombinedStats()
+
+    for board, value, prior in train_gen:
+        board, value, prior = board.to(device), value.to(device), prior.to(device)
+
+    value_output, prior_output = net(board)
+    assert value_output.shape == value.shape
+    assert prior_output.shape == prior.shape
+
+    value_loss = value_criterion(value_output, value)
+    prior_loss = prior_criterion(prior_output, prior)
+
+    stats.update(value_output.cpu().detach().numpy(),
+                 value.cpu().numpy(),
+                 value_loss,
+                 prior_output.cpu().detach().numpy(),
+                 prior.cpu().numpy(),
+                 prior_loss)
+
+    return stats

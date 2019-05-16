@@ -1,7 +1,7 @@
 import numpy as np
 
 
-class Stats():
+class ValueStats():
     def __init__(self):
         self.n = 0
         self.average_value = 0.0
@@ -61,7 +61,6 @@ class Stats():
 
         for k in self.correct:
             idx = np.where(values == k)[0]
-            # print(np.equal(categories[idx], values[idx]).nonzero()[0])
             self.total[k] += len(idx)
             self.correct[k] += len(np.equal(categories[idx], values[idx]).nonzero()[0])
 
@@ -70,3 +69,75 @@ class Stats():
         preds = np.floor(preds)
         preds = preds / 2.0
         return preds
+
+
+class PriorStats():
+    def __init__(self):
+        self.n = 0
+        self.total_loss = 0.0
+        self.correct = 0
+
+    @property
+    def loss(self):
+        return float(self.total_loss) / self.n
+
+    @property
+    def accuracy(self):
+        return float(self.correct) / self.n
+
+    def to_dict(self):
+        dict_ = {'Average loss': self.loss,
+                 'Accuracy': self.accuracy}
+        return dict_
+
+    def __repr__(self):
+        x = "Average loss:  " + "{:.5f}".format(self.loss) + \
+            "  Accuracy:  " + "{:.5f}".format(self.accuracy)
+
+        return x
+
+    def update(self, outputs, values, loss):
+        self.n += len(values)
+        self.total_loss += loss * len(values)
+
+        output_best_move = np.argmax(outputs, axis=1)
+        value_largest = np.amax(values, axis=1)
+        # value_best_moves = [[x if i == l else 0 for x, i in enumerate(v)] for v, l in zip(values, value_largest)
+        value_best_moves = []
+
+        for largest, v in zip(value_largest, values):
+            value_best_moves.append(np.where(v == largest)[0])
+
+        for x, y in zip(output_best_move, value_best_moves):
+            if x in y:
+                self.correct += 1
+
+
+class CombinedStats:
+    def __init__(self):
+        self.value_stats = ValueStats()
+        self.prior_stats = PriorStats()
+
+    @property
+    def loss(self):
+        return self.value_stats.loss + self.prior_stats.loss
+
+    def update(self,
+               value_outputs,
+               values,
+               value_loss,
+               prior_outputs,
+               priors,
+               prior_loss):
+        self.value_stats.update(value_outputs, values, value_loss)
+        self.prior_stats.update(prior_outputs, priors, prior_loss)
+
+    def __repr__(self):
+        return "{}\n{}".format(self.value_stats.__repr__(),
+                               self.prior_stats.__repr__())
+
+# a = np.array([[0,1], [1,1], [0,1], [0,1]])
+# b = np.array([[1,1], [0,1], [0,1], [1,0]])
+# p = PriorStats()
+# p.update(a, b, 0.1)
+# print(p)
