@@ -4,14 +4,14 @@ class ModelConfig():
                  weight_decay=1e-4,
                  momentum=0.9,
                  # Schedule for chess and shogi, Go starts at 2e-2 immediately.
-                 initial_lr=0.05,
+                 initial_lr=0.005,
                  # Remember that these are in epochs, and we have a n_training_epochs parameter
                  milestones=[int(1e3), int(3e3), int(5e3)],
                  gamma=0.1,
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
                  batch_size=4096,
-                 n_training_epochs=1,
+                 n_training_epochs=10,
                  use_gpu=True):
         self.weight_decay = weight_decay
         self.momentum = momentum
@@ -37,16 +37,16 @@ class AlphaZeroConfig():
     def __init__(self,
                  model_config=ModelConfig(),
                  storage_config=StorageConfig(),
-                 game_processes=1,
-                 game_threads=1,
+                 game_processes=10,
+                 game_threads=20,
                  simulations=800,
                  pb_c_base=19652,
                  pb_c_init=1.25,
                  root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
                  num_sampling_moves=10,
-                 n_eval=5,
-                 n_training_games=500,
+                 n_eval=1,
+                 n_training_games=1000,
                  use_pytorch=True,
                  enable_gpu=True,
                  visdom_enabled=False):

@@ -18,5 +18,6 @@ if __name__ == "__main__":
     print(x_pieces)
     board = Board(o_pieces, x_pieces)
 
-    model = ModelWrapper(ModelConfig(), file_name=sys.argv[2])
+    model_config = ModelConfig()
+    model = ModelWrapper(model_config, file_name=sys.argv[2])
     print('{} value {}'.format(board, model(board)))

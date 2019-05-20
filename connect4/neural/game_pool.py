@@ -45,6 +45,7 @@ def game_pool(conn_list: List[Tuple[Connection, Connection]],
             results.append(game_data.result)
             games.append(game_data.game)
             training_data.add(game_data.data)
+
     return results, games, training_data
 
 

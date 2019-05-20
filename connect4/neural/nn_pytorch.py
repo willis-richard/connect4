@@ -168,20 +168,20 @@ class ModelWrapper():
                                    lr=config.initial_lr,
                                    momentum=config.momentum,
                                    weight_decay=config.weight_decay)
+        # self.optimiser = optim.Adam(self.net.parameters())
         self.scheduler = MultiStepLR(self.optimiser,
                                      milestones=config.milestones,
                                      gamma=config.gamma)
-        # self.optimiser = optim.Adam(self.net.parameters())
         if file_name is not None:
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
-            self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            # self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
+            # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
 
         self.value_loss = nn.MSELoss()
-        self.policy_loss = BCELoss()
+        self.policy_loss = nn.BCELoss()
         # FIXME: that this needs to be with logits, not just the class index
         # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
         # self.policy_loss = nn.CrossEntropyLoss()
@@ -244,8 +244,8 @@ class ModelWrapper():
         torch.save(
             {
                 'net_state_dict': self.net.state_dict(),
-                'optimiser_state_dict': self.optimiser.state_dict(),
-                'scheduler_state_dict': self.scheduler.state_dict()
+                'optimiser_state_dict': self.optimiser.state_dict()
+                # 'scheduler_state_dict': self.scheduler.state_dict()
             },
             file_name)
 
@@ -257,7 +257,7 @@ class ModelWrapper():
         policy_loss = self.policy_loss(x_policy, y_policy)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        return value_loss - policy_loss
+        return value_loss + policy_loss
 
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
@@ -272,7 +272,7 @@ class ModelWrapper():
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
-                self.scheduler.step()
+                # self.scheduler.step()
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
                 y_policy = y_policy.to(self.device)
@@ -306,10 +306,12 @@ class ModelWrapper():
                 board, y_value = board.to(self.device), value.to(self.device)
                 x_value, _ = self.net(board)
                 loss = self.value_loss(x_value, y_value)
+                assert x_value.shape == y_value.shape
                 # FIXME: flatten is the right way here yes?
                 stats.update(x_value.cpu().numpy().flatten(),
                              y_value.cpu().numpy().flatten(),
                              loss.item())
+        return stats
 
     def evaluate(self, train_gen):
         return evaluate(train_gen,
@@ -328,7 +330,7 @@ class ModelWrapper():
         data = Connect4Dataset(boards,
                                values,
                                policies,
-                               add_fliplr)
+                               add_fliplr=add_fliplr)
 
         return DataLoader(data, batch_size=batch_size, shuffle=True)
 
@@ -365,7 +367,7 @@ class Connect4Dataset(Dataset):
         if policies is None:
             self.policies = None
         else:
-            assert len(boards) == len(policies)
+            assert len(boards) == 2 * len(policies)
             if add_fliplr:
                 flip_policies = list(map(lambda x: np.flip(x), policies))
                 policies.extend(flip_policies)

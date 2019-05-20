@@ -16,6 +16,7 @@ from functools import partial
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
+import pickle
 import time
 import torch
 from torch.multiprocessing import (Pipe,
@@ -44,8 +45,18 @@ class TrainingLoop():
                                          ModelWrapper)
         self.game_storage = GameStorage(self.save_dir + '/games')
 
-        self.boards = torch.load(config.storage_config.path_8ply_boards)
-        self.values = torch.load(config.storage_config.path_8ply_values)
+        # self.boards = torch.load(config.storage_config.path_8ply_boards)
+        # self.values = torch.load(config.storage_config.path_8ply_values)
+        with open('/home/richard/data/connect4/8ply_boards.pkl', 'rb') as f:
+            self.8ply_boards = pickle.load(f)
+        with open('/home/richard/data/connect4/8ply_values.pkl', 'rb') as f:
+            self.8ply_values = pickle.load(f)
+        with open('/home/richard/data/connect4/7ply_boards.pkl', 'rb') as f:
+            self.7ply_boards = pickle.load(f)
+        with open('/home/richard/data/connect4/7ply_values.pkl', 'rb') as f:
+            self.7ply_values = pickle.load(f)
+        with open('/home/richard/data/connect4/7ply_priors.pkl', 'rb') as f:
+            self.7ply_priors = pickle.load(f)
 
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
@@ -152,11 +163,15 @@ class TrainingLoop():
     def evaluate(self):
         model = self.nn_storage.get_model()
 
-        test_stats = model.evaluate_value_only(self.boards, self.values)
-
-        print("8 Ply Test Stats:  ", test_stats)
-        self.stats_8ply = self.stats_8ply.append(test_stats.to_dict(), ignore_index=True)
+        value_stats = model.evaluate_value_only(self.8ply_boards, self.8ply_values)
+        print("8 Ply Test Stats:  ", value_stats)
+        self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(), ignore_index=True)
         self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
+
+        combined_stats = model.evaluate(self.7ply_boards, self.7ply_values, self.7ply_priors)
+        print("7 Ply Test Stats:  ", combined_stats)
+        self.stats_7ply = self.stats_8ply.append(combined_stats.to_dict(), ignore_index=True)
+        self.stats_7ply.to_pickle(self.save_dir + '/stats/7ply.pkl')
 
         if self.config.visdom_enabled:
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,

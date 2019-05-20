@@ -11,10 +11,8 @@ def training_game(player: BasePlayer):
     game_data = GameData()
     while board.result is None:
         move, value, tree = player.make_move(board)
-        # For use with tensorflow
-        # policy = tree.get_policy_all()
-        # would also change last arg in line below
-        game_data.add_move(copy(board), move, value, move)
+        policy = tree.get_policy_all()
+        game_data.add_move(copy(board), move, value, policy)
 
     game_data.create_values(board.result)
 
@@ -35,6 +33,11 @@ class TrainingData:
         self.values = np.concatenate((self.values, other.values), 0)
         self.policies.extend(other.policies)
 
+    def __repr__(self):
+        return str([(b, v, p) for b, v, p in zip(self.boards,
+                                                 self.values,
+                                                 self.policies)])
+
 
 class GameData():
     def __init__(self):
@@ -53,7 +56,8 @@ class GameData():
     def create_values(self, result):
         # FIXME: TD(lambda) algorithm?
         self.result = result
-        self.values = (np.array(self.values, dtype='float') + result.value) / 2.0
+        # self.values = (np.array(self.values, dtype='float') + result.value) / 2.0
+        self.values = np.ones(len(self.values), dtype='float') * result.value
 
     @property
     def data(self):
