@@ -46,7 +46,7 @@ class AlphaZeroConfig():
                  root_exploration_fraction=0.25,
                  num_sampling_moves=10,
                  n_eval=1,
-                 n_training_games=1000,
+                 n_training_games=1200,
                  use_pytorch=True,
                  enable_gpu=True,
                  visdom_enabled=False):

@@ -1,4 +1,4 @@
-l_total, l_correct, d_total, d_correct, w_total, w_correct = 13335, 13124, 5171, 2063, 35539, 4497
+l_total, l_correct, d_total, d_correct, w_total, w_correct = 33874, 2395, 12887, 2812, 115986, 69352
 
 max_possible_error_squared = \
         (l_total - l_correct) * 1.0**2 + \

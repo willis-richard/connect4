@@ -48,15 +48,24 @@ class TrainingLoop():
         # self.boards = torch.load(config.storage_config.path_8ply_boards)
         # self.values = torch.load(config.storage_config.path_8ply_values)
         with open('/home/richard/data/connect4/8ply_boards.pkl', 'rb') as f:
-            self.8ply_boards = pickle.load(f)
+            self.ply8_boards = pickle.load(f)
         with open('/home/richard/data/connect4/8ply_values.pkl', 'rb') as f:
-            self.8ply_values = pickle.load(f)
+            self.ply8_values = pickle.load(f)
         with open('/home/richard/data/connect4/7ply_boards.pkl', 'rb') as f:
-            self.7ply_boards = pickle.load(f)
+            self.ply7_boards = pickle.load(f)
         with open('/home/richard/data/connect4/7ply_values.pkl', 'rb') as f:
-            self.7ply_values = pickle.load(f)
+            self.ply7_values = pickle.load(f)
         with open('/home/richard/data/connect4/7ply_priors.pkl', 'rb') as f:
-            self.7ply_priors = pickle.load(f)
+            self.ply7_priors = pickle.load(f)
+
+        if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
+            self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
+        else:
+            self.stats_8ply = pd.DataFrame()
+        if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
+            self.stats_7ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
+        else:
+            self.stats_7ply = pd.DataFrame()
 
         self.easy_opponent = GridSearch("gridsearch:4",
                                         4,
@@ -75,11 +84,6 @@ class TrainingLoop():
             self.hard_results = pd.read_pickle(self.save_dir + '/stats/hard_results.pkl')
         else:
             self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
-
-        if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
-            self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
-        else:
-            self.stats_8ply = pd.DataFrame()
 
         if config.visdom_enabled:
             self.vis = Visdom()
@@ -163,14 +167,14 @@ class TrainingLoop():
     def evaluate(self):
         model = self.nn_storage.get_model()
 
-        value_stats = model.evaluate_value_only(self.8ply_boards, self.8ply_values)
+        value_stats = model.evaluate_value_only(self.ply8_boards, self.ply8_values)
         print("8 Ply Test Stats:  ", value_stats)
         self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(), ignore_index=True)
         self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
 
-        combined_stats = model.evaluate(self.7ply_boards, self.7ply_values, self.7ply_priors)
+        combined_stats = model.evaluate(self.ply7_boards, self.ply7_values, self.ply7_priors)
         print("7 Ply Test Stats:  ", combined_stats)
-        self.stats_7ply = self.stats_8ply.append(combined_stats.to_dict(), ignore_index=True)
+        self.stats_7ply = self.stats_7ply.append(combined_stats.to_dict(), ignore_index=True)
         self.stats_7ply.to_pickle(self.save_dir + '/stats/7ply.pkl')
 
         if self.config.visdom_enabled:

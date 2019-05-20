@@ -20,7 +20,7 @@ class GameStorage():
 
     @property
     def file_name(self):
-        return self.folder_path + '/8ply.' + str(self.iteration) + '.pkl'
+        return self.folder_path + '/games.' + str(self.iteration) + '.pkl'
 
     def save(self):
         self.iteration += 1

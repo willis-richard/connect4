@@ -14,8 +14,6 @@ if __name__ == "__main__":
     o_pieces[np.where(array == b'o')] = 1
     x_pieces[np.where(array == b'x')] = 1
 
-    print(o_pieces)
-    print(x_pieces)
     board = Board(o_pieces, x_pieces)
 
     model_config = ModelConfig()

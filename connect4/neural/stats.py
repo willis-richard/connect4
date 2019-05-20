@@ -132,6 +132,11 @@ class CombinedStats:
         self.value_stats.update(value_outputs, values, value_loss)
         self.prior_stats.update(prior_outputs, priors, prior_loss)
 
+    def to_dict(self):
+        dict_ = {'prior '+k: v for k, v in self.prior_stats.to_dict().items()}
+        dict_.update(self.value_stats.to_dict())
+        return dict_
+
     def __repr__(self):
         return "{}\n{}".format(self.value_stats.__repr__(),
                                self.prior_stats.__repr__())

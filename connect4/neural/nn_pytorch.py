@@ -164,18 +164,18 @@ class ModelWrapper():
         else:
             self.device = torch.device("cpu")
 
-        self.optimiser = optim.SGD(self.net.parameters(),
-                                   lr=config.initial_lr,
-                                   momentum=config.momentum,
-                                   weight_decay=config.weight_decay)
-        # self.optimiser = optim.Adam(self.net.parameters())
-        self.scheduler = MultiStepLR(self.optimiser,
-                                     milestones=config.milestones,
-                                     gamma=config.gamma)
+        # self.optimiser = optim.SGD(self.net.parameters(),
+        #                            lr=config.initial_lr,
+        #                            momentum=config.momentum,
+        #                            weight_decay=config.weight_decay)
+        self.optimiser = optim.Adam(self.net.parameters())
+        # self.scheduler = MultiStepLR(self.optimiser,
+        #                              milestones=config.milestones,
+        #                              gamma=config.gamma)
         if file_name is not None:
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
-            # self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
+            self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
@@ -188,7 +188,6 @@ class ModelWrapper():
         # self.policy_loss = nn.MultiLabelSoftMarginLoss()
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
-        # self.net.train(False)
         self.print_test_boards()
 
     def print_test_boards(self):
@@ -313,24 +312,24 @@ class ModelWrapper():
                              loss.item())
         return stats
 
-    def evaluate(self, train_gen):
+    def evaluate(self, boards, values, priors):
+        train_gen = self.create_dataloader(4096, boards, values, priors)
         return evaluate(train_gen,
                         self.net,
                         self.device,
-                        self.value_criterion,
-                        self.prior_criterion)
+                        self.value_loss,
+                        self.policy_loss)
 
     def create_dataloader(self,
                           batch_size: int,
-                          # FIXME: actually already an array
                           boards: List[Board],
                           values: Sequence[float],
-                          policies: List[Sequence[float]] = None,
+                          priors: List[Sequence[float]] = None,
                           add_fliplr: bool = False):
-        data = Connect4Dataset(boards,
-                               values,
-                               policies,
-                               add_fliplr=add_fliplr)
+        data = Connect4Dataset.from_boards(boards,
+                                           values,
+                                           priors,
+                                           add_fliplr=add_fliplr)
 
         return DataLoader(data, batch_size=batch_size, shuffle=True)
 
