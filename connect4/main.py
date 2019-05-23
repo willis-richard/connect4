@@ -78,15 +78,14 @@ if __name__ == "__main__":
                               ev.Evaluator(ev.evaluate_centre))
 
         player_2 = MCTS("mcts_det",
-                        MCTSConfig(simulations=2500,
-                                   pb_c_init=99999),
+                        MCTSConfig(simulations=2000),
                         ev.Evaluator(ev.evaluate_centre_with_prior))
 
         model = ModelWrapper(ModelConfig(),
                              file_name=parser.args.net_filepath)
 
         player_3 = MCTS("mcts_nn",
-                        MCTSConfig(simulations=1500),
+                        MCTSConfig(simulations=2000),
                         ev.Evaluator(partial(ev.evaluate_nn,
                                              model=model)))
 

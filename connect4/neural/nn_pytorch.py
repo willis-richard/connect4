@@ -4,8 +4,9 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import CombinedStats, ValueStats
-from connect4.neural.training_game import TrainingData
+from connect4.neural.training_game import GameData, TrainingData
 
+import os
 import numpy as np
 import torch
 import torch.optim as optim
@@ -18,7 +19,40 @@ from typing import (List,
                     Sequence,
                     Union)
 
-# import torch.nn.functional as F
+
+class Connect4Dataset(Dataset):
+    def __init__(self,
+                 boards: torch.FloatTensor,
+                 values: torch.FloatTensor,
+                 priors: torch.FloatTensor):
+        self.boards = boards
+        self.values = values
+        self.priors = priors
+
+    def save(self, filename):
+        data = {}
+        data['boards'] = self.boards
+        data['values'] = self.values
+        data['priors'] = self.priors
+
+        torch.save(data, filename)
+
+    @classmethod
+    def load(cls, filename):
+        data = torch.load(filename)
+        return cls(data['boards'], data['values'], data['priors'])
+
+    def __len__(self):
+        return len(self.boards)
+
+    def __getitem__(self, idx: int):
+        if self.priors is None:
+            return (self.boards[idx],
+                    self.values[idx])
+        else:
+            return (self.boards[idx],
+                    self.values[idx],
+                    self.priors[idx])
 
 
 # Input with N * channels * (6,7)
@@ -68,12 +102,12 @@ class ValueHead(nn.Module):
                  filters=net_info.filters,
                  fc_layers=net_info.n_fc_layers):
         super(ValueHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 1, 1) # N*f*H*W -> N*1*H*W
+        self.conv1 = nn.Conv2d(filters, 1, 1)  # N*f*H*W -> N*1*H*W
         self.batch_norm = nn.BatchNorm2d(1)
         self.relu = nn.LeakyReLU()
         # in the linear we go from N*(H*W) -> N*(H*W)
         self.fcN = nn.Sequential(*[nn.Linear(net_info.area, net_info.area) for _ in range(fc_layers)])
-        self.fc1 = nn.Linear(net_info.area, 1) # N*(H*W) -> N*(1)
+        self.fc1 = nn.Linear(net_info.area, 1)  # N*(H*W) -> N*(1)
         self.tanh = torch.nn.Tanh()
         self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
         self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
@@ -100,10 +134,10 @@ class ValueHead(nn.Module):
 class PolicyHead(nn.Module):
     def __init__(self, filters=net_info.filters):
         super(PolicyHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 2, 1) # N * f * H * W -> N * 2 * H * W
+        self.conv1 = nn.Conv2d(filters, 2, 1)  # N * f * H * W -> N * 2 * H * W
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
-        self.fc1 = nn.Linear(2 * net_info.area, net_info.width) # N * f * (2 * H * W) -> N * f * W
+        self.fc1 = nn.Linear(2 * net_info.area, net_info.width)  # N * f * (2 * H * W) -> N * f * W
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -188,18 +222,6 @@ class ModelWrapper():
         # self.policy_loss = nn.MultiLabelSoftMarginLoss()
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
-        self.print_test_boards()
-
-    def print_test_boards(self):
-        board_1 = Board()
-        board_2 = Board()
-        board_3 = Board()
-        board_2.o_pieces = np.ones((info.height, info.width))
-        board_3.x_pieces = np.ones((info.height, info.width))
-        print("Test board output: empty board:  {}, full o board:  {}, full x board:  {}"
-              .format(self.__call__(board_1),
-                      self.__call__(board_2),
-                      self.__call__(board_3)))
 
     def __call__(self, input_: Union[Board, List[Board]]):
         if isinstance(input_, Board):
@@ -262,12 +284,8 @@ class ModelWrapper():
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
-    def train(self, training_data: TrainingData):
-        data = self.create_dataloader(self.config.batch_size,
-                                      training_data.boards,
-                                      training_data.values,
-                                      training_data.policies,
-                                      add_fliplr=True)
+    def train(self, data: Connect4Dataset):
+        data =  DataLoader(data, batch_size=self.config.batch_size, shuffle=True)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
@@ -294,9 +312,9 @@ class ModelWrapper():
         # Perhaps it is to do with the batchnorm: https://arxiv.org/abs/1702.03275
         self.net.eval()
 
-    def evaluate_value_only(self, boards, values):
+    def evaluate_value_only(self, data: Connect4Dataset):
         # Note no policy here, 3rd arg unused
-        data = self.create_dataloader(4096, boards, values)
+        data = DataLoader(data, batch_size=4096, shuffle=True)
         """Get an idea of how the initialisation is"""
         stats = ValueStats()
 
@@ -312,26 +330,16 @@ class ModelWrapper():
                              loss.item())
         return stats
 
-    def evaluate(self, boards, values, priors):
-        train_gen = self.create_dataloader(4096, boards, values, priors)
-        return evaluate(train_gen,
+    def evaluate(self,
+                 data: Connect4Dataset,
+                 batch_size: int = 4096,
+                 shuffle: bool = True):
+        test_gen = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
+        return evaluate(test_gen,
                         self.net,
                         self.device,
                         self.value_loss,
                         self.policy_loss)
-
-    def create_dataloader(self,
-                          batch_size: int,
-                          boards: List[Board],
-                          values: Sequence[float],
-                          priors: List[Sequence[float]] = None,
-                          add_fliplr: bool = False):
-        data = Connect4Dataset.from_boards(boards,
-                                           values,
-                                           priors,
-                                           add_fliplr=add_fliplr)
-
-        return DataLoader(data, batch_size=batch_size, shuffle=True)
 
 
 def weights_init(m):
@@ -344,46 +352,6 @@ def weights_init(m):
     elif classname.find('Linear') != -1:
         nn.init.constant_(m.weight, 0)
         nn.init.constant_(m.bias, 0)
-
-
-class Connect4Dataset(Dataset):
-    def __init__(self,
-                 boards: List[Board],
-                 values: Sequence[float],
-                 policies: List[Sequence[float]] = None,
-                 to_move_channel: bool = True,
-                 add_fliplr: bool = False):
-        assert len(boards) == len(values)
-        if add_fliplr:
-            flip_boards = list(map(lambda x: x.create_fliplr(), boards))
-            boards.extend(flip_boards)
-            values = np.concatenate((values, values), axis=None)
-        self.boards = torch.FloatTensor(list(map(
-            lambda x: x.to_array(), boards)))
-        if not to_move_channel:
-            self.boards = self.boards[:, 1:]
-        self.values = torch.FloatTensor(values)
-        if policies is None:
-            self.policies = None
-        else:
-            assert len(boards) == 2 * len(policies)
-            if add_fliplr:
-                flip_policies = list(map(lambda x: np.flip(x), policies))
-                policies.extend(flip_policies)
-            self.policies = torch.FloatTensor(policies)
-        print("Creating dataset with {} positions".format(self.__len__()))
-
-    def __len__(self):
-        return len(self.boards)
-
-    def __getitem__(self, idx: int):
-        if self.policies is None:
-            return (self.boards[idx],
-                    self.values[idx])
-        else:
-            return (self.boards[idx],
-                    self.values[idx],
-                    self.policies[idx])
 
 
 def evaluate(train_gen, net, device, value_criterion, prior_criterion):
@@ -407,3 +375,61 @@ def evaluate(train_gen, net, device, value_criterion, prior_criterion):
                  prior_loss)
 
     return stats
+
+
+class TrainingDataStorage():
+    def __init__(self, folder_path: str):
+        self.folder_path = folder_path
+
+    @property
+    def file_name(self):
+        return self.folder_path + '/data.pth'
+
+    def get_dataset(self, n_pos: int, games: List[GameData]):
+        data = np.sum(list(map(lambda x: x.data, games)))
+        board_t, value_t, prior_t = native_to_pytorch(data.boards,
+                                                      data.values,
+                                                      data.priors,
+                                                      add_fliplr=True)
+        print(board_t, value_t, prior_t)
+        if os.path.exists(self.file_name):
+            data = torch.load(self.file_name)
+            data['boards'] = torch.cat((board_t, data['boards']), 0)[:n_pos]
+            data['values'] = torch.cat((value_t, data['values']), 0)[:n_pos]
+            data['priors'] = torch.cat((prior_t, data['priors']), 0)[:n_pos]
+        else:
+            data = {}
+            data['boards'] = board_t
+            data['values'] = value_t
+            data['priors'] = prior_t
+
+        torch.save(data, self.file_name)
+
+        return Connect4Dataset(**data)
+
+
+def native_to_pytorch(boards: List[Board],
+                      values: Sequence[float],
+                      priors: List[Sequence[float]] = None,
+                      to_move_channel: bool = True,
+                      add_fliplr: bool = False):
+    assert len(boards) == len(values)
+    if add_fliplr:
+        flip_boards = list(map(lambda x: x.create_fliplr(), boards))
+        boards.extend(flip_boards)
+        values = np.concatenate((values, values), axis=None)
+    boards = torch.FloatTensor(list(map(
+        lambda x: x.to_array(), boards)))
+    if not to_move_channel:
+        boards = boards[:, 1:]
+    values = torch.FloatTensor(values)
+    if priors is None:
+        priors = None
+    else:
+        if add_fliplr:
+            flip_priors = list(map(lambda x: np.flip(x), priors))
+            priors.extend(flip_priors)
+        assert len(boards) == len(priors)
+        priors = torch.FloatTensor(priors)
+
+    return boards, values, priors

@@ -18,7 +18,7 @@ class BaseNodeData():
         self.search_value = None
 
     def value(self, side: Side):
-        if self.board.result:
+        if self.board.result is not None:
             return value_to_side(self.board.result.value, side)
         elif self.search_value is not None:
             return value_to_side(float(self.search_value), side)
@@ -51,18 +51,17 @@ class Tree():
         self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
 
-    def get_node_value(self, node, side: Optional[Side] = None):
-        if side is None:
-            return node.data.value(self.side)
-        else:
-            return node.data.value(side)
+    def get_node_value(self, node):
+        return node.data.value(self.side)
 
     def select_best_move(self):
-        _, move, value = max(((self.get_node_value(c),
-                               c.name,
-                               self.get_node_value(c, Side.o))
-                              for c in self.root.children))
-        return move, value
+        value, move = max(((self.get_node_value(c),
+                           c.name)
+                          for c in self.root.children))
+
+        absolute_value = value_to_side(value, self.side)
+
+        return move, absolute_value
 
     def select_softmax_move(self):
         moves = []
@@ -73,11 +72,11 @@ class Tree():
         values = softmax(values)
 
         idx = np.random.choice(range(len(moves)), p=values)
+        absolute_value = value_to_side(values[idx], self.side)
 
-        return moves[idx], values[idx]
+        return moves[idx], absolute_value
 
-    def get_policy_all(self):
-        # If using that multiclass stuff
+    def get_policy(self):
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)

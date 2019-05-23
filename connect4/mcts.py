@@ -143,22 +143,22 @@ class MCTS(BasePlayer):
             move, value = tree.select_best_move()
         # choose shortest win
         elif same_side(tree.root.data.terminal_result.result, tree.side):
-            _, _, move, value = max((tree.get_node_value(c),
-                                     info.area - c.data.terminal_result.age,
-                                     c.name,
-                                     tree.get_node_value(c, Side.o))
-                                    for c in tree.root.children
-                                    if c.name in tree.root.data.terminal_moves)
+            value, _, move = max((tree.get_node_value(c),
+                                  info.area - c.data.terminal_result.age,
+                                  c.name)
+                                 for c in tree.root.children
+                                 if c.name in tree.root.data.terminal_moves)
         # else longest loss (or draw = 42)
         else:
-            _, _, move, value = max((tree.get_node_value(c),
-                                     c.data.terminal_result.age,
-                                     c.name,
-                                     tree.get_node_value(c, Side.o))
-                                    for c in tree.root.children
-                                    if c.name in tree.root.data.terminal_moves)
+            value, _, move = max((tree.get_node_value(c),
+                                  c.data.terminal_result.age,
+                                  c.name)
+                                 for c in tree.root.children
+                                 if c.name in tree.root.data.terminal_moves)
 
-        return move, value
+        absolute_value = value_to_side(value, tree.side)
+
+        return move, absolute_value
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

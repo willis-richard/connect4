@@ -18,10 +18,18 @@ import os
 import pandas as pd
 import pickle
 import time
-import torch
-from torch.multiprocessing import (Pipe,
+from torch.multiprocessing import (Manager,
+                                   Pipe,
                                    Pool)
 from visdom import Visdom
+
+if True:
+    from connect4.neural.nn_pytorch import (Connect4Dataset,
+                                            ModelWrapper,
+                                            native_to_pytorch,
+                                            TrainingDataStorage)
+else:
+    from connect4.neural.nn_tf import ModelWrapper
 
 
 class TrainingLoop():
@@ -34,29 +42,41 @@ class TrainingLoop():
         os.makedirs(self.save_dir + '/net', exist_ok=True)
         os.makedirs(self.save_dir + '/games', exist_ok=True)
         os.makedirs(self.save_dir + '/stats', exist_ok=True)
-
-        if config.use_pytorch:
-            from connect4.neural.nn_pytorch import ModelWrapper
-        else:
-            from connect4.neural.nn_tf import ModelWrapper
+        os.makedirs(self.save_dir + '/data', exist_ok=True)
 
         self.nn_storage = NetworkStorage(self.save_dir + '/net',
                                          config.model_config,
                                          ModelWrapper)
         self.game_storage = GameStorage(self.save_dir + '/games')
+        self.training_data_storage = TrainingDataStorage(self.save_dir + '/data')
 
         # self.boards = torch.load(config.storage_config.path_8ply_boards)
         # self.values = torch.load(config.storage_config.path_8ply_values)
         with open('/home/richard/data/connect4/8ply_boards.pkl', 'rb') as f:
-            self.ply8_boards = pickle.load(f)
+            ply8_boards = pickle.load(f)
         with open('/home/richard/data/connect4/8ply_values.pkl', 'rb') as f:
-            self.ply8_values = pickle.load(f)
+            ply8_values = pickle.load(f)
+
+        self.ply8_data = Connect4Dataset(
+            *native_to_pytorch(ply8_boards,
+                               ply8_values,
+                               add_fliplr=True))
+
         with open('/home/richard/data/connect4/7ply_boards.pkl', 'rb') as f:
-            self.ply7_boards = pickle.load(f)
+            ply7_boards = pickle.load(f)
         with open('/home/richard/data/connect4/7ply_values.pkl', 'rb') as f:
-            self.ply7_values = pickle.load(f)
+            ply7_values = pickle.load(f)
         with open('/home/richard/data/connect4/7ply_priors.pkl', 'rb') as f:
-            self.ply7_priors = pickle.load(f)
+            ply7_priors = pickle.load(f)
+
+        self.ply7_data = Connect4Dataset(
+            *native_to_pytorch(ply7_boards,
+                               ply7_values,
+                               ply7_priors,
+                               add_fliplr=True))
+
+        self.ply7_data.save('/home/richard/data/connect4/connect4dataset_7ply.pth')
+        self.ply8_data.save('/home/richard/data/connect4/connect4dataset_8ply.pth')
 
         if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
             self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
@@ -96,21 +116,20 @@ class TrainingLoop():
     def run(self):
         i = 0
         while True:
+            i += 1
             print("Loop: ", i)
-            self.loop()
+            self.loop(i)
             if i % self.config.n_eval == 0:
                 self.evaluate()
-            i += 1
 
-    def loop(self):
+    def loop(self, iteration):
         model = self.nn_storage.get_model()
         mcts_config = self.create_alpha_zero_config(training=True)
-        training_data = TrainingData()
-        results = []
 
         start_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
         if self.config.game_processes == 1:
+            games = []
             evaluator = evl.Evaluator(partial(evl.evaluate_nn,
                                               model=model))
             alpha_zero = MCTS('AlphaZero',
@@ -120,9 +139,7 @@ class TrainingLoop():
                 game_data = training_game(alpha_zero).play()
                 # N.B. ideally these would be saved inside play(), but...
                 # multiprocessing?
-                results.append(game_data.result)
-                training_data.add(game_data.data)
-                self.game_storage.save_game(game_data.game)
+                games.apend(game_data)
         else:
             connections = [[Pipe() for
                             _ in range(self.config.game_threads)] for
@@ -133,32 +150,38 @@ class TrainingLoop():
                                                 for sublist in connections
                                                 for item in sublist])
 
+            mgr = Manager()
+            games = mgr.list()
+
             with Pool(processes=self.config.game_processes) as pool:
-                # for results, games, data in pool.imap_unordered(
-                for results, games, data in pool.map(
-                        partial(game_pool,
-                                mcts_config=mcts_config,
-                                n_threads=self.config.game_threads,
-                                n_games=int(self.config.n_training_games /
-                                            self.config.game_processes)),
-                        connections,
-                        chunksize=1):
-                    training_data.add(data)
-                    self.game_storage.save_games(games)
-                    results.extend(results)
+                # pool.imap_unordered(
+                pool.map(
+                    partial(game_pool,
+                            mcts_config=mcts_config,
+                            n_threads=self.config.game_threads,
+                            n_games=int(self.config.n_training_games /
+                                        self.config.game_processes),
+                            games=games),
+                    connections,
+                    chunksize=1)
 
             inference_server.terminate()
 
         if self.config.visdom_enabled:
             self.vis.text(self.game_storage.last_game_str(),
                           win=self.game_win)
-        self.game_storage.save()
+        self.game_storage.save(games)
         train_t = time.time()
+
+        training_data = self.training_data_storage.get_dataset(
+            self.calc_n_posn(iteration),
+            games)
 
         self.nn_storage.train(training_data)
 
         end_t = time.time()
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
+        results = list(map(lambda x: x.result, games))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             results.count(Result.o_win),
             results.count(Result.draw),
@@ -167,14 +190,16 @@ class TrainingLoop():
     def evaluate(self):
         model = self.nn_storage.get_model()
 
-        value_stats = model.evaluate_value_only(self.ply8_boards, self.ply8_values)
+        value_stats = model.evaluate_value_only(self.ply8_data)
         print("8 Ply Test Stats:  ", value_stats)
-        self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(), ignore_index=True)
+        self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(),
+                                                 ignore_index=True)
         self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
 
-        combined_stats = model.evaluate(self.ply7_boards, self.ply7_values, self.ply7_priors)
+        combined_stats = model.evaluate(self.ply7_data)
         print("7 Ply Test Stats:  ", combined_stats)
-        self.stats_7ply = self.stats_7ply.append(combined_stats.to_dict(), ignore_index=True)
+        self.stats_7ply = self.stats_7ply.append(combined_stats.to_dict(),
+                                                 ignore_index=True)
         self.stats_7ply.to_pickle(self.save_dir + '/stats/7ply.pkl')
 
         if self.config.visdom_enabled:
@@ -217,3 +242,7 @@ class TrainingLoop():
                                      0)
 
         return mcts_config
+
+    def calc_n_posn(self, iteration):
+        n = min(20, iteration / 2)
+        return n * 25 * 2 * self.config.n_training_games

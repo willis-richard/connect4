@@ -1,7 +1,7 @@
 from connect4.board import Board
 
 from connect4.neural.config import ModelConfig
-from connect4.neural.training_game import TrainingData
+from connect4.neural.training_game import TrainingData, GameData
 
 import os
 import pickle
@@ -16,26 +16,21 @@ class GameStorage():
         if file_list:
             iterations = [int(f.split('.')[1]) for f in file_list]
             self.iteration = max(iterations)
-        self.games = []
 
     @property
     def file_name(self):
         return self.folder_path + '/games.' + str(self.iteration) + '.pkl'
 
-    def save(self):
+    def save(self, games: List[GameData]):
         self.iteration += 1
         with open(self.file_name, 'wb') as f:
-            pickle.dump(self.games, f)
-        self.games = []
-
-    def save_game(self, game: List[Tuple[int, float]]):
-        self.games.append(game)
-
-    def save_games(self, games: List[List[Tuple[int, float]]]):
-        self.games.extend(games)
+            pickle.dump(games, f)
+        self.last_game = games[-1]
 
     def last_game_str(self):
-        return game_str(self.games[-1])
+        return game_str(self.last_game.moves,
+                        self.last_game.values,
+                        self.last_game.priors)
 
 
 class NetworkStorage():
@@ -67,10 +62,12 @@ class NetworkStorage():
         return self.model
 
 
-def game_str(game: List):
+def game_str(moves: List,
+             values: List,
+             policies: List):
     board = Board()
     out_str = str(board)
-    for move, value, policy in game:
+    for move, value, policy in zip(moves, values, policies):
         board.make_move(move)
         out_str += '\nMove: {}  Value: {} Policy: {}\n{}'.format(move,
                                                                  value,
