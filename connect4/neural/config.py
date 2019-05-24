@@ -44,7 +44,7 @@ class AlphaZeroConfig():
                  pb_c_init=1.25,
                  root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
-                 num_sampling_moves=10,
+                 num_sampling_moves=8,
                  n_eval=1,
                  n_training_games=1200,
                  use_pytorch=True,

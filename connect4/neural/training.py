@@ -8,15 +8,13 @@ from connect4.utils import Result
 from connect4.neural.config import AlphaZeroConfig
 from connect4.neural.game_pool import game_pool
 from connect4.neural.inference_server import InferenceServer
-from connect4.neural.storage import (GameStorage,
-                                     NetworkStorage)
-from connect4.neural.training_game import TrainingData, training_game
+from connect4.neural.storage import NetworkStorage
+from connect4.neural.training_game import training_game
 
 from functools import partial
 import matplotlib.pyplot as plt
 import os
 import pandas as pd
-import pickle
 import time
 from torch.multiprocessing import (Manager,
                                    Pipe,
@@ -26,7 +24,6 @@ from visdom import Visdom
 if True:
     from connect4.neural.nn_pytorch import (Connect4Dataset,
                                             ModelWrapper,
-                                            native_to_pytorch,
                                             TrainingDataStorage)
 else:
     from connect4.neural.nn_tf import ModelWrapper
@@ -44,39 +41,10 @@ class TrainingLoop():
         os.makedirs(self.save_dir + '/stats', exist_ok=True)
         os.makedirs(self.save_dir + '/data', exist_ok=True)
 
-        self.nn_storage = NetworkStorage(self.save_dir + '/net',
+        self.nn_storage = NetworkStorage(self.save_dir,
                                          config.model_config,
                                          ModelWrapper)
-        self.game_storage = GameStorage(self.save_dir + '/games')
-        self.training_data_storage = TrainingDataStorage(self.save_dir + '/data')
-
-        # self.boards = torch.load(config.storage_config.path_8ply_boards)
-        # self.values = torch.load(config.storage_config.path_8ply_values)
-        with open('/home/richard/data/connect4/8ply_boards.pkl', 'rb') as f:
-            ply8_boards = pickle.load(f)
-        with open('/home/richard/data/connect4/8ply_values.pkl', 'rb') as f:
-            ply8_values = pickle.load(f)
-
-        self.ply8_data = Connect4Dataset(
-            *native_to_pytorch(ply8_boards,
-                               ply8_values,
-                               add_fliplr=True))
-
-        with open('/home/richard/data/connect4/7ply_boards.pkl', 'rb') as f:
-            ply7_boards = pickle.load(f)
-        with open('/home/richard/data/connect4/7ply_values.pkl', 'rb') as f:
-            ply7_values = pickle.load(f)
-        with open('/home/richard/data/connect4/7ply_priors.pkl', 'rb') as f:
-            ply7_priors = pickle.load(f)
-
-        self.ply7_data = Connect4Dataset(
-            *native_to_pytorch(ply7_boards,
-                               ply7_values,
-                               ply7_priors,
-                               add_fliplr=True))
-
-        self.ply7_data.save('/home/richard/data/connect4/connect4dataset_7ply.pth')
-        self.ply8_data.save('/home/richard/data/connect4/connect4dataset_8ply.pth')
+        self.data_storage = TrainingDataStorage(self.save_dir)
 
         if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
             self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
@@ -87,23 +55,16 @@ class TrainingLoop():
         else:
             self.stats_7ply = pd.DataFrame()
 
-        self.easy_opponent = GridSearch("gridsearch:4",
-                                        4,
-                                        evl.Evaluator(evl.evaluate_centre))
-        self.hard_opponent = MCTS("mcts:" + str(config.simulations),
-                                  MCTSConfig(simulations=config.simulations,
-                                             pb_c_init=9999),
-                                  evl.Evaluator(evl.evaluate_centre_with_prior))
+        self.opponent = MCTS("mcts:" + str(config.simulations),
+                             MCTSConfig(simulations=config.simulations),
+                             evl.Evaluator(evl.evaluate_centre_with_prior))
 
-        if os.path.exists(self.save_dir + '/stats/easy_results.pkl'):
-            self.easy_results = pd.read_pickle(self.save_dir + '/stats/easy_results.pkl')
+        if os.path.exists(self.save_dir + '/stats/match_results.pkl'):
+            self.match_results = pd.read_pickle(
+                self.save_dir + '/stats/match_results.pkl')
         else:
-            self.easy_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
-
-        if os.path.exists(self.save_dir + '/stats/hard_results.pkl'):
-            self.hard_results = pd.read_pickle(self.save_dir + '/stats/hard_results.pkl')
-        else:
-            self.hard_results = pd.DataFrame(columns=['win', 'draw', 'loss', 'return'])
+            self.match_results = pd.DataFrame(
+                columns=['win', 'draw', 'loss', 'return'])
 
         if config.visdom_enabled:
             self.vis = Visdom()
@@ -118,11 +79,11 @@ class TrainingLoop():
         while True:
             i += 1
             print("Loop: ", i)
-            self.loop(i)
+            self.loop()
             if i % self.config.n_eval == 0:
                 self.evaluate()
 
-    def loop(self, iteration):
+    def loop(self):
         model = self.nn_storage.get_model()
         mcts_config = self.create_alpha_zero_config(training=True)
 
@@ -167,15 +128,15 @@ class TrainingLoop():
 
             inference_server.terminate()
 
+        self.data_storage.save(games)
         if self.config.visdom_enabled:
-            self.vis.text(self.game_storage.last_game_str(),
+            self.vis.text(self.data_storage.last_game_str(),
                           win=self.game_win)
-        self.game_storage.save(games)
         train_t = time.time()
 
-        training_data = self.training_data_storage.get_dataset(
-            self.calc_n_posn(iteration),
-            games)
+        training_data = self.data_storage.get_dataset()
+
+        print("{} positions created for training".format(len(training_data)))
 
         self.nn_storage.train(training_data)
 
@@ -190,13 +151,17 @@ class TrainingLoop():
     def evaluate(self):
         model = self.nn_storage.get_model()
 
-        value_stats = model.evaluate_value_only(self.ply8_data)
+        ply8_data = Connect4Dataset.load(
+            '/home/richard/data/connect4/connect4dataset_8ply.pth')
+        value_stats = model.evaluate_value_only(ply8_data)
         print("8 Ply Test Stats:  ", value_stats)
         self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(),
                                                  ignore_index=True)
         self.stats_8ply.to_pickle(self.save_dir + '/stats/8ply.pkl')
 
-        combined_stats = model.evaluate(self.ply7_data)
+        ply7_data = Connect4Dataset.load(
+            '/home/richard/data/connect4/connect4dataset_7ply.pth')
+        combined_stats = model.evaluate(ply7_data)
         print("7 Ply Test Stats:  ", combined_stats)
         self.stats_7ply = self.stats_7ply.append(combined_stats.to_dict(),
                                                  ignore_index=True)
@@ -206,43 +171,38 @@ class TrainingLoop():
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
                              win=self.win_8ply)
 
-        # alpha_zero = self.create_alpha_zero(training=False)
+        az_config = self.create_alpha_zero_config(training=False)
+        evaluator = evl.Evaluator(partial(evl.evaluate_nn,
+                                          model=model))
+        alpha_zero = MCTS('AlphaZero',
+                          az_config,
+                          evaluator)
 
-        # results = self.match(alpha_zero, self.easy_opponent)
-        # self.easy_results = self.easy_results.append(results, ignore_index=True)
-        # self.easy_results.to_pickle(self.save_dir + '/stats/easy_results.pkl')
-        # if self.config.visdom_enabled:
-        #     self.vis.matplot(self.easy_results.plot(y=['return']).figure,
-        #                      win=self.easy_win)
-
-        # results = self.match(alpha_zero, self.hard_opponent)
-        # self.hard_results = self.hard_results.append(results, ignore_index=True)
-        # self.hard_results.to_pickle(self.save_dir + '/stats/hard_results.pkl')
-        # if self.config.visdom_enabled:
-        #     self.vis.matplot(self.hard_results.plot(y=['return']).figure, win=self.hard_win)
+        results = self.match(alpha_zero, self.opponent)
+        self.match_results = self.match_results.append(results,
+                                                       ignore_index=True)
+        self.match_results.to_pickle(
+            self.save_dir + '/stats/match_results.pkl')
+        if self.config.visdom_enabled:
+            self.vis.matplot(self.match_results.plot(y=['return']).figure,
+                             win=self.easy_win)
 
     def match(self, alpha_zero, opponent: MCTS):
         match = Match(False, alpha_zero, opponent, plies=1, switch=True)
-        return match.play(agents=self.config.agents)
+        return match.play(agents=self.config.game_processes)
 
     def create_alpha_zero_config(self, training=False):
         if training:
-            mcts_config = MCTSConfig(self.config.simulations,
-                                     self.config.pb_c_base,
-                                     self.config.pb_c_init,
-                                     self.config.root_dirichlet_alpha,
-                                     self.config.root_exploration_fraction,
-                                     self.config.num_sampling_moves)
+            return MCTSConfig(self.config.simulations,
+                              self.config.pb_c_base,
+                              self.config.pb_c_init,
+                              self.config.root_dirichlet_alpha,
+                              self.config.root_exploration_fraction,
+                              self.config.num_sampling_moves)
         else:
-            mcts_config = MCTSConfig(self.config.simulations,
-                                     self.config.pb_c_base,
-                                     self.config.pb_c_init,
-                                     0.0,
-                                     0.0,
-                                     0)
-
-        return mcts_config
-
-    def calc_n_posn(self, iteration):
-        n = min(20, iteration / 2)
-        return n * 25 * 2 * self.config.n_training_games
+            return MCTSConfig(self.config.simulations,
+                              self.config.pb_c_base,
+                              self.config.pb_c_init,
+                              0.0,
+                              0.0,
+                              0)

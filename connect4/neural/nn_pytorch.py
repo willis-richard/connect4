@@ -4,6 +4,7 @@ from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import CombinedStats, ValueStats
+from connect4.neural.storage import GameStorage
 from connect4.neural.training_game import GameData, TrainingData
 
 import os
@@ -11,7 +12,7 @@ import numpy as np
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import DataLoader, Dataset
+from torch.utils.data import ConcatDataset, DataLoader, Dataset
 from torch.optim.lr_scheduler import MultiStepLR
 
 from typing import (List,
@@ -285,7 +286,9 @@ class ModelWrapper():
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
     def train(self, data: Connect4Dataset):
-        data =  DataLoader(data, batch_size=self.config.batch_size, shuffle=True)
+        data = DataLoader(data,
+                          batch_size=self.config.batch_size,
+                          shuffle=True)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
@@ -377,35 +380,33 @@ def evaluate(train_gen, net, device, value_criterion, prior_criterion):
     return stats
 
 
-class TrainingDataStorage():
+class TrainingDataStorage(GameStorage):
     def __init__(self, folder_path: str):
-        self.folder_path = folder_path
+        super().__init__(folder_path)
 
-    @property
-    def file_name(self):
-        return self.folder_path + '/data.pth'
+    def td_file_name(self, iteration):
+        return "{}/data/{}.pth".format(self.folder_path, iteration)
 
-    def get_dataset(self, n_pos: int, games: List[GameData]):
+    def save(self, games: List[GameData]):
+        super().save(games)
+
         data = np.sum(list(map(lambda x: x.data, games)))
         board_t, value_t, prior_t = native_to_pytorch(data.boards,
                                                       data.values,
                                                       data.priors,
                                                       add_fliplr=True)
-        print(board_t, value_t, prior_t)
-        if os.path.exists(self.file_name):
-            data = torch.load(self.file_name)
-            data['boards'] = torch.cat((board_t, data['boards']), 0)[:n_pos]
-            data['values'] = torch.cat((value_t, data['values']), 0)[:n_pos]
-            data['priors'] = torch.cat((prior_t, data['priors']), 0)[:n_pos]
-        else:
-            data = {}
-            data['boards'] = board_t
-            data['values'] = value_t
-            data['priors'] = prior_t
 
-        torch.save(data, self.file_name)
+        dataset = Connect4Dataset(board_t, value_t, prior_t)
+        dataset.save(self.td_file_name(self.iteration))
 
-        return Connect4Dataset(**data)
+    def get_dataset(self):
+        n = min(20, int((self.iteration + 1) / 2))
+        file_names = [self.td_file_name(i)
+                      for i in range(self.iteration,
+                                     self.iteration - n,
+                                     -1)]
+        return ConcatDataset([Connect4Dataset.load(f)
+                              for f in file_names])
 
 
 def native_to_pytorch(boards: List[Board],

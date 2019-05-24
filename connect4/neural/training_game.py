@@ -2,8 +2,7 @@ from connect4.board import Board
 from connect4.player import BasePlayer
 
 from copy import copy
-import numpy as np
-from typing import List, Optional
+from typing import List, Sequence
 
 
 def training_game(player: BasePlayer):
@@ -21,12 +20,12 @@ def training_game(player: BasePlayer):
 
 class TrainingData:
     def __init__(self,
-                 boards: Optional[List] = None,
-                 values: Optional[List] = None,
-                 priors: Optional[List] = None):
-        self.boards = [] if boards is None else boards
-        self.values = [] if values is None else values
-        self.priors = [] if priors is None else priors
+                 boards: List[Board],
+                 values: List[float],
+                 priors: List[Sequence[float]]):
+        self.boards = boards
+        self.values = values
+        self.priors = priors
 
     def __add__(self, other: 'TrainingData'):
         return TrainingData(self.boards + other.boards,
