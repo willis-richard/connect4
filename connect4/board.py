@@ -144,7 +144,7 @@ class Board():
            self.check_for_winner_c(self.o_pieces):
             self.result = Result.o_win
         elif (check_all or self._player_to_move == Side.o) and \
-             self.check_for_winner_c(self.x_pieces):
+            self.check_for_winner_c(self.x_pieces):
             self.result = Result.x_win
         elif np.all(self._get_pieces()):
             self.result = Result.draw
