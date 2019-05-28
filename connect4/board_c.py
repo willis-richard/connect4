@@ -29,10 +29,10 @@ BITMASK = np.flipud(np.transpose(np.reshape(
 
 class Board():
     def __init__(self):
-        self.color = np.zeros((2,), dtype=np.uint64)
-        self.nplies = np.uint8(0)
+        self.color = np.zeros((2,), dtype=np.int64)
+        self.nplies = 0
         self.height = np.array([H1 * i for i in range(WIDTH)],
-                               dtype=np.uint8)
+                               dtype=np.int64)
         self.result = None
 
     @classmethod
@@ -64,8 +64,7 @@ class Board():
 
     # return whether columns col has room
     def isplayable(self, col):
-        newboard = np.uint64(self.color[self.nplies & 1] |
-                             (np.uint64(1) << self.height[col]))
+        newboard = self.color[self.nplies & 1] | (1 << self.height[col])
         return self.islegal(newboard)
 
     # return whether newboard lacks overflowing column
@@ -88,10 +87,9 @@ class Board():
 
     def make_move(self, move):
         self.color[self.nplies & 1] = \
-            self.color[self.nplies & 1] ^ \
-            (np.uint64(1) << self.height[move])
-        self.height[move] = np.uint8(self.height[move] + 1)
-        winner = self.check_terminal_position(int(self.color[self.nplies & 1]))
+            self.color[self.nplies & 1] ^ (1 << self.height[move])
+        self.height[move] = self.height[move] + 1
+        winner = self.check_terminal_position(self.color[self.nplies & 1])
         self.nplies += 1
         if winner:
             self.result = Result(self.nplies % 2)
@@ -108,7 +106,7 @@ class Board():
 
     @property
     def pieces(self):
-        o_pieces = np.array([(self.color[0] >> np.uint8(i)) % 2
+        o_pieces = np.array([(self.color[0] >> i) % 2
                              for i in range(SIZE1)],
                             dtype=np.bool_)
         o_pieces = np.flipud(np.reshape(o_pieces, (H1, WIDTH), order='F')[0:HEIGHT, :])
