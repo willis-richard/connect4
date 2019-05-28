@@ -239,35 +239,7 @@ def ucb_score(config: MCTSConfig,
         / (child.data._search_value.visit_count + 1))
 
     prior_score = pb_c * node.data.position_value.prior[child.name]
-    value_score = tree.get_node_value(child)
-    return prior_score + value_score
-
-
-def select_child_vector(config: MCTSConfig,
-                        tree: Tree,
-                        node: Node):
-    non_terminal_children = [child for child in node.children if
-                             child.name not in node.data.terminal_moves]
-    _, child = max((ucb_score(config, tree, node, child), i)
-                   for i, child in enumerate(non_terminal_children))
-
-    return non_terminal_children[child]
-
-
-def ucb_score(config: MCTSConfig,
-              tree: Tree,
-              node: Node,
-              child: Node):
-    pb_c = math.log((node.data._search_value.visit_count + config.pb_c_base + 1) /
-                    config.pb_c_base) + config.pb_c_init
-    pb_c *= math.sqrt(node.data._search_value.visit_count) / (child.data._search_value.visit_count + 1)
-
-    pb_c = pb_c * (
-        math.sqrt(node.data._search_value.visit_count)
-        / (child.data._search_value.visit_count + 1))
-
-    prior_score = pb_c * node.data.position_value.prior[child.name]
-    value_score = tree.get_node_value(child)
+    value_score = child.data.value(node.data.board.player_to_move)
     return prior_score + value_score
 
 
