@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.nn_pytorch import ModelWrapper

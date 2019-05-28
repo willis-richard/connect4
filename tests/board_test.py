@@ -1,5 +1,5 @@
-from connect4 import board
-from connect4.utils import Result, Side
+from connect4.board_c import Board
+from connect4.utils import Result
 
 import pytest
 
@@ -153,8 +153,8 @@ assert len(pieces_1) == len(pieces_2) == len(ans)
                          [(n, p1, p2, a) for n, p1, p2, a in zip(range(len(ans)), pieces_1, pieces_2, ans)])
 def test_check_valid(n, pieces_1, pieces_2, ans):
     print("test_check_valid", n)
-    board_ = board.Board(o_pieces=pieces_1,
-                         x_pieces=pieces_2)
+    board_ = Board.from_pieces(o_pieces=pieces_1,
+                               x_pieces=pieces_2)
 
     print(board_)
     assert board_.result == (Result(ans) if ans is not None else None)
@@ -178,8 +178,8 @@ def test_valid_moves():
          [0, 0, 0, 0, 0, 0, 0],
          [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
 
-    board_ = board.Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
+    board_ = Board.from_pieces(o_pieces=o_pieces,
+                               x_pieces=x_pieces)
 
     assert board_.valid_moves == set(range(7))
 
@@ -199,8 +199,8 @@ def test_valid_moves():
          [0, 0, 0, 0, 0, 0, 1],
          [0, 0, 0, 0, 0, 0, 0]], dtype=np.bool_)
 
-    board_ = board.Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
+    board_ = Board.from_pieces(o_pieces=o_pieces,
+                               x_pieces=x_pieces)
 
     assert board_.valid_moves == set(range(6))
 
@@ -220,8 +220,8 @@ def test_valid_moves():
          [1, 0, 1, 1, 0, 0, 1],
          [1, 0, 0, 0, 1, 1, 0]], dtype=np.bool_)
 
-    board_ = board.Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
+    board_ = Board.from_pieces(o_pieces=o_pieces,
+                               x_pieces=x_pieces)
 
     assert board_.valid_moves == set([6])
 
@@ -241,7 +241,7 @@ def test_valid_moves():
          [0, 0, 0, 1, 1, 0, 0],
          [1, 1, 1, 0, 0, 0, 1]], dtype=np.bool_)
 
-    board_ = board.Board(o_pieces=o_pieces,
-                         x_pieces=x_pieces)
+    board_ = Board.from_pieces(o_pieces=o_pieces,
+                               x_pieces=x_pieces)
 
     assert board_.valid_moves == set([0, 1, 2, 4, 5, 6])

@@ -10,18 +10,20 @@ class Board():
     def __init__(self,
                  o_pieces=None,
                  x_pieces=None):
-        self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
-            o_pieces is None else o_pieces
-        self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_) if\
-            x_pieces is None else x_pieces
+        self.o_pieces = np.zeros((info.height, info.width), dtype=np.bool_)
+        self.x_pieces = np.zeros((info.height, info.width), dtype=np.bool_)
         self.result = None
+        self._player_to_move = Side.o
 
-        if o_pieces is None and x_pieces is None:
-            self._player_to_move = Side.o
-        else:
-            self.player_to_move = Side(1 - (np.count_nonzero(self.o_pieces) - np.count_nonzero(self.x_pieces)))
-            self._check_valid()
-            self.check_terminal_position()
+    @classmethod
+    def from_pieces(cls, o_pieces, x_pieces):
+        board = cls()
+        board.o_pieces = o_pieces
+        board.x_pieces = x_pieces
+        board.player_to_move = Side(board.age % 2)
+        board._check_valid()
+        board.check_terminal_position()
+        return board
 
     def __copy__(self):
         new_board = self.__class__()
@@ -175,7 +177,7 @@ class Board():
 
         assert no_gaps
         assert not np.any(np.logical_and(self.o_pieces, self.x_pieces))
-        assert np.sum(self.o_pieces) - np.sum(self.x_pieces) == (1 - self._player_to_move.value)
+        assert np.sum(self.o_pieces) - np.sum(self.x_pieces) == (self._player_to_move.value)
         # check the player to move has not already won
         assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o)
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == Side.x)

@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 from connect4.mcts import MCTSConfig, PositionEvaluation
 from connect4.evaluators import Evaluator
 from connect4.player import BasePlayer

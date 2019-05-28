@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 from connect4.utils import Connect4Stats as info, Result, Side, value_to_side
 
 from anytree import Node

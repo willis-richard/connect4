@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 from connect4.player import BasePlayer
 
 from copy import copy

@@ -51,8 +51,8 @@ class NetworkStats():
 
 
 class Side(IntEnum):
-    o = 1
-    x = 0
+    o = 0
+    x = 1
 
 
 class Result(Enum):

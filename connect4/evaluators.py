@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 from connect4.utils import Connect4Stats as info
 
 from copy import copy
@@ -27,11 +27,12 @@ class Evaluator():
 
 
 def evaluate_centre(board: Board):
-    value = 0.5 + \
-        (np.einsum('ij,ij', board.o_pieces, info.value_grid)
-         - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
-        / float(info.value_grid_sum)
-    return value
+    # value = 0.5 + \
+    #     (np.einsum('ij,ij', board.o_pieces, info.value_grid)
+    #      - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
+    #     / float(info.value_grid_sum)
+    # return value
+    return 0.5
 
 
 def evaluate_centre_with_prior(board: Board):

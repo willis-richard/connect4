@@ -1,8 +1,22 @@
+from connect4.utils import Result, Side
+
+from copy import copy
 import numpy as np
+from typing import Set
 
 
 WIDTH = 7
 HEIGHT = 6
+H1 = HEIGHT+1
+H2 = HEIGHT+2
+SIZE = HEIGHT*WIDTH
+SIZE1 = H1*WIDTH
+ALL1 = (1 << SIZE1)-1  # assumes SIZE1 < 63
+COL1 = (1 << H1)-1
+BOTTOM = int(ALL1 / COL1)  # has bits i*H1 set
+TOP = BOTTOM << HEIGHT
+BITMASK = np.flipud(np.transpose(np.reshape(
+    np.array([2 ** x for x in range(SIZE1)]), ((H1,WIDTH)))))[1:,:]
 # bitmask corresponds to board as follows in 7x6 case:
 #  .  .  .  .  .  .  .  TOP
 #  5 12 19 26 33 40 47
@@ -11,22 +25,36 @@ HEIGHT = 6
 #  2  9 16 23 30 37 44
 #  1  8 15 22 29 36 43
 #  0  7 14 21 28 35 42  BOTTOM
-H1 = HEIGHT+1
-H2 = HEIGHT+2
-SIZE = HEIGHT*WIDTH
-SIZE1 = H1*WIDTH
-ALL1 = (np.uint64(1) << SIZE1)-np.uint64(1)  # assumes SIZE1 < 63
-COL1 = (np.uint64(1) << H1)-np.uint64(1)
-BOTTOM = ALL1 / COL1  # has bits i*H1 set
-TOP = BOTTOM << HEIGHT
 
 
-class Board_c():
+class Board():
     def __init__(self):
         self.color = np.zeros((2,), dtype=np.uint64)
         self.nplies = np.uint8(0)
-        self.height = np.zeros([H1 * i for i in range(WIDTH)],
-                               dtype=np.byte)
+        self.height = np.array([H1 * i for i in range(WIDTH)],
+                               dtype=np.uint8)
+        self.result = None
+
+    @classmethod
+    def from_pieces(cls,
+                    o_pieces,
+                    x_pieces):
+        board = cls()
+        board.color[0] = np.dot(np.concatenate(o_pieces),
+                                np.concatenate(BITMASK))
+        board.color[1] = np.dot(np.concatenate(x_pieces),
+                                np.concatenate(BITMASK))
+        pieces = o_pieces + x_pieces
+        board.nplies = np.sum(pieces)
+        for i in range(WIDTH):
+            board.height[i] = board.height[i] + np.count_nonzero(pieces[:, i])
+        if board.check_terminal_position(board.color[0]):
+            board.result = Result.o_win
+        elif board.check_terminal_position(board.color[1]):
+            board.result = Result.x_win
+        elif board.nplies == 42:
+            board.result = Result.draw
+        return board
 
     @property
     def positioncode(self):
@@ -42,15 +70,11 @@ class Board_c():
 
     # return whether newboard lacks overflowing column
     def islegal(self, newboard):
-        return (newboard & TOP) == 0
-
-    # return whether newboard is legal and includes a win
-    def islegalhaswon(self, newboard):
-        return self.islegal(newboard) and self.haswon(newboard)
+        return (int(newboard) & TOP) == 0
 
     # return whether newboard includes a win
-    def haswon(self, newboard):
-        y = np.uint64(newboard & (newboard >> HEIGHT))
+    def check_terminal_position(self, newboard):
+        y = newboard & (newboard >> HEIGHT)
         if ((y & (y >> 2*HEIGHT)) != 0):  # check diagonal \
             return True
         y = newboard & (newboard >> H1)
@@ -62,36 +86,44 @@ class Board_c():
         y = newboard & (newboard >> 1)  # check vertical |
         return (y & (y >> 2)) != 0
 
-    def make_move(self, n):
-        self.color[self.nplies & 1] = self.color[self.nplies & 1] ^ \
-                                      (np.uint64(1) << (self.height[n] + 1))
+    def make_move(self, move):
+        self.color[self.nplies & 1] = \
+            self.color[self.nplies & 1] ^ \
+            (np.uint64(1) << self.height[move])
+        self.height[move] = np.uint8(self.height[move] + 1)
+        winner = self.check_terminal_position(int(self.color[self.nplies & 1]))
         self.nplies += 1
+        if winner:
+            self.result = Result(self.nplies % 2)
+        elif self.nplies == SIZE:
+            self.result = Result.Draw
+        return self.result
 
     def __eq__(self, obj):
-        return isinstance(obj, Board_c) \
-            and np.array_equal(obj.colors, self.colors)
+        return isinstance(obj, Board) \
+            and np.array_equal(obj.color, self.color)
 
     def __hash__(self):
-        return hash(self.colors)
+        return hash((self.color[0], self.color[1]))
 
     @property
     def pieces(self):
-        o_pieces = np.array([(self.color[0] >> i) % 2
+        o_pieces = np.array([(self.color[0] >> np.uint8(i)) % 2
                              for i in range(SIZE1)],
-                            dtype=np.uint8)
-        o_pieces = np.reshape((H1, WIDTH), o_pieces)[0:HEIGHT, :]
-        x_pieces = np.array([(self.color[1] >> i) % 2
+                            dtype=np.bool_)
+        o_pieces = np.flipud(np.reshape(o_pieces, (H1, WIDTH), order='F')[0:HEIGHT, :])
+        x_pieces = np.array([(self.color[1] >> np.uint8(i)) % 2
                              for i in range(SIZE1)],
-                            dtype=np.uint8)
-        x_pieces = np.reshape((H1, WIDTH), x_pieces)[0:HEIGHT, :]
+                            dtype=np.bool_)
+        x_pieces = np.flipud(np.reshape(x_pieces, (H1, WIDTH), order='F')[0:HEIGHT, :])
         return o_pieces, x_pieces
 
     def to_array(self):
-        to_move = np.ones(self.o_pieces.shape, dtype=np.uint8) if \
-                  self.nplies % 2 == 0 else \
-                  np.zeros(self.x_pieces.shape, dtype=np.uint8)
-
         o_pieces, x_pieces = self.pieces
+
+        to_move = np.ones(o_pieces.shape, dtype=np.uint8) if \
+                      self.nplies % 2 == 0 else \
+                      np.zeros(x_pieces.shape, dtype=np.uint8)
 
         return np.stack([to_move, o_pieces, x_pieces])
 
@@ -106,9 +138,43 @@ class Board_c():
             + "\n" + str(display.decode('utf-8')) \
             + "\n" + str(np.array([range(WIDTH)]).astype(str))
 
+    def __repr__(self):
+        return "color: {}, nplies: {}, height: {}, result: {}\n{}".format(
+            self.color,
+            self.nplies,
+            self.height,
+            self.result,
+            self.__str__())
+
     @property
     def valid_moves(self):
-        return set([self.isplayable(i) for i in range(WIDTH)])
+        if self.result is not None:
+            return set()
+        return set([i for i in range(WIDTH) if self.isplayable(i)])
+
+    @property
+    def _player_to_move(self):
+        return Side(self.nplies % 2)
+
+    @property
+    def player_to_move(self):
+        return 'o' if self._player_to_move == Side.o else 'x'
+
+    def to_int_tuple(self):
+        # FIXME: can I really have 1 value repr?
+        return self.color[0], self.color[1]
+
+    @property
+    def age(self):
+        return self.nplies
+
+    def __copy__(self):
+        new_board = self.__class__()
+        new_board.color = copy(self.color)
+        new_board.nplies = copy(self.nplies)
+        new_board.height = copy(self.height)
+        new_board.result = copy(self.result)
+        return new_board
 
 
 def make_random_ips(plies):

@@ -1,4 +1,4 @@
-from connect4.board import Board
+from connect4.board_c import Board
 import connect4.evaluators as evl
 from connect4.grid_search import GridSearch
 from connect4.match import Match

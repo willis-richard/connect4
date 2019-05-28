@@ -114,12 +114,12 @@ x_pieces = [
          [0, 0, 1, 0, 0, 0, 1]], dtype=np.bool_)
 ]
 
-plies = [1, 2, 2, 4, 4, 2, 100]
+plies = [1, 2, 2, 4, 4, 2, 15]
 ans = [[1], [1], [1], [6], [2, 5], [4], [0]]
 
 assert len(o_pieces) == len(x_pieces) == len(plies) == len(ans)
 
-boards = [Board(o_pieces=o, x_pieces=x)
+boards = [Board.from_pieces(o_pieces=o, x_pieces=x)
           for o, x in zip(o_pieces, x_pieces)]
 
 
@@ -128,12 +128,12 @@ boards = [Board(o_pieces=o, x_pieces=x)
                           in zip(range(len(ans)), boards, plies, ans)])
 def test_next_move(n, board, plies, ans):
     computers = [
-        # GridSearch("grid_test",
-        #            plies,
-        #            evaluators.Evaluator(
-        #                evaluators.evaluate_centre)),
+        GridSearch("grid_test",
+                   plies,
+                   evaluators.Evaluator(
+                       evaluators.evaluate_centre)),
         MCTS("mcts_test",
-             MCTSConfig(simulations=7**plies + 1,
+             MCTSConfig(simulations=7**plies + 1 if plies <= 6 else 2**plies,
                         pb_c_init=9999),
              evaluators.Evaluator(
                  evaluators.evaluate_centre_with_prior))]
@@ -154,7 +154,7 @@ def test_next_move(n, board, plies, ans):
                     # node.data.board.result,
                     # node.data.position_value,
                     # node.data.search_value))
-        elif plies == 100:
+        elif plies == 15 and computer == computers[1]:
             for pre, fill, node in anytree.RenderTree(tree.root):
                 print("%s%s, %s" % (
                     pre,

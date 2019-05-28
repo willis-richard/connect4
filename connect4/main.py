@@ -47,6 +47,8 @@ class Parser():
                             help='the number of pre-made half-moves for each game')
         parser.add_argument('-s', '--switch', default=False, type=bool,
                             help='play again but reverse first player for each position?')
+        parser.add_argument('-d', '--display', default=False, type=bool,
+                            help='display each position?')
         parser.add_argument('-n', '--net_filepath', type=str, required=False,
                             help='filepath to a pytorch network')
         self.args = parser.parse_args(sys.argv[3:])
@@ -77,21 +79,21 @@ if __name__ == "__main__":
                               4,
                               ev.Evaluator(ev.evaluate_centre))
 
-        player_2 = MCTS("mcts_det",
-                        MCTSConfig(simulations=2000),
-                        ev.Evaluator(ev.evaluate_centre_with_prior))
+        # player_2 = MCTS("mcts_det",
+        #                 MCTSConfig(simulations=2000),
+        #                 ev.Evaluator(ev.evaluate_centre_with_prior))
 
-        model = ModelWrapper(ModelConfig(),
-                             file_name=parser.args.net_filepath)
+        # model = ModelWrapper(ModelConfig(),
+        #                      file_name=parser.args.net_filepath)
 
-        player_3 = MCTS("mcts_nn",
-                        MCTSConfig(simulations=2000),
-                        ev.Evaluator(partial(ev.evaluate_nn,
-                                             model=model)))
+        # player_3 = MCTS("mcts_nn",
+        #                 MCTSConfig(simulations=2000),
+        #                 ev.Evaluator(partial(ev.evaluate_nn,
+        #                                      model=model)))
 
-        match = Match(True,
-                      player_3,
-                      player_2,
+        match = Match(parser.args.display,
+                      player_1,
+                      player_1,
                       plies=parser.args.plies,
                       switch=parser.args.switch)
         match.play(agents=parser.args.agents)
