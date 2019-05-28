@@ -126,42 +126,59 @@ boards = [Board.from_pieces(o_pieces=o, x_pieces=x)
 @pytest.mark.parametrize("n,board,plies,ans",
                          [(n, b, d, a) for n, b, d, a
                           in zip(range(len(ans)), boards, plies, ans)])
-def test_next_move(n, board, plies, ans):
-    computers = [
-        GridSearch("grid_test",
-                   plies,
-                   evaluators.Evaluator(
-                       evaluators.evaluate_centre)),
-        MCTS("mcts_test",
-             MCTSConfig(simulations=7**plies + 1 if plies <= 6 else 2**plies,
-                        pb_c_init=9999),
-             evaluators.Evaluator(
-                 evaluators.evaluate_centre_with_prior))]
-    for computer in computers:
-        board_copy = copy(board)
-        print(board)
+def test_grid_next_move(n, board, plies, ans):
+    computer = GridSearch("grid_test",
+                          plies,
+                          evaluators.Evaluator(
+                              evaluators.evaluate_centre))
+    board_copy = copy(board)
+    print(board)
 
-        move, _, tree = computer.make_move(board_copy)
+    move, _, tree = computer.make_move(board_copy)
 
-        if plies <= 2:
-            for pre, fill, node in anytree.RenderTree(tree.root):
-                # print("%s%s, %3d, %s, %s, %s" % (
-                print("%s%s, %s" % (
-                    pre,
-                    node.name,
-                    node.data))
-                    # tree.get_node_value(node),
-                    # node.data.board.result,
-                    # node.data.position_value,
-                    # node.data.search_value))
-        elif plies == 15 and computer == computers[1]:
-            for pre, fill, node in anytree.RenderTree(tree.root):
-                print("%s%s, %s" % (
-                    pre,
-                    node.name,
-                    node.data.terminal_result))
+    if plies <= 2:
+        for pre, fill, node in anytree.RenderTree(tree.root):
+            # print("%s%s, %3d, %s, %s, %s" % (
+            print("%s%s, %s" % (
+                pre,
+                node.name,
+                node.data))
 
-        assert move in ans
+    assert move in ans
+    return
+
+
+@pytest.mark.parametrize("n,board,plies,ans",
+                         [(n, b, d, a) for n, b, d, a
+                          in zip(range(len(ans)), boards, plies, ans)])
+def test_mcts_next_move(n, board, plies, ans):
+    computer = MCTS("mcts_test",
+                    MCTSConfig(simulations=7**plies + 1 if plies <= 6 else 2**plies,
+                               pb_c_init=9999),
+                    evaluators.Evaluator(
+                        evaluators.evaluate_centre_with_prior))
+    board_copy = copy(board)
+    print(board)
+
+    move, _, tree = computer.make_move(board_copy)
+
+    if plies <= 2:
+        for pre, fill, node in anytree.RenderTree(tree.root):
+            print("%s%s, %3d, %s, %s, %s" % (
+                pre,
+                node.name,
+                tree.get_node_value(node),
+                node.data.board.result,
+                node.data.position_value,
+                node.data.search_value))
+    elif plies == 15:
+        for pre, fill, node in anytree.RenderTree(tree.root):
+            print("%s%s, %s" % (
+                pre,
+                node.name,
+                node.data.terminal_result))
+
+    assert move in ans
     return
 
 
