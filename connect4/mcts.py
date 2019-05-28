@@ -169,12 +169,12 @@ def search(config: MCTSConfig,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
     # First evaluate root and add noise
-    board = tree.root.data.board
-    value, root_prior = evaluator(board)
+    root_data = tree.root.data
+    value, root_prior = evaluator(root_data.board)
     # later we will return the root prior to it's true value so the transition table is accurate
     noisy_prior = add_exploration_noise(config,
                                         root_prior,
-                                        board.valid_moves)
+                                        root_data.valid_moves)
     tree.root.data.position_value = PositionEvaluation(value,
                                                        noisy_prior)
 
@@ -206,7 +206,6 @@ def search(config: MCTSConfig,
         backpropagate(node, value)
 
     # Return the root prior to it's true value
-    # FIXME: Check that this works for parallelism
     tree.root.data.position_value.prior = root_prior
     return
 
@@ -214,6 +213,39 @@ def search(config: MCTSConfig,
 def select_child(config: MCTSConfig,
                  tree: Tree,
                  node: Node):
+    non_terminal_children = [child for child in node.children if
+                             child.name not in node.data.terminal_moves]
+    assert non_terminal_children
+
+    if len(non_terminal_children) == 1:
+        return non_terminal_children[0]
+
+    _, child = max((ucb_score(config, tree, node, child), i)
+                   for i, child in enumerate(non_terminal_children))
+
+    return non_terminal_children[child]
+
+
+def ucb_score(config: MCTSConfig,
+              tree: Tree,
+              node: Node,
+              child: Node):
+    pb_c = math.log((node.data._search_value.visit_count + config.pb_c_base + 1) /
+                    config.pb_c_base) + config.pb_c_init
+    pb_c *= math.sqrt(node.data._search_value.visit_count) / (child.data._search_value.visit_count + 1)
+
+    pb_c = pb_c * (
+        math.sqrt(node.data._search_value.visit_count)
+        / (child.data._search_value.visit_count + 1))
+
+    prior_score = pb_c * node.data.position_value.prior[child.name]
+    value_score = tree.get_node_value(child)
+    return prior_score + value_score
+
+
+def select_child_vector(config: MCTSConfig,
+                        tree: Tree,
+                        node: Node):
     non_terminal_children = [child for child in node.children if
                              child.name not in node.data.terminal_moves]
     _, child = max((ucb_score(config, tree, node, child), i)
@@ -251,7 +283,7 @@ def backpropagate_terminal(node: Node,
     node = node.parent
 
     # The side to move can choose a win - they choose the quickest forcing line
-    if same_side(result, node.data.board._player_to_move):
+    if same_side(result, node.data.board.player_to_move):
         age = min((c.data.terminal_result.age
                    for c in node.children
                    if c.name in node.data.terminal_moves))
@@ -265,7 +297,7 @@ def backpropagate_terminal(node: Node,
         # if forced to choose a loss, will choose the longest one
         # N.B. in connect4 all draws have age 42
         _, age, idx = max((value_to_side(c.data.terminal_result.result.value,
-                                         node.data.board._player_to_move),
+                                         node.data.board.player_to_move),
                            c.data.terminal_result.age,
                            i)
                           for i, c in enumerate(node.children))

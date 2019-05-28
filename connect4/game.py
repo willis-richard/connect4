@@ -22,7 +22,7 @@ class Game():
             print("Game between", self._player_o, " and ", self._player_x)
             print(self._board)
         while self._board.result is None:
-            if self._board._player_to_move == Side.o:
+            if self._board.player_to_move == Side.o:
                 move, _, _ = self._player_o.make_move(self._board)
                 name = self._player_o.name
             else:

@@ -54,6 +54,10 @@ class Side(IntEnum):
     o = 0
     x = 1
 
+    @classmethod
+    def as_str(cls, side):
+        return 'o' if side == Side.o else 'x'
+
 
 class Result(Enum):
     o_win = 1.0

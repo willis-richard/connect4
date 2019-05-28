@@ -27,12 +27,11 @@ class Evaluator():
 
 
 def evaluate_centre(board: Board):
-    # value = 0.5 + \
-    #     (np.einsum('ij,ij', board.o_pieces, info.value_grid)
-    #      - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
-    #     / float(info.value_grid_sum)
-    # return value
-    return 0.5
+    value = 0.5 + \
+        (np.einsum('ij,ij', board.o_pieces, info.value_grid)
+         - np.einsum('ij,ij', board.x_pieces, info.value_grid)) \
+        / float(info.value_grid_sum)
+    return value
 
 
 def evaluate_centre_with_prior(board: Board):

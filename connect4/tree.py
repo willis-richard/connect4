@@ -47,7 +47,7 @@ class Tree():
     def __init__(self,
                  board: Board,
                  node_data_type):
-        self.side = board._player_to_move
+        self.side = board.player_to_move
         self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
 
@@ -91,8 +91,7 @@ class Tree():
     def create_node(self, name, board, parent=None):
         node_data = self.node_data_type(board)
 
-        node = Node(name, parent=parent, data=node_data)
-        return node
+        return Node(name, parent=parent, data=node_data)
 
     def expand_node(self,
                     node: Node,

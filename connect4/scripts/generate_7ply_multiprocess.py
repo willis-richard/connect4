@@ -14,7 +14,7 @@ import torch
 
 
 def backpropagate(board_ips, table, player):
-    to_move = board_ips[0]._player_to_move
+    to_move = board_ips[0].player_to_move
     boards = []
     values = []
     priors = []

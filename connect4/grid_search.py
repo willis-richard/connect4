@@ -55,7 +55,7 @@ def nega_max(node: Node,
         node.data.position_value = value
         return value
 
-    side = node.data.board._player_to_move
+    side = node.data.board.player_to_move
 
     if side == Side.o:
         value = -2

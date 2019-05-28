@@ -79,9 +79,9 @@ if __name__ == "__main__":
                               4,
                               ev.Evaluator(ev.evaluate_centre))
 
-        # player_2 = MCTS("mcts_det",
-        #                 MCTSConfig(simulations=2000),
-        #                 ev.Evaluator(ev.evaluate_centre_with_prior))
+        player_2 = MCTS("mcts_det",
+                        MCTSConfig(simulations=2000),
+                        ev.Evaluator(ev.evaluate_centre_with_prior))
 
         # model = ModelWrapper(ModelConfig(),
         #                      file_name=parser.args.net_filepath)
@@ -92,8 +92,8 @@ if __name__ == "__main__":
         #                                      model=model)))
 
         match = Match(parser.args.display,
-                      player_1,
-                      player_1,
+                      player_2,
+                      player_2,
                       plies=parser.args.plies,
                       switch=parser.args.switch)
         match.play(agents=parser.args.agents)

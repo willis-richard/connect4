@@ -22,7 +22,7 @@ class Board():
         board.x_pieces = x_pieces
         board.player_to_move = Side(board.age % 2)
         board._check_valid()
-        board.check_terminal_position()
+        board._check_terminal_position()
         return board
 
     def __copy__(self):
@@ -43,13 +43,6 @@ class Board():
         x_int = np.dot(np.concatenate(self.x_pieces), info.hash_value)
         return (o_int, x_int)
 
-    def to_fliplr_int_tuple(self):
-        o_int = np.dot(np.concatenate(np.fliplr(self.o_pieces)),
-                       info.hash_value)
-        x_int = np.dot(np.concatenate(np.fliplr(self.x_pieces)),
-                       info.hash_value)
-        return (o_int, x_int)
-
     def __hash__(self):
         return hash(self.to_int_tuple())
 
@@ -60,11 +53,6 @@ class Board():
         new_board._player_to_move = copy(self._player_to_move)
         new_board.result = copy(self.result)
         return new_board
-
-    def fliplr(self):
-        self.o_pieces = np.fliplr(self.o_pieces)
-        self.x_pieces = np.fliplr(self.x_pieces)
-        return self
 
     @property
     def player_to_move(self):
@@ -107,9 +95,6 @@ class Board():
         pieces = self._get_pieces()
         return set(i for i in range(info.width) if not all(pieces[:, i]))
 
-    def get_plies(self):
-        return np.sum(self._get_pieces())
-
     def _check_straight(self, pieces):
         return np.any(np.all([pieces[i:i+info.win_length, j] for i in range(pieces.shape[0] - info.win_length + 1) for j in range(pieces.shape[1])], axis=1))
 
@@ -141,7 +126,7 @@ class Board():
         y = pieces & (pieces >> 1)
         return (y & (y >> 2)) != 0  # check vertical |
 
-    def check_terminal_position(self, check_all: bool = True):
+    def _check_terminal_position(self, check_all: bool = True):
         if (check_all or self._player_to_move == Side.x) and \
            self.check_for_winner_c(self.o_pieces):
             self.result = Result.o_win
@@ -163,7 +148,7 @@ class Board():
 
     def make_move(self, move):
         self._make_move(move)
-        return self.check_terminal_position(False)
+        return self._check_terminal_position(False)
 
     def _check_valid(self):
         assert self.o_pieces.shape == (info.height, info.width)

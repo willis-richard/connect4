@@ -47,7 +47,7 @@ if __name__ == '__main__':
     for i, board in enumerate(board_ips):
         if i % ten_percent == 0:
             print(i)
-        to_move = board._player_to_move
+        to_move = board.player_to_move
         undetermined = False
         moves = np.zeros((7,))
         valid_moves = board.valid_moves
