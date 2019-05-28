@@ -1,11 +1,28 @@
 from connect4.board_c import Board
-from connect4.utils import Connect4Stats as info, Result, Side, value_to_side
+from connect4.utils import Connect4Stats as info, Side, value_to_side
 
 from anytree import Node
 from copy import copy
 import numpy as np
 from scipy.special import softmax
-from typing import Dict, Optional, Tuple
+
+
+# Give Node an __eq__ operator -> will be the same if the boards are the same
+# def node_eq(self, other):
+#     return self.data.board == other.data.board
+
+
+# def node_gt(self, other):
+#     return self.name > other.name
+
+
+# def node_hash(self):
+#     return hash(self.data.board)
+
+
+# Node.__eq__ = node_eq
+# Node.__gt__ = node_gt
+# Node.__hash__ = node_hash
 
 
 class BaseNodeData():

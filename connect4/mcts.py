@@ -179,10 +179,10 @@ def search(config: MCTSConfig,
                                                        noisy_prior)
 
     for _ in range(config.simulations):
-        node = tree.root
-
         if not tree.root.data.non_terminal_moves:
             break
+
+        node = tree.root
 
         while node.children:
             node = select_child(config, tree, node)
@@ -220,10 +220,10 @@ def select_child(config: MCTSConfig,
     if len(non_terminal_children) == 1:
         return non_terminal_children[0]
 
-    _, child = max((ucb_score(config, tree, node, child), i)
-                   for i, child in enumerate(non_terminal_children))
+    _, idx = max((ucb_score(config, tree, node, child), i)
+                 for i, child in enumerate(non_terminal_children))
 
-    return non_terminal_children[child]
+    return non_terminal_children[idx]
 
 
 def ucb_score(config: MCTSConfig,
