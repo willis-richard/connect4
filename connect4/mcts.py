@@ -220,20 +220,17 @@ def select_child(config: MCTSConfig,
     if len(non_terminal_children) == 1:
         return non_terminal_children[0]
 
-    _, idx = max((ucb_score(config, tree, node, child), i)
+    _, idx = max((ucb_score(config, node, child), i)
                  for i, child in enumerate(non_terminal_children))
 
     return non_terminal_children[idx]
 
 
 def ucb_score(config: MCTSConfig,
-              tree: Tree,
               node: Node,
               child: Node):
     pb_c = math.log((node.data._search_value.visit_count + config.pb_c_base + 1) /
                     config.pb_c_base) + config.pb_c_init
-    pb_c *= math.sqrt(node.data._search_value.visit_count) / (child.data._search_value.visit_count + 1)
-
     pb_c = pb_c * (
         math.sqrt(node.data._search_value.visit_count)
         / (child.data._search_value.visit_count + 1))
