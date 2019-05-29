@@ -35,8 +35,10 @@ class Parser():
 
     def game(self):
         parser = argparse.ArgumentParser(description='Run a game between two human players.')
-        parser.add_argument('-n', '--names', nargs=2,
+        parser.add_argument('-p', '--players', nargs=2,
                             help='the names of the two players')
+        parser.add_argument('-n', '--net_filepath', type=str, required=False,
+                            help='filepath to a pytorch network')
         self.args = parser.parse_args(sys.argv[3:])
 
     def match(self):
@@ -69,10 +71,17 @@ if __name__ == "__main__":
 
     parser = Parser()
     if parser.mode.mode == 'game':
-        player_1 = HumanPlayer(parser.args.names[0])
-        player_2 = HumanPlayer(parser.args.names[1])
+        player_1 = HumanPlayer(parser.args.players[0])
+        # player_2 = HumanPlayer(parser.args.players[1])
+        model = ModelWrapper(ModelConfig(),
+                             file_name=parser.args.net_filepath)
 
-        match = Match(True, player_1, player_2, switch=False)
+        player_2 = MCTS(parser.args.players[0],
+                        MCTSConfig(simulations=2000),
+                        ev.Evaluator(partial(ev.evaluate_nn,
+                                             model=model)))
+
+        match = Match(True, player_1, player_2, switch=True)
         match.play()
     elif parser.mode.mode == 'match':
         player_1 = GridSearch("grid_det",

@@ -15,8 +15,7 @@ from typing import Dict, List, Tuple, Optional
 def game_pool(conn_list: List[Tuple[Connection, Connection]],
               n_threads: int,
               mcts_config: MCTSConfig,
-              n_games: int,
-              games: List):
+              n_games: int):
     assert n_threads == len(conn_list)
 
     position_table = {}
@@ -32,15 +31,15 @@ def game_pool(conn_list: List[Tuple[Connection, Connection]],
                                evaluator)
                           for i in range(n_threads)])
 
-    results = []
+    games = []
 
     with ThreadPool(n_threads) as pool:
-        # training_games = pool.map(partial(run_training_game,
         for game_data in pool.imap_unordered(partial(run_training_game,
                                                      player_deque=player_deque),
                                              range(n_games),
                                              chunksize=1):
             games.append(game_data)
+    return games
 
 
 def run_training_game(useless_int, player_deque: deque):

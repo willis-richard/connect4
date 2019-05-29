@@ -50,8 +50,8 @@ class TrainingLoop():
             self.stats_8ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
         else:
             self.stats_8ply = pd.DataFrame()
-        if os.path.exists(self.save_dir + '/stats/8ply.pkl'):
-            self.stats_7ply = pd.read_pickle(self.save_dir + '/stats/8ply.pkl')
+        if os.path.exists(self.save_dir + '/stats/7ply.pkl'):
+            self.stats_7ply = pd.read_pickle(self.save_dir + '/stats/7ply.pkl')
         else:
             self.stats_7ply = pd.DataFrame()
 
@@ -64,7 +64,7 @@ class TrainingLoop():
                 self.save_dir + '/stats/match_results.pkl')
         else:
             self.match_results = pd.DataFrame(
-                columns=['win', 'draw', 'loss', 'return'])
+                columns=['wins', 'draws', 'losses', 'return'])
 
         if config.visdom_enabled:
             self.vis = Visdom()
@@ -84,13 +84,22 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        model = self.nn_storage.get_model()
-        mcts_config = self.create_alpha_zero_config(training=True)
-
         start_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
+        self.generate_games()
+        train_t = time.time()
+        self.train()
+        end_t = time.time()
+        print('Generate games: {:.0f}s  training: {:.0f}s'.format(
+            train_t - start_t,
+            end_t - train_t))
+
+    def generate_games(self):
+        model = self.nn_storage.get_model()
+        mcts_config = self.create_alpha_zero_config(training=True)
+        games = []
+
         if self.config.game_processes == 1:
-            games = []
             evaluator = evl.Evaluator(partial(evl.evaluate_nn,
                                               model=model))
             alpha_zero = MCTS('AlphaZero',
@@ -98,8 +107,6 @@ class TrainingLoop():
                               evaluator)
             for _ in range(self.config.n_training_games):
                 game_data = training_game(alpha_zero).play()
-                # N.B. ideally these would be saved inside play(), but...
-                # multiprocessing?
                 games.apend(game_data)
         else:
             connections = [[Pipe() for
@@ -111,42 +118,38 @@ class TrainingLoop():
                                                 for sublist in connections
                                                 for item in sublist])
 
-            mgr = Manager()
-            games = mgr.list()
-
             with Pool(processes=self.config.game_processes) as pool:
-                # pool.imap_unordered(
-                pool.map(
-                    partial(game_pool,
-                            mcts_config=mcts_config,
-                            n_threads=self.config.game_threads,
-                            n_games=int(self.config.n_training_games /
-                                        self.config.game_processes),
-                            games=games),
-                    connections,
-                    chunksize=1)
+                # pool.map(
+                for game_batch in pool.imap_unordered(partial(
+                        game_pool,
+                        mcts_config=mcts_config,
+                        n_threads=self.config.game_threads,
+                        n_games=int(self.config.n_training_games /
+                                    self.config.game_processes)),
+                                                      connections,
+                                                      chunksize=1):
+                    games.extend(game_batch)
 
             inference_server.terminate()
 
         self.data_storage.save(games)
-        if self.config.visdom_enabled:
-            self.vis.text(self.data_storage.last_game_str(),
-                          win=self.game_win)
-        train_t = time.time()
 
-        training_data = self.data_storage.get_dataset()
-
-        print("{} positions created for training".format(len(training_data)))
-
-        self.nn_storage.train(training_data)
-
-        end_t = time.time()
-        print('Generate games: {:.0f}s  training: {:.0f}s'.format(train_t - start_t, end_t - train_t))
         results = list(map(lambda x: x.result, games))
         print('Player one: wins, draws, losses:  {}, {}, {}'.format(
             results.count(Result.o_win),
             results.count(Result.draw),
             results.count(Result.x_win)))
+
+        if self.config.visdom_enabled:
+            self.vis.text(self.data_storage.last_game_str(),
+                          win=self.game_win)
+
+    def train(self):
+        training_data = self.data_storage.get_dataset()
+
+        print("{} positions created for training".format(len(training_data)))
+
+        self.nn_storage.train(training_data)
 
     def evaluate(self):
         model = self.nn_storage.get_model()

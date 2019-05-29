@@ -199,19 +199,19 @@ class ModelWrapper():
         else:
             self.device = torch.device("cpu")
 
-        # self.optimiser = optim.SGD(self.net.parameters(),
-        #                            lr=config.initial_lr,
-        #                            momentum=config.momentum,
-        #                            weight_decay=config.weight_decay)
-        self.optimiser = optim.Adam(self.net.parameters())
-        # self.scheduler = MultiStepLR(self.optimiser,
-        #                              milestones=config.milestones,
-        #                              gamma=config.gamma)
+        self.optimiser = optim.SGD(self.net.parameters(),
+                                   lr=config.initial_lr,
+                                   momentum=config.momentum,
+                                   weight_decay=config.weight_decay)
+        # self.optimiser = optim.Adam(self.net.parameters())
+        self.scheduler = MultiStepLR(self.optimiser,
+                                     milestones=config.milestones,
+                                     gamma=config.gamma)
         if file_name is not None:
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-            # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
 
@@ -266,8 +266,8 @@ class ModelWrapper():
         torch.save(
             {
                 'net_state_dict': self.net.state_dict(),
-                'optimiser_state_dict': self.optimiser.state_dict()
-                # 'scheduler_state_dict': self.scheduler.state_dict()
+                'optimiser_state_dict': self.optimiser.state_dict(),
+                'scheduler_state_dict': self.scheduler.state_dict()
             },
             file_name)
 
@@ -292,7 +292,7 @@ class ModelWrapper():
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
-                # self.scheduler.step()
+                self.scheduler.step()
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
                 y_policy = y_policy.to(self.device)

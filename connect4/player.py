@@ -1,4 +1,5 @@
 from connect4 import tree
+from connect4.utils import Side
 
 from typing import Dict, Optional
 
@@ -23,7 +24,7 @@ class HumanPlayer(BasePlayer):
         while move not in board.valid_moves:
             try:
                 move = int(input("Enter " + self.name + " (" +
-                                 board.player_to_move + "'s) move:"))
+                                 Side.as_str(board.player_to_move) + "'s) move:"))
             except ValueError:
                 print("Try again dipshit")
                 pass
