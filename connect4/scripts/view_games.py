@@ -13,4 +13,6 @@ if __name__ == "__main__":
         print('{} games loaded'.format(len(games)))
         game = games[int(sys.argv[2])]
 
-        print(game_str(game))
+        print(game_str(game.moves,
+                       game.values,
+                       game.priors))

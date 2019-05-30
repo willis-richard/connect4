@@ -211,7 +211,7 @@ class ModelWrapper():
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
 
@@ -292,7 +292,6 @@ class ModelWrapper():
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
             for board, y_value, y_policy in data:
-                self.scheduler.step()
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
                 y_policy = y_policy.to(self.device)
@@ -313,6 +312,7 @@ class ModelWrapper():
         # https://discuss.pytorch.org/t/performance-highly-degraded-when-eval-is-activated-in-the-test-phase/3323/33
         # self.net.train(False)
         # Perhaps it is to do with the batchnorm: https://arxiv.org/abs/1702.03275
+        self.scheduler.step()
         self.net.eval()
 
     def evaluate_value_only(self, data: Connect4Dataset):
@@ -405,6 +405,7 @@ class TrainingDataStorage(GameStorage):
                       for i in range(self.iteration,
                                      self.iteration - n,
                                      -1)]
+        print(file_names)
         return ConcatDataset([Connect4Dataset.load(f)
                               for f in file_names])
 

@@ -14,7 +14,7 @@ if __name__ == "__main__":
     o_pieces[np.where(array == b'o')] = 1
     x_pieces[np.where(array == b'x')] = 1
 
-    board = Board(o_pieces, x_pieces)
+    board = Board.from_pieces(o_pieces, x_pieces)
 
     model_config = ModelConfig()
     model = ModelWrapper(model_config, file_name=sys.argv[2])
