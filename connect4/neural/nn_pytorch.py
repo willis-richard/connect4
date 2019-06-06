@@ -1,13 +1,11 @@
 from connect4.board_c import Board
-from connect4.utils import Connect4Stats as info
 from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import CombinedStats, ValueStats
 from connect4.neural.storage import GameStorage
-from connect4.neural.training_game import GameData, TrainingData
+from connect4.neural.training_game import GameData
 
-import os
 import numpy as np
 import torch
 import torch.optim as optim
@@ -183,8 +181,8 @@ class Net(nn.Module):
     def forward(self, x):
         x = self.body(x)
         value = self.value_head(x)
-        policy = self.policy_head(x)
-        return value, policy
+        prior = self.policy_head(x)
+        return value, prior
 
 
 class ModelWrapper():
@@ -211,16 +209,12 @@ class ModelWrapper():
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-            # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
 
         self.value_loss = nn.MSELoss()
-        self.policy_loss = nn.BCELoss()
-        # FIXME: that this needs to be with logits, not just the class index
-        # Google says: BCEWithLogitsLoss or MultiLabelSoftMarginLoss
-        # self.policy_loss = nn.CrossEntropyLoss()
-        # self.policy_loss = nn.MultiLabelSoftMarginLoss()
+        self.prior_loss = nn.BCELoss()
         print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
 
@@ -262,61 +256,73 @@ class ModelWrapper():
         priors = priors.cpu().data.numpy()
         return values, priors
 
-    def save(self, file_name: str):
+    def save(self, folder_path: str):
         torch.save(
             {
                 'net_state_dict': self.net.state_dict(),
                 'optimiser_state_dict': self.optimiser.state_dict(),
                 'scheduler_state_dict': self.scheduler.state_dict()
             },
-            file_name)
+            folder_path + '/net.pth')
 
-    def criterion(self, x_value, x_policy, y_value, y_policy):
+    def criterion(self, x_value, x_prior, y_value, y_prior):
         assert x_value.shape == y_value.shape
-        assert x_policy.shape == y_policy.shape
+        assert x_prior.shape == y_prior.shape
 
         value_loss = self.value_loss(x_value, y_value)
-        policy_loss = self.policy_loss(x_policy, y_policy)
+        prior_loss = self.prior_loss(x_prior, y_prior)
         # L2 regularization loss is added via the optimiser (setting a weight_decay value)
 
-        return value_loss + policy_loss
+        return value_loss, prior_loss
 
     # FIXME: How is the optimiser going to work?
     # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
     # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
 
-    def train(self, data: Connect4Dataset):
+    def train(self,
+              data: Connect4Dataset,
+              print_stats: bool = False):
         data = DataLoader(data,
                           batch_size=self.config.batch_size,
                           shuffle=True)
         self.net.train()
         for epoch in range(self.config.n_training_epochs):
-            for board, y_value, y_policy in data:
+            if print_stats:
+                stats = CombinedStats()
+            for board, y_value, y_prior in data:
                 board = board.to(self.device)
                 y_value = y_value.to(self.device)
-                y_policy = y_policy.to(self.device)
+                y_prior = y_prior.to(self.device)
 
                 # zero the parameter gradients
                 self.optimiser.zero_grad()
 
                 # forward + backward + optimise
-                x_value, x_policy = self.net(board)
+                x_value, x_prior = self.net(board)
 
-                loss = self.criterion(x_value, x_policy, y_value, y_policy)
+                value_loss, prior_loss = self.criterion(x_value,
+                                                        x_prior,
+                                                        y_value,
+                                                        y_prior)
+                loss = value_loss + prior_loss
                 loss.backward()
                 self.optimiser.step()
-        # https://discuss.pytorch.org/t/output-always-the-same/5934/4
-        # https://github.com/pytorch/pytorch/issues/5406
-        # https://discuss.pytorch.org/t/model-eval-gives-incorrect-loss-for-model-with-batchnorm-layers/7561/13
-        # Epic post in this one
-        # https://discuss.pytorch.org/t/performance-highly-degraded-when-eval-is-activated-in-the-test-phase/3323/33
-        # self.net.train(False)
-        # Perhaps it is to do with the batchnorm: https://arxiv.org/abs/1702.03275
+                if print_stats:
+                    stats.update(x_value.cpu().detach().numpy(),
+                                 y_value.cpu().numpy(),
+                                 value_loss,
+                                 x_prior.cpu().detach().numpy(),
+                                 y_prior.cpu().numpy(),
+                                 prior_loss)
+
+            if print_stats:
+                print("epoch: {}\n{}".format(epoch, stats))
+
         self.scheduler.step()
         self.net.eval()
 
     def evaluate_value_only(self, data: Connect4Dataset):
-        # Note no policy here, 3rd arg unused
+        # Note no prior here, 3rd arg unused
         data = DataLoader(data, batch_size=4096, shuffle=True)
         """Get an idea of how the initialisation is"""
         stats = ValueStats()
@@ -342,7 +348,7 @@ class ModelWrapper():
                         self.net,
                         self.device,
                         self.value_loss,
-                        self.policy_loss)
+                        self.prior_loss)
 
 
 def weights_init(m):
@@ -381,14 +387,13 @@ def evaluate(train_gen, net, device, value_criterion, prior_criterion):
 
 
 class TrainingDataStorage(GameStorage):
-    def __init__(self, folder_path: str):
-        super().__init__(folder_path)
+    def td_file_name(self, folder_path, gen):
+        return "{}/{}/data.pth".format(folder_path, gen)
 
-    def td_file_name(self, iteration):
-        return "{}/data/{}.pth".format(self.folder_path, iteration)
-
-    def save(self, games: List[GameData]):
-        super().save(games)
+    def save(self,
+             games: List[GameData],
+             folder_path: str):
+        super().save(games, folder_path)
 
         data = np.sum(list(map(lambda x: x.data, games)))
         board_t, value_t, prior_t = native_to_pytorch(data.boards,
@@ -397,15 +402,16 @@ class TrainingDataStorage(GameStorage):
                                                       add_fliplr=True)
 
         dataset = Connect4Dataset(board_t, value_t, prior_t)
-        dataset.save(self.td_file_name(self.iteration))
+        dataset.save(folder_path + '/data.pth')
 
-    def get_dataset(self):
-        n = min(20, int((self.iteration + 1) / 2))
-        file_names = [self.td_file_name(i)
-                      for i in range(self.iteration,
-                                     self.iteration - n,
+    def get_dataset(self,
+                    base_path: str,
+                    gen: int):
+        n = min(20, int((gen + 1) / 2))
+        file_names = [self.td_file_name(base_path, i)
+                      for i in range(gen,
+                                     gen - n,
                                      -1)]
-        print(file_names)
         return ConcatDataset([Connect4Dataset.load(f)
                               for f in file_names])
 

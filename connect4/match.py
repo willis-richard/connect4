@@ -71,7 +71,6 @@ class Match():
 
     def play_parallel(self, agents):
         with Pool(processes=agents) as pool:
-            # results = pool.map(lambda x: x.play(), self.games)
             results = pool.map(top_level_defined_play, self.games)
 
         return results
