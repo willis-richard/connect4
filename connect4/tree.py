@@ -76,9 +76,7 @@ class Tree():
                            c.name)
                           for c in self.root.children))
 
-        absolute_value = value_to_side(value, self.side)
-
-        return move, absolute_value
+        return move, value
 
     def select_softmax_move(self):
         moves = []
@@ -89,9 +87,8 @@ class Tree():
         values = softmax(values)
 
         idx = np.random.choice(range(len(moves)), p=values)
-        absolute_value = value_to_side(values[idx], self.side)
 
-        return moves[idx], absolute_value
+        return moves[idx], values[idx]
 
     def get_policy(self):
         policy = np.zeros((info.width,))

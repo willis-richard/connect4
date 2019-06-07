@@ -85,7 +85,7 @@ class TrainingLoop():
                 self.evaluate()
 
     def loop(self):
-        os.makedirs(self.folder_path + '/' + str(self.gen))
+        os.makedirs(self.folder_path)
         start_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
         self.generate_games()

@@ -42,7 +42,7 @@ class PositionEvaluation():
         return float(self.value)
 
     def __str__(self):
-        return str(self.__float__())
+        return str("{:.4f}".format(self.__float__()))
 
     def __repr__(self):
         return "position_value: " + str(self.value) + \
@@ -63,7 +63,7 @@ class SearchEvaluation():
         return float(self.value_sum / self.visit_count)
 
     def __str__(self):
-        return str(self.__float__())
+        return str("{:.4f}".format(self.__float__()))
 
     def __repr__(self):
         return "value: " + str(self.__float__()) + \
@@ -136,11 +136,14 @@ class MCTS(BasePlayer):
         board.make_move(move)
         # Note that because we select the action greedily, the value of the root is equal to the perceived value of the 'best value' child
         # We need to return the value of the position to 'player_o'
-        return move, value, tree
+
+        absolute_value = value_to_side(value, tree.side)
+
+        return move, absolute_value, tree
 
     def select_best_move(self, tree) -> Tuple[int, float]:
         if tree.root.data.terminal_result is None:
-            move, value = tree.select_best_move()
+            return tree.select_best_move()
         # choose shortest win
         elif same_side(tree.root.data.terminal_result.result, tree.side):
             value, _, move = max((tree.get_node_value(c),
@@ -155,10 +158,7 @@ class MCTS(BasePlayer):
                                   c.name)
                                  for c in tree.root.children
                                  if c.name in tree.root.data.terminal_moves)
-
-        absolute_value = value_to_side(value, tree.side)
-
-        return move, absolute_value
+        return move, value
 
     def __str__(self):
         return super().__str__() + ", type: Computer"
@@ -177,6 +177,7 @@ def search(config: MCTSConfig,
                                         root_data.valid_moves)
     tree.root.data.position_value = PositionEvaluation(value,
                                                        noisy_prior)
+    tree.root.data._search_value.add(value)
 
     for _ in range(config.simulations):
         if not tree.root.data.non_terminal_moves:
@@ -280,6 +281,8 @@ def backpropagate_terminal(node: Node,
 
 def backpropagate(node: Node,
                   value: float):
+    # FIXME: don't count it as visited if we just position evaluated it
+    # well actually that fucked the ucb_score as we multiplied the prior by 0 and thus always chose move 6
     node.data._search_value.add(value)
     while not node.is_root:
         node = node.parent
