@@ -25,6 +25,8 @@ BITMASK = np.flipud(np.transpose(np.reshape(
 #  2  9 16 23 30 37 44
 #  1  8 15 22 29 36 43
 #  0  7 14 21 28 35 42  BOTTOM
+HALF = int(WIDTH / 2)
+SHIFT = (WIDTH - 1) * H1
 
 
 class Board():
@@ -85,6 +87,27 @@ class Board():
         if self.result is not None:
             return set()
         return set([i for i in range(WIDTH) if self._isplayable(i)])
+
+    @property
+    def symmetrical(self):
+        return self.is_symmetrical(self.color[0]) and \
+            self.is_symmetrical(self.color[1])
+
+    def is_symmetrical(self, pieces):
+        for i in range(HALF):
+            # delete all columns to the right
+            col_l = pieces << (SHIFT - H1 * i)
+            col_l = col_l & ALL1
+            # delete all columns to the left, leaving it in col 0
+            col_l = col_l >> SHIFT
+            # delete all columns to the right
+            col_r = pieces << (H1 * i)
+            col_r = col_r & ALL1
+            # delete all columns to the left, leaving it in col 0
+            col_r = col_r >> SHIFT
+            if ((col_l ^ col_r) != 0):
+                return False
+        return True
 
     def create_fliplr(self):
         flip_o_pieces = np.fliplr(self.o_pieces)

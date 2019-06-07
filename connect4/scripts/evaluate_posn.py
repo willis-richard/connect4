@@ -12,7 +12,7 @@ import sys
 
 
 if __name__ == "__main__":
-    np.set_printoptions(5)
+    np.set_printoptions(4)
     array = np.genfromtxt(sys.argv[1], dtype='c')
     o_pieces = np.zeros(array.shape, dtype=np.bool_)
     x_pieces = np.zeros(array.shape, dtype=np.bool_)
@@ -20,6 +20,7 @@ if __name__ == "__main__":
     x_pieces[np.where(array == b'x')] = 1
 
     board = Board.from_pieces(o_pieces, x_pieces)
+    print(board.symmetrical)
 
     model_config = ModelConfig()
     model = ModelWrapper(model_config, file_name=sys.argv[2])
@@ -27,7 +28,7 @@ if __name__ == "__main__":
     print('{}\nvalue {}, policy {}'.format(board, value, prior))
 
     player = MCTS("name",
-                  MCTSConfig(simulations=8),
+                  MCTSConfig(simulations=800),
                   ev.Evaluator(partial(ev.evaluate_nn,
                                        model=model)))
 
@@ -40,7 +41,7 @@ if __name__ == "__main__":
             child.children = []
 
     for pre, fill, node in anytree.RenderTree(tree.root):
-        print("{}{}, {:.3f} ({}, {}, {}), {}, {}".format(
+        print("{}{}, {:.4f} ({}, {}, {}), {}, {}".format(
             pre,
             node.name,
             tree.get_node_value(node),

@@ -81,13 +81,18 @@ class Tree():
     def select_softmax_move(self):
         moves = []
         values = []
+        visit_counts = []
         for c in self.root.children:
             moves.append(c.name)
             values.append(self.get_node_value(c))
-        values = softmax(values)
+            visit_counts.append(c.data._search_value.visit_counts
+                                if c.data.search_value
+                                else 0)
+        probabilties = softmax(visit_counts)
 
-        idx = np.random.choice(range(len(moves)), p=values)
+        idx = np.random.choice(range(len(moves)), p=probabilties)
 
+        # FIXME: better way of both finding the value, and knowing if I should return the best value or the chosen move...
         return moves[idx], values[idx]
 
     def get_policy(self):

@@ -281,8 +281,6 @@ def backpropagate_terminal(node: Node,
 
 def backpropagate(node: Node,
                   value: float):
-    # FIXME: don't count it as visited if we just position evaluated it
-    # well actually that fucked the ucb_score as we multiplied the prior by 0 and thus always chose move 6
     node.data._search_value.add(value)
     while not node.is_root:
         node = node.parent
