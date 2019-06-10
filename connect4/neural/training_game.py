@@ -9,9 +9,10 @@ def training_game(player: BasePlayer):
     board = Board()
     game_data = GameData()
     while board.result is None:
+        board_copy = copy(board)
         move, value, tree = player.make_move(board)
         prior = tree.get_policy()
-        game_data.add_move(copy(board), move, value, prior)
+        game_data.add_move(board_copy, move, value, prior)
 
     game_data.result = board.result
 
