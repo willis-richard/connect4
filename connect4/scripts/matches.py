@@ -17,18 +17,24 @@ if __name__ == "__main__":
         if str(e) == 'context has already been set':
             pass
     for i in range(0, 250, 50):
+    # for i in [250, 300]:
         model_1 = ModelWrapper(ModelConfig(),
-                             file_name=sys.argv[1] + str(i) + '.pth')
+                               # file_name="{}/{}/net.pth".format(
+                               #     sys.argv[1], i))
+                               file_name="{}/net/{}.pth".format(
+                                   sys.argv[1], i))
 
         a0_1 = MCTS("mcts_nn_" + str(i),
                     MCTSConfig(simulations=800),
                     ev.Evaluator(partial(ev.evaluate_nn,
                                          model=model_1)))
 
-        for j in [250]:
+        for j in [350]:
             if j > i:
                 model_2 = ModelWrapper(ModelConfig(),
-                                     file_name=sys.argv[1] + str(j) + '.pth')
+                                       # file_name="{}/{}/net.pth".format(
+                                       #     sys.argv[1], j))
+                                       '/home/richard/Downloads/nn/new_dir10/{}/net.pth'.format(j))
 
                 a0_2 = MCTS("mcts_nn_" + str(j),
                             MCTSConfig(simulations=800),

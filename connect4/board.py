@@ -167,6 +167,10 @@ class Board():
         assert not (self.check_for_winner(self.o_pieces) and self._player_to_move == Side.o)
         assert not (self.check_for_winner(self.x_pieces) and self._player_to_move == Side.x)
 
+        # if there are any pieces played, at least one o must be in the bottom row
+        if self.age > 0:
+            assert np.any(self.o_pieces[-1:])
+
 
 def make_random_ips(plies):
     ips = set()

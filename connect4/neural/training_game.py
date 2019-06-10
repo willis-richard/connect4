@@ -55,7 +55,6 @@ class GameData():
         self.priors.append(prior)
 
     def create_training_values(self):
-        assert self.result is not None
         # FIXME: TD(lambda) algorithm?
         # self.values = (np.array(self.values, dtype='float') + result.value) / 2.0
         return [self.result.value] * len(self.values)

@@ -85,7 +85,7 @@ class Tree():
         for c in self.root.children:
             moves.append(c.name)
             values.append(self.get_node_value(c))
-            visit_counts.append(c.data._search_value.visit_counts
+            visit_counts.append(c.data._search_value.visit_count
                                 if c.data.search_value
                                 else 0)
         probabilties = softmax(visit_counts)
