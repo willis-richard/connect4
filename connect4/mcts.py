@@ -296,7 +296,8 @@ def add_exploration_noise(config: MCTSConfig,
                                 info.width)
         frac = config.root_exploration_fraction
         prior = prior * (1 - frac) + noise * frac
-        prior = normalise_prior(valid_moves, prior)
+        # FIXME: Currently I never normalise (valid moves, non_terminal_moves) so I am not here either
+        # prior = normalise_prior(valid_moves, prior)
     return prior
 
 
