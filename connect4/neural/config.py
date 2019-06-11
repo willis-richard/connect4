@@ -11,7 +11,7 @@ class ModelConfig():
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
                  batch_size=4096,
-                 n_training_epochs=10,
+                 n_training_epochs=2,
                  use_gpu=True):
         self.weight_decay = weight_decay
         self.momentum = momentum
@@ -25,11 +25,9 @@ class ModelConfig():
 
 class StorageConfig():
     def __init__(self,
-                 path_8ply_boards='/home/richard/data/connect4/connect4_boards.pth',
-                 path_8ply_values='/home/richard/data/connect4/connect4_values.pth',
+                 data_dir='/home/richard/data/connect4',
                  save_dir='/home/richard/Downloads/nn/new_dir'):
-        self.path_8ply_boards = path_8ply_boards
-        self.path_8ply_values = path_8ply_values
+        self.data_dir = data_dir
         self.save_dir = save_dir
 
 

@@ -3,6 +3,8 @@ import connect4.evaluators as ev
 from connect4.grid_search import GridSearch
 from connect4.utils import Side
 
+from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
+
 from connect4.scripts.view_boards import read_8ply_data
 
 from copy import copy
@@ -14,19 +16,22 @@ def return_half(x):
     return 0.5
 
 
+DATA_DIR = '/home/richard/data/connect4'
+
 if __name__ == '__main__':
-    boards_8ply, values_8ply = read_8ply_data()
-    table = {copy(b): v for b, v in zip(boards_8ply, values_8ply)}
-    table.update([(b.create_fliplr(), v) for b, v in zip(boards_8ply, values_8ply)])
+    boards_8ply, values_8ply = read_8ply_data(add_fliplr=True)
+    # with open(DATA_DIR + '/8ply_boards.pkl', 'rb') as f:
+    #     boards_8ply = pickle.load(f)
+    # with open(DATA_DIR + '/8ply_values.pkl', 'rb') as f:
+    #     values_8ply = pickle.load(f)
+    table = {b: v for b, v in zip(boards_8ply, values_8ply)}
 
-    board_ips = make_random_ips(7)
-    with open('/home/richard/data/connect4/7ply_ips.pkl', 'wb') as f:
-        pickle.dump(board_ips, f)
+    # board_ips = make_random_ips(7)
+    # with open(DATA_DIR + '/7ply_ips.pkl', 'wb') as f:
+    #     pickle.dump(board_ips, f)
 
-    # with open('/home/richard/data/connect4/8ply_table.pkl', 'rb') as f:
-    #     table = pickle.load(f)
-    # with open('/home/richard/data/connect4/7ply_ips.pkl', 'rb') as f:
-    #     board_ips = pickle.load(f)
+    with open(DATA_DIR + '/7ply_ips.pkl', 'rb') as f:
+        board_ips = pickle.load(f)
 
     print("Number of 7ply ips: {}".format(len(board_ips)))
     print("len of table at start: {}".format(len(table)))
@@ -53,11 +58,12 @@ if __name__ == '__main__':
         valid_moves = board.valid_moves
         for move in valid_moves:
             new_board = copy(board)
-            new_board._make_move(move)
+            new_board.make_move(move)
             value = table.get(new_board)
             if value is None:
-                value = new_board.check_terminal_position()
+                value = new_board.result
                 if value is None:
+                    # Now we look into whether the resulting 8 ply position has a trivial solution
                     _, value, _ = player_1.make_move(
                         copy(new_board))
                     if value == 0.5:
@@ -67,7 +73,7 @@ if __name__ == '__main__':
                             unknown.append(copy(board))
                             undetermined = True
                             break
-                    value = np.round(value)
+                    value = float(int(np.round(value)))
                     table[copy(new_board)] = value
                     table[new_board.create_fliplr()] = value
                 else:
@@ -81,6 +87,9 @@ if __name__ == '__main__':
         prior = np.array([1.0 if moves[x] == value and x in valid_moves
                           else 0.0
                           for x in range(7)])
+        prior = prior / np.sum(prior) if \
+            np.sum(prior) > 0.0 else \
+            np.zeros((7,))
         boards.append(copy(board))
         values.append(value)
         priors.append(prior)
@@ -88,16 +97,20 @@ if __name__ == '__main__':
     print("Finished: {} {} {}".format(len(boards), len(values), len(priors)))
     print("{} known 8ply non-terminal positions".format(len(table)))
     print("{} unknown (prior, not necessarily value) 7ply non-terminal positions".format(len(unknown)))
-    with open('/home/richard/data/connect4/8ply_table.pkl', 'wb') as f:
+    with open(DATA_DIR + '/8ply_table.pkl', 'wb') as f:
         pickle.dump(table, f)
-    with open('/home/richard/data/connect4/7ply_boards.pkl', 'wb') as f:
+    with open(DATA_DIR + '/7ply_boards.pkl', 'wb') as f:
         pickle.dump(boards, f)
-    with open('/home/richard/data/connect4/7ply_values.pkl', 'wb') as f:
+    with open(DATA_DIR + '/7ply_values.pkl', 'wb') as f:
         pickle.dump(values, f)
-    with open('/home/richard/data/connect4/7ply_priors.pkl', 'wb') as f:
+    with open(DATA_DIR + '/7ply_priors.pkl', 'wb') as f:
         pickle.dump(priors, f)
-    with open('/home/richard/data/connect4/7ply_unknown_boards.pkl', 'wb') as f:
+    with open(DATA_DIR + '/7ply_unknown_boards.pkl', 'wb') as f:
         pickle.dump(unknown, f)
+
+    board_t, value_t, prior_t = native_to_pytorch(boards, values, priors)
+    data_7ply = Connect4Dataset(board_t, value_t, prior_t)
+    data_7ply.save(DATA_DIR + '/connect4dataset_7ply.pth')
 
     boards_8ply = []
     values_8ply = []
@@ -106,7 +119,11 @@ if __name__ == '__main__':
         values_8ply.append(v)
     print("len of boards 8ply: {}".format(len(boards_8ply)))
 
-    with open('/home/richard/data/connect4/8ply_boards.pkl', 'wb') as f:
+    with open(DATA_DIR + '/8ply_boards_extended.pkl', 'wb') as f:
         pickle.dump(boards_8ply, f)
-    with open('/home/richard/data/connect4/8ply_values.pkl', 'wb') as f:
+    with open(DATA_DIR + '/8ply_values_extended.pkl', 'wb') as f:
         pickle.dump(values_8ply, f)
+
+    board_t, value_t, _ = native_to_pytorch(boards_8ply, values_8ply)
+    data_8ply = Connect4Dataset(board_t, value_t, _)
+    data_8ply.save(DATA_DIR + '/connect4datasetextended_8ply.pth')

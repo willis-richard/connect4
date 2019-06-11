@@ -197,19 +197,19 @@ class ModelWrapper():
         else:
             self.device = torch.device("cpu")
 
-        self.optimiser = optim.SGD(self.net.parameters(),
-                                   lr=config.initial_lr,
-                                   momentum=config.momentum,
-                                   weight_decay=config.weight_decay)
-        # self.optimiser = optim.Adam(self.net.parameters())
-        self.scheduler = MultiStepLR(self.optimiser,
-                                     milestones=config.milestones,
-                                     gamma=config.gamma)
+        # self.optimiser = optim.SGD(self.net.parameters(),
+        #                            lr=config.initial_lr,
+        #                            momentum=config.momentum,
+        #                            weight_decay=config.weight_decay)
+        self.optimiser = optim.Adam(self.net.parameters())
+        # self.scheduler = MultiStepLR(self.optimiser,
+        #                              milestones=config.milestones,
+        #                              gamma=config.gamma)
         if file_name is not None:
             checkpoint = torch.load(file_name)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
-            self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
+            # self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])
         # else:
         #     self.net.apply(weights_init)
 
@@ -260,8 +260,9 @@ class ModelWrapper():
         torch.save(
             {
                 'net_state_dict': self.net.state_dict(),
-                'optimiser_state_dict': self.optimiser.state_dict(),
-                'scheduler_state_dict': self.scheduler.state_dict()
+                'optimiser_state_dict': self.optimiser.state_dict()
+                # 'optimiser_state_dict': self.optimiser.state_dict(),
+                # 'scheduler_state_dict': self.scheduler.state_dict()
             },
             folder_path + '/net.pth')
 
@@ -318,7 +319,7 @@ class ModelWrapper():
             if print_stats:
                 print("epoch: {}\n{}".format(epoch, stats))
 
-        self.scheduler.step()
+        # self.scheduler.step()
         self.net.eval()
 
     def evaluate_value_only(self, data: Connect4Dataset):
@@ -366,22 +367,23 @@ def weights_init(m):
 def evaluate(train_gen, net, device, value_criterion, prior_criterion):
     stats = CombinedStats()
 
-    for board, value, prior in train_gen:
-        board, value, prior = board.to(device), value.to(device), prior.to(device)
+    with torch.set_grad_enabled(False):
+        for board, value, prior in train_gen:
+            board, value, prior = board.to(device), value.to(device), prior.to(device)
 
-    value_output, prior_output = net(board)
-    assert value_output.shape == value.shape
-    assert prior_output.shape == prior.shape
+            value_output, prior_output = net(board)
+            assert value_output.shape == value.shape
+            assert prior_output.shape == prior.shape
 
-    value_loss = value_criterion(value_output, value)
-    prior_loss = prior_criterion(prior_output, prior)
+            value_loss = value_criterion(value_output, value)
+            prior_loss = prior_criterion(prior_output, prior)
 
-    stats.update(value_output.cpu().detach().numpy(),
-                 value.cpu().numpy(),
-                 value_loss,
-                 prior_output.cpu().detach().numpy(),
-                 prior.cpu().numpy(),
-                 prior_loss)
+            stats.update(value_output.cpu().numpy(),
+                         value.cpu().numpy(),
+                         value_loss,
+                         prior_output.cpu().numpy(),
+                         prior.cpu().numpy(),
+                         prior_loss)
 
     return stats
 

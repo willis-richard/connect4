@@ -30,6 +30,7 @@ class TrainingLoop():
     def __init__(self,
                  config: AlphaZeroConfig):
         self.config = config
+        self.data_dir = config.storage_config.data_dir
         self.save_dir = config.storage_config.save_dir
 
         # if there are existing dirs, load the latest
@@ -151,12 +152,12 @@ class TrainingLoop():
 
         print("{} positions created for training".format(len(training_data)))
 
-        self.model.train(training_data, True)
+        self.model.train(training_data)
         self.model.save(self.folder_path)
 
     def evaluate(self):
         ply8_data = Connect4Dataset.load(
-            '/home/richard/data/connect4/connect4dataset_8ply.pth')
+            self.data_dir + '/connect4dataset_8ply.pth')
         value_stats = self.model.evaluate_value_only(ply8_data)
         print("8 Ply Test Stats:  ", value_stats)
         self.stats_8ply = self.stats_8ply.append(value_stats.to_dict(),
@@ -164,7 +165,7 @@ class TrainingLoop():
         self.stats_8ply.to_pickle(self.save_dir + '/8ply.pkl')
 
         ply7_data = Connect4Dataset.load(
-            '/home/richard/data/connect4/connect4dataset_7ply.pth')
+            self.data_dir + '/connect4dataset_7ply.pth')
         combined_stats = self.model.evaluate(ply7_data)
         print("7 Ply Test Stats:  ", combined_stats)
         self.stats_7ply = self.stats_7ply.append(combined_stats.to_dict(),

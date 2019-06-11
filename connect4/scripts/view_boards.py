@@ -1,6 +1,9 @@
 from connect4.board_c import Board
 
+from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
+
 import numpy as np
+import pickle
 
 
 def parse_line(line):
@@ -23,7 +26,7 @@ def parse_line(line):
     return board, value
 
 
-def read_8ply_data():
+def read_8ply_data(add_fliplr: bool = False):
     with open('/home/richard/data/connect4/connect-4.data') as f:
         boards = []
         values = []
@@ -31,14 +34,19 @@ def read_8ply_data():
             board, value = parse_line(line)
             boards.append(board)
             values.append(value)
+            if add_fliplr and not board.symmetrical:
+                boards.append(board.create_fliplr())
+                values.append(value)
     return boards, values
 
 
 boards, values = read_8ply_data()
-
-from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
+with open('/home/richard/data/connect4/8ply_boards.pkl', 'wb') as f:
+    pickle.dump(boards, f)
+with open('/home/richard/data/connect4/8ply_values.pkl', 'wb') as f:
+    pickle.dump(values, f)
 
 board_t, value_t, _ = native_to_pytorch(boards, values)
 data = Connect4Dataset(board_t, value_t, _)
 
-data.save('/home/richard/newfucking.pth')
+data.save('/home/richard/data/connect4/connect4dataset_8ply.pth')
