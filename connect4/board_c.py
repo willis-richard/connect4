@@ -110,9 +110,36 @@ class Board():
         return True
 
     def create_fliplr(self):
-        flip_o_pieces = np.fliplr(self.o_pieces)
-        flip_x_pieces = np.fliplr(self.x_pieces)
-        return self.__class__().from_pieces(flip_o_pieces, flip_x_pieces)
+        new_board = self.__class__()
+        new_board.color[0] = self.flip_color(self.color[0])
+        new_board.color[1] = self.flip_color(self.color[1])
+        new_board.age = copy(self.age)
+        base_height = np.array([H1 * i for i in range(WIDTH)],
+                               dtype=np.int64)
+        height_incr = self.height - base_height
+        height_incr = np.flip(height_incr)
+        new_board.height = base_height + height_incr
+        new_board.result = copy(self.result)
+        return new_board
+
+    def flip_color(self, pieces):
+        new_pieces = 0
+        for i in range(HALF):
+            # take columns starting from the left
+            col = pieces & (COL1 << (H1 * i))
+            # shift it to where it should be (on rhs)
+            col = col << (SHIFT - (2 * H1 * i))
+            new_pieces += col
+            # take columns starting from the right
+            col = pieces & (COL1 << (SHIFT - H1 * i))
+            # shift it to where it should be (on lhs)
+            col = col >> (SHIFT - (2 * H1 * i))
+            new_pieces += col
+        if WIDTH % 2 == 1:
+            # add back middle column
+            col = pieces & (COL1 << (H1 * HALF))
+            new_pieces += col
+        return new_pieces
 
     def to_array(self):
         o_pieces, x_pieces = self.pieces
