@@ -4,14 +4,14 @@ class ModelConfig():
                  weight_decay=1e-4,
                  momentum=0.9,
                  # Schedule for chess and shogi, Go starts at 2e-2 immediately.
-                 initial_lr=0.005,
+                 initial_lr=0.01,
                  # These are in training cycles
-                 milestones=[int(100), int(300), int(600)],
+                 milestones=[int(50), int(100), int(200)],
                  gamma=0.1,
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
                  batch_size=4096,
-                 n_training_epochs=2,
+                 n_training_epochs=5,
                  use_gpu=True):
         self.weight_decay = weight_decay
         self.momentum = momentum

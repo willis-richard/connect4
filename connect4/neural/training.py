@@ -37,9 +37,16 @@ class TrainingLoop():
         subfolders = [f.name for f in os.scandir(self.save_dir) if f.is_dir()]
         if subfolders:
             self.gen = max([int(n) for n in subfolders])
-            net_path = self.folder_path + '/net.pth'
-            print("Loading Network saved in file {}".format(net_path))
-            self.model = ModelWrapper(config.model_config, net_path)
+            try:
+                net_path = self.folder_path + '/net.pth'
+                print("Loading Network saved in file {}".format(net_path))
+                self.model = ModelWrapper(config.model_config, net_path)
+            except FileNotFoundError:
+                print("File not found, trying previous gen")
+                self.gen -= 1
+                net_path = self.folder_path + '/net.pth'
+                print("Loading Network saved in file {}".format(net_path))
+                self.model = ModelWrapper(config.model_config, net_path)
             self.gen += 1
         else:
             self.gen = 1
@@ -55,10 +62,6 @@ class TrainingLoop():
             self.stats_7ply = pd.read_pickle(self.save_dir + '/7ply.pkl')
         else:
             self.stats_7ply = pd.DataFrame()
-
-        self.opponent = MCTS("mcts:" + str(config.simulations),
-                             MCTSConfig(simulations=config.simulations),
-                             evl.Evaluator(evl.evaluate_centre_with_prior))
 
         if os.path.exists(self.save_dir + '/match_results.pkl'):
             self.match_results = pd.read_pickle(
@@ -82,11 +85,13 @@ class TrainingLoop():
         while True:
             print("Loop: ", self.gen)
             self.loop()
+            self.evaluate()
             if self.gen % self.config.n_eval == 0:
-                self.evaluate()
+                self.match()
+            self.gen += 1
 
     def loop(self):
-        os.makedirs(self.folder_path)
+        os.makedirs(self.folder_path, exist_ok=True)
         start_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
         self.generate_games()
@@ -96,7 +101,6 @@ class TrainingLoop():
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(
             train_t - start_t,
             end_t - train_t))
-        self.gen += 1
 
     def generate_games(self):
         mcts_config = self.create_alpha_zero_config(training=True)
@@ -176,6 +180,7 @@ class TrainingLoop():
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
                              win=self.win_8ply)
 
+    def match(self):
         az_config = self.create_alpha_zero_config(training=False)
         evaluator = evl.Evaluator(partial(evl.evaluate_nn,
                                           model=self.model))
@@ -183,7 +188,23 @@ class TrainingLoop():
                           az_config,
                           evaluator)
 
-        results = self.match(alpha_zero, self.opponent)
+        if self.gen <= 10:
+            name = "Evaluate_centre_with_prior"
+            evaluator = evl.Evaluator(evl.evaluate_centre_with_prior)
+        else:
+            name = "Older net"
+            evaluator = ModelWrapper(self.config.model_config,
+                                     "{}/{}/net.pth".format(self.save_dir,
+                                                            self.gen - 10))
+
+        opponent = MCTS(name,
+                        MCTSConfig(simulations=self.config.simulations),
+                        evaluator)
+
+        match = Match(False, alpha_zero, opponent, plies=1, switch=True)
+        # Above 4 processes I have run into Cuda memory problems
+        results = match.play(agents=max(self.config.game_processes, 4))
+
         self.match_results = self.match_results.append(results,
                                                        ignore_index=True)
         self.match_results.to_pickle(
@@ -191,10 +212,6 @@ class TrainingLoop():
         if self.config.visdom_enabled:
             self.vis.matplot(self.match_results.plot(y=['return']).figure,
                              win=self.match_win)
-
-    def match(self, alpha_zero, opponent: MCTS):
-        match = Match(False, alpha_zero, opponent, plies=1, switch=True)
-        return match.play(agents=max(self.config.game_processes, 5))
 
     def create_alpha_zero_config(self, training=False):
         if training:
