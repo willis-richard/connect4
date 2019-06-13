@@ -49,9 +49,9 @@ class PositionEvaluation():
 
 
 class SearchEvaluation():
-    def __init__(self, value: float):
-        self.value_sum = value
-        self.visit_count = 1
+    def __init__(self):
+        self.value_sum = 0.0
+        self.visit_count = 0
 
     def add(self, value: float):
         self.value_sum += value
@@ -114,6 +114,11 @@ def search(config: MCTSConfig,
         while node.children:
             node = select_child(config, tree, node)
 
+        # previously evaluated, so expand
+        if node.data.position_value is not None:
+            tree.expand_node(node, 1)
+            node = select_child(config, tree, node)
+
         value = evaluate_node(tree, node, evaluator)
 
         backpropagate(node, value)
@@ -124,15 +129,12 @@ def evaluate_node(tree: Tree, node: Node, evaluator):
     if node.data.board.result is not None:
         value = node.data.board.result.value
         if node.data.search_value is None:
-            node.data.search_value = SearchEvaluation(value)
-        else:
-            node.data.search_value.add(value)
+            node.data.search_value = SearchEvaluation()
     else:
         value, prior = evaluator(node.data.board)
         prior = normalise_prior(node.data.valid_moves, prior)
         node.data.position_value = PositionEvaluation(value, prior)
-        node.data.search_value = SearchEvaluation(value)
-        tree.expand_node(node, 1)
+        node.data.search_value = SearchEvaluation()
     return value
 
 
@@ -165,6 +167,7 @@ def ucb_score(config: MCTSConfig,
 
 def backpropagate(node: Node,
                   value: float):
+    node.data.search_value.add(value)
     while not node.is_root:
         node = node.parent
         node.data.search_value.add(value)
