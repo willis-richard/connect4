@@ -46,4 +46,4 @@ def evaluate_nn(board: Board,
     # FIXME: This is temporary until I have the net outputting priors
     prior = softmax(prior)
     # prior = copy(info.prior)
-    return value, prior
+    return float(value), prior

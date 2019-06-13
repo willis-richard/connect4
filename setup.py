@@ -22,7 +22,8 @@ setuptools.setup(name='connect4',
           'matplotlib',
           'numpy',
           'pandas',
-          'pytorch'
+          'pytorch',
+          'scipy'
       ],
       dependency_links=[
           'https://github.com/c0fec0de/anytree/archive/master.zip',

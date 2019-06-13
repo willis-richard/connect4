@@ -77,7 +77,7 @@ if __name__ == "__main__":
                              file_name=parser.args.net_filepath)
 
         player_2 = MCTS(parser.args.players[0],
-                        MCTSConfig(simulations=2000),
+                        MCTSConfig(simulations=800),
                         ev.Evaluator(partial(ev.evaluate_nn,
                                              model=model)))
 

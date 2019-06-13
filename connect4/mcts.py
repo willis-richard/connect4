@@ -80,14 +80,12 @@ class MCTS(BasePlayer):
         self.evaluator = evaluator
 
     def make_move(self, board):
-        tree = Tree(board)
+        tree = search(self.config, board, self.evaluator)
 
-        search(self.config, tree, self.evaluator)
-
-        if board.age >= self.config.num_sampling_moves:
-            child = tree.select_most_visited()
-        else:
+        if board.age < self.config.num_sampling_moves:
             child = tree.select_softmax_move()
+        else:
+            child = tree.select_most_visited()
 
         board.make_move(child.name)
 
@@ -98,9 +96,11 @@ class MCTS(BasePlayer):
 
 
 def search(config: MCTSConfig,
-           tree: Tree,
+           board: Board,
            evaluator: Callable[[Board],
                                Tuple[float, List[float]]]):
+    tree = Tree(board)
+
     # First evaluate root and add noise
     evaluate_node(tree, tree.root, evaluator)
     tree.root.data.position_value.prior = add_exploration_noise(
@@ -117,6 +117,7 @@ def search(config: MCTSConfig,
         value = evaluate_node(tree, node, evaluator)
 
         backpropagate(node, value)
+    return tree
 
 
 def evaluate_node(tree: Tree, node: Node, evaluator):
@@ -127,11 +128,11 @@ def evaluate_node(tree: Tree, node: Node, evaluator):
         else:
             node.data.search_value.add(value)
     else:
-        tree.expand_node(node, 1)
         value, prior = evaluator(node.data.board)
         prior = normalise_prior(node.data.valid_moves, prior)
         node.data.position_value = PositionEvaluation(value, prior)
         node.data.search_value = SearchEvaluation(value)
+        tree.expand_node(node, 1)
     return value
 
 

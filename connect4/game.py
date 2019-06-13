@@ -23,13 +23,18 @@ class Game():
             print(self._board)
         while self._board.result is None:
             if self._board.player_to_move == Side.o:
-                move, _, _ = self._player_o.make_move(self._board)
+                move, value, tree = self._player_o.make_move(self._board)
                 name = self._player_o.name
             else:
-                move, _, _ = self._player_x.make_move(self._board)
+                move, value, tree = self._player_x.make_move(self._board)
                 name = self._player_x.name
             if self.display:
-                print(name + " selected move: ", move)
+                if tree is None:
+                    print("{} selected move: {}".format(name, move))
+                else:
+                    prior = tree.get_visit_count_policy()
+                    print("{} selected move: {}, value: {}, prior: {}".
+                          format(name, move, value, prior))
                 print(self._board)
             self.move_history = np.append(self.move_history, move)
         return self._board.result
