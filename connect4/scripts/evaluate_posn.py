@@ -27,12 +27,14 @@ if __name__ == "__main__":
 
     if len(sys.argv) > 3 and sys.argv[3] == 'True':
         player = MCTS("name",
+                      # MCTSConfig(simulations=800,num_sampling_moves=10),
                       MCTSConfig(simulations=800),
                       ev.Evaluator(partial(ev.evaluate_nn,
                                            model=model)))
 
         move, value, tree = player.make_move(board)
-        prior = tree.get_policy()
+        prior = tree.get_visit_count_policy()
+        # prior = tree.get_values_policy()
         print("move {}, value {:4f}, policy {}".format(move, value, prior))
 
         for r_child in tree.root.children:

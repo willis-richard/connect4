@@ -162,21 +162,18 @@ def test_mcts_next_move(n, board, plies, ans):
 
     move, _, tree = computer.make_move(board_copy)
 
-    if plies <= 2:
-        for pre, fill, node in anytree.RenderTree(tree.root):
-            print("%s%s, %3d, %s, %s, %s" % (
-                pre,
-                node.name,
-                tree.get_node_value(node),
-                node.data.board.result,
-                node.data.position_value,
-                node.data.search_value))
-    elif plies == 15:
-        for pre, fill, node in anytree.RenderTree(tree.root):
-            print("%s%s, %s" % (
-                pre,
-                node.name,
-                node.data.terminal_result))
+    for r_child in tree.root.children:
+        for child in r_child.children:
+            child.children = []
+    for pre, fill, node in anytree.RenderTree(tree.root):
+        print("%s%s, %3d, %s, %s, %s, %s" % (
+            pre,
+            node.name,
+            tree.get_node_value(node),
+            node.data.board.result,
+            node.data.position_value,
+            node.data.search_value,
+            0 if node.data.search_value is None else node.data.search_value.visit_count))
 
     assert move in ans
     return

@@ -1,7 +1,7 @@
 from connect4.board_c import Board
 from connect4.evaluators import Evaluator
 from connect4.player import BasePlayer
-from connect4.tree import BaseNodeData, Tree
+from connect4.tree import Tree
 from connect4.utils import same_side, Side
 
 from anytree import Node
@@ -19,8 +19,7 @@ class GridSearch(BasePlayer):
         self.evaluator = evaluator
 
     def make_move(self, board):
-        tree = Tree(board,
-                    BaseNodeData)
+        tree = Tree(board)
 
         tree.expand_node(tree.root,
                          self.plies)
@@ -28,9 +27,9 @@ class GridSearch(BasePlayer):
                  self.plies,
                  self.evaluator)
 
-        move, value = tree.select_best_move()
-        board.make_move(move)
-        return move, value, tree
+        child = tree.select_best_move()
+        board.make_move(child.name)
+        return child.name, child.data.absolute_value, tree
 
     def __str__(self):
         return super().__str__() + ", type: Computer"

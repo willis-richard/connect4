@@ -12,8 +12,8 @@ from scipy.special import softmax
 #     return self.data.board == other.data.board
 
 
-# def node_gt(self, other):
-#     return self.name > other.name
+def node_gt(self, other):
+    return self.name > other.name
 
 
 # def node_hash(self):
@@ -21,11 +21,11 @@ from scipy.special import softmax
 
 
 # Node.__eq__ = node_eq
-# Node.__gt__ = node_gt
+Node.__gt__ = node_gt
 # Node.__hash__ = node_hash
 
 
-class BaseNodeData():
+class NodeData():
     """Node data is a pair of a board and some evaluation data"""
     def __init__(self,
                  board: Board):
@@ -34,13 +34,21 @@ class BaseNodeData():
         self.position_value = None
         self.search_value = None
 
-    def value(self, side: Side):
+    @property
+    def absolute_value(self):
         if self.board.result is not None:
-            return value_to_side(self.board.result.value, side)
+            return self.board.result.value
         elif self.search_value is not None:
-            return value_to_side(float(self.search_value), side)
+            return float(self.search_value)
         elif self.position_value is not None:
-            return value_to_side(float(self.position_value), side)
+            return float(self.position_value)
+        else:
+            return None
+
+    def value(self, side: Side):
+        absolute_value = self.absolute_value
+        if absolute_value is not None:
+            return value_to_side(absolute_value, side)
         else:
             # position is unknown - assume lost
             return 0.0
@@ -61,44 +69,52 @@ class BaseNodeData():
 
 
 class Tree():
-    def __init__(self,
-                 board: Board,
-                 node_data_type):
+    def __init__(self, board: Board):
         self.side = board.player_to_move
-        self.node_data_type = node_data_type
         self.root = self.create_node('root', copy(board))
 
     def get_node_value(self, node):
         return node.data.value(self.side)
 
     def select_best_move(self):
-        value, move = max(((self.get_node_value(c),
-                           c.name)
-                          for c in self.root.children))
+        _, child = max(((self.get_node_value(child), child)
+                       for child in self.root.children))
 
-        return move, value
+        return child
+
+    def select_most_visited(self):
+        _, child = max(((child.data.search_value.visit_count
+                         if child.data.search_value is not None
+                         else 0,
+                         child)
+                       for child in self.root.children))
+
+        return child
 
     def select_softmax_move(self):
-        moves = []
-        values = []
-        visit_counts = []
-        for c in self.root.children:
-            moves.append(c.name)
-            values.append(self.get_node_value(c))
-            visit_counts.append(c.data._search_value.visit_count
-                                if c.data.search_value
-                                else 0)
+        visit_counts = [c.data.search_value.visit_count
+                        if c.data.search_value
+                        else 0
+                        for c in self.root.children]
         probabilties = softmax(visit_counts)
 
-        idx = np.random.choice(range(len(moves)), p=probabilties)
+        idx = np.random.choice(range(len(visit_counts)), p=probabilties)
 
-        # FIXME: better way of both finding the value, and knowing if I should return the best value or the chosen move...
-        return moves[idx], values[idx]
+        return self.root.children[idx]
 
-    def get_policy(self):
+    def get_values_policy(self):
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)
+        return self.normalise_policy(policy)
+
+    def get_visit_count_policy(self):
+        policy = np.zeros((info.width,))
+        for c in self.root.children:
+            policy[c.name] = 0 if c.data.search_value is None else c.data.search_value.visit_count
+        return self.normalise_policy(policy)
+
+    def normalise_policy(self, policy):
         policy_sum = np.sum(policy)
         if policy_sum == 0.0:
             for c in self.root.children:
@@ -108,7 +124,7 @@ class Tree():
             return policy / policy_sum
 
     def create_node(self, name, board, parent=None):
-        node_data = self.node_data_type(board)
+        node_data = NodeData(board)
 
         return Node(name, parent=parent, data=node_data)
 

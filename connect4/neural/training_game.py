@@ -11,7 +11,7 @@ def training_game(player: BasePlayer):
     while board.result is None:
         board_copy = copy(board)
         move, value, tree = player.make_move(board)
-        prior = tree.get_policy()
+        prior = tree.get_visit_count_policy()
         game_data.add_move(board_copy, move, value, prior)
 
     game_data.result = board.result
@@ -32,7 +32,6 @@ class TrainingData:
         return TrainingData(self.boards + other.boards,
                             self.values + other.values,
                             self.priors + other.priors)
-                            # self.values = np.concatenate((self.values, other.values), 0)
 
     def __repr__(self):
         return str([(b, v, p) for b, v, p in zip(self.boards,
