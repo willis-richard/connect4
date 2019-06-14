@@ -1,7 +1,7 @@
 from connect4.evaluators import Evaluator
 from connect4.mcts import MCTS, MCTSConfig
 
-from connect4.neural.inference_server import evaluate_server, evaluate_server_deque
+from connect4.neural.inference_server import evaluate_server_deque
 from connect4.neural.training_game import training_game
 
 from collections import deque

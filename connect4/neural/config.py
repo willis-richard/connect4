@@ -40,7 +40,7 @@ class AlphaZeroConfig():
                  simulations=800,
                  pb_c_base=19652,
                  pb_c_init=1.25,
-                 root_dirichlet_alpha=1.0, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
+                 root_dirichlet_alpha=0.3, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
                  root_exploration_fraction=0.25,
                  num_sampling_moves=6,
                  n_eval=1,

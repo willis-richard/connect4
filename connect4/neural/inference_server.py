@@ -66,9 +66,6 @@ class InferenceServer():
 def evaluate_server(board: Board, conn: Connection):
     conn.send(board)
     value, prior = conn.recv()
-    # FIXME: Temporary until net returns priors
-    # priors = softmax(prior)
-    prior = copy(info.prior)
     return value, prior
 
 

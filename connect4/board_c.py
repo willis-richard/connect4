@@ -1,6 +1,6 @@
 from connect4.utils import Result, Side
 
-from copy import copy
+from copy import copy, deepcopy
 import numpy as np
 from typing import Set
 
@@ -113,13 +113,13 @@ class Board():
         new_board = self.__class__()
         new_board.color[0] = self.flip_color(self.color[0])
         new_board.color[1] = self.flip_color(self.color[1])
-        new_board.age = copy(self.age)
+        new_board.age = self.age
         base_height = np.array([H1 * i for i in range(WIDTH)],
                                dtype=np.int64)
         height_incr = self.height - base_height
         height_incr = np.flip(height_incr)
         new_board.height = base_height + height_incr
-        new_board.result = copy(self.result)
+        new_board.result = deepcopy(self.result)
         return new_board
 
     def flip_color(self, pieces):
@@ -184,12 +184,12 @@ class Board():
     def _isplayable(self, col):
         return (self.color[self.age & 1] | (1 << self.height[col])) & TOP == 0
 
-    def __copy__(self):
+    def __deepcopy__(self):
         new_board = self.__class__()
-        new_board.color = copy(self.color)
-        new_board.age = copy(self.age)
-        new_board.height = copy(self.height)
-        new_board.result = copy(self.result)
+        new_board.color = deepcopy(self.color)
+        new_board.age = self.age
+        new_board.height = deepcopy(self.height)
+        new_board.result = deepcopy(self.result)
         return new_board
 
     def __eq__(self, obj):

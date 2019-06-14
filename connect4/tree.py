@@ -2,7 +2,7 @@ from connect4.board_c import Board
 from connect4.utils import Connect4Stats as info, Side, value_to_side
 
 from anytree import Node
-from copy import copy
+from copy import deepcopy
 import numpy as np
 from scipy.special import softmax
 
@@ -71,18 +71,18 @@ class NodeData():
 class Tree():
     def __init__(self, board: Board):
         self.side = board.player_to_move
-        self.root = self.create_node('root', copy(board))
+        self.root = self.create_node('root', deepcopy(board))
 
     def get_node_value(self, node):
         return node.data.value(self.side)
 
-    def select_best_move(self):
+    def best_move(self):
         _, child = max(((self.get_node_value(child), child)
                        for child in self.root.children))
 
         return child
 
-    def select_most_visited(self):
+    def most_visited(self):
         _, child = max(((child.data.search_value.visit_count
                          if child.data.search_value is not None
                          else 0,
@@ -91,7 +91,7 @@ class Tree():
 
         return child
 
-    def select_softmax_move(self):
+    def softmax_visit_count(self):
         visit_counts = [c.data.search_value.visit_count
                         if c.data.search_value
                         else 0
@@ -106,22 +106,25 @@ class Tree():
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)
-        return self.normalise_policy(policy)
+        self.normalise_policy(policy)
+        return policy
 
     def get_visit_count_policy(self):
         policy = np.zeros((info.width,))
         for c in self.root.children:
-            policy[c.name] = 0 if c.data.search_value is None else c.data.search_value.visit_count
-        return self.normalise_policy(policy)
+            if c.data.search_value is not None:
+                policy[c.name] = c.data.search_value.visit_count
+        return policy
 
     def normalise_policy(self, policy):
+        """Operates in-place"""
         policy_sum = np.sum(policy)
         if policy_sum == 0.0:
             for c in self.root.children:
                 policy[c.name] = 1.0
-            return policy / len(self.root.children)
+            policy /= len(self.root.children)
         else:
-            return policy / policy_sum
+            policy /= policy_sum
 
     def create_node(self, name, board, parent=None):
         node_data = NodeData(board)
@@ -136,7 +139,7 @@ class Tree():
 
         if not node.children:
             for move in node.data.valid_moves:
-                new_board = copy(node.data.board)
+                new_board = deepcopy(node.data.board)
                 new_board.make_move(move)
                 child = self.create_node(move, new_board, parent=node)
 

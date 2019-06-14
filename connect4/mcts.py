@@ -132,7 +132,7 @@ def evaluate_node(tree: Tree, node: Node, evaluator):
             node.data.search_value = SearchEvaluation()
     else:
         value, prior = evaluator(node.data.board)
-        prior = normalise_prior(node.data.valid_moves, prior)
+        normalise(node.data.valid_moves, prior)
         node.data.position_value = PositionEvaluation(value, prior)
         node.data.search_value = SearchEvaluation()
     return value
@@ -180,15 +180,28 @@ def add_exploration_noise(config: MCTSConfig,
         noise = np.random.gamma(config.root_dirichlet_alpha,
                                 1,
                                 info.width)
-        noise = normalise_prior(valid_moves, noise)
+        normalise(valid_moves, noise)
         frac = config.root_exploration_fraction
         prior = prior * (1 - frac) + noise * frac
     return prior
 
 
-def normalise_prior(valid_moves: Set, prior: np.ndarray):
+def add_exploration_noise_non_normalised(config: MCTSConfig,
+                                         prior: np.ndarray,
+                                         valid_moves: Set):
+    if config.root_dirichlet_alpha and config.root_exploration_fraction:
+        noise = np.random.gamma(config.root_dirichlet_alpha,
+                                1,
+                                len(valid_moves))
+        for a, n in zip(valid_moves, noise):
+            frac = config.root_exploration_fraction
+            prior[a] = prior[a] * (1 - frac) + n * frac
+    return prior
+
+
+def normalise(valid_moves: Set, prior: np.ndarray):
+    """This function works in-place, but must have a float-array prior"""
     invalid_moves = set(range(info.width)).difference(valid_moves)
     if invalid_moves:
         np.put(prior, list(invalid_moves), 0.0)
-    prior = prior / np.sum(prior)
-    return prior
+    prior /= np.sum(prior)

@@ -1,10 +1,9 @@
 from connect4.board_c import Board
 from connect4.utils import Connect4Stats as info
 
-from copy import copy
+from copy import deepcopy
 import numpy as np
-from scipy.special import softmax
-from typing import Callable, Dict, List, Optional, Set
+from typing import Callable, Dict, Optional
 
 
 class Evaluator():
@@ -23,7 +22,7 @@ class Evaluator():
             position_eval = self.evaluate_fn(board)
             if self.store_position:
                 self.position_table[b_value] = position_eval
-        return position_eval
+        return deepcopy(position_eval)
 
 
 def evaluate_centre(board: Board):
@@ -36,14 +35,10 @@ def evaluate_centre(board: Board):
 
 def evaluate_centre_with_prior(board: Board):
     value = evaluate_centre(board)
-    prior = copy(info.prior)
-    return value, prior
+    return value, info.prior
 
 
 def evaluate_nn(board: Board,
                 model):
     value, prior = model(board)
-    # FIXME: This is temporary until I have the net outputting priors
-    prior = softmax(prior)
-    # prior = copy(info.prior)
     return float(value), prior

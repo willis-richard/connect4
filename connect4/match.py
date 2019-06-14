@@ -2,7 +2,7 @@ from connect4.board_c import make_random_ips
 from connect4.game import Game
 from connect4.player import BasePlayer
 
-from copy import copy
+from copy import copy, deepcopy
 import numpy as np
 from torch.multiprocessing import Pool
 
@@ -26,7 +26,7 @@ class Match():
         self.games = [Game(display,
                            copy(player_1),
                            copy(player_2),
-                           copy(board))
+                           board)
                       for board in ips]
 
         self.n = len(self.games)
@@ -36,7 +36,7 @@ class Match():
                      [Game(display,
                            copy(player_2),
                            copy(player_1),
-                           board)
+                           deepcopy(board))
                       for board in ips]
         self.switch = switch
 
