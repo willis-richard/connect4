@@ -11,7 +11,7 @@ def training_game(player: BasePlayer):
     while board.result is None:
         board_copy = deepcopy(board)
         move, value, tree = player.make_move(board)
-        prior = tree.get_visit_count_policy()
+        prior = tree.get_values_policy()
         game_data.add_move(board_copy, move, value, prior)
 
     game_data.result = board.result
