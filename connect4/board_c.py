@@ -184,7 +184,7 @@ class Board():
     def _isplayable(self, col):
         return (self.color[self.age & 1] | (1 << self.height[col])) & TOP == 0
 
-    def __deepcopy__(self):
+    def __copy__(self):
         new_board = self.__class__()
         new_board.color = deepcopy(self.color)
         new_board.age = self.age

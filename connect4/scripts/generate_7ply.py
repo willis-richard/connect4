@@ -7,7 +7,7 @@ from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
 
 from connect4.scripts.view_boards import read_8ply_data
 
-from copy import deepcopy
+from copy import copy
 import numpy as np
 import pickle
 
@@ -57,7 +57,7 @@ if __name__ == '__main__':
         moves = np.zeros((7,))
         valid_moves = board.valid_moves
         for move in valid_moves:
-            new_board = deepcopy(board)
+            new_board = copy(board)
             new_board.make_move(move)
             value = table.get(new_board)
             if value is None:
@@ -65,10 +65,10 @@ if __name__ == '__main__':
                 if value is None:
                     # Now we look into whether the resulting 8 ply position has a trivial solution
                     _, value, _ = player_1.make_move(
-                        deepcopy(new_board))
+                        copy(new_board))
                     if value == 0.5:
                         _, value, _ = player_2.make_move(
-                            deepcopy(new_board))
+                            copy(new_board))
                         if value == 0.5:
                             unknown.append(board)
                             undetermined = True

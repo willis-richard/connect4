@@ -2,7 +2,7 @@ from connect4.board_c import Board
 from connect4.utils import Connect4Stats as info, Side, value_to_side
 
 from anytree import Node
-from copy import deepcopy
+from copy import copy
 import numpy as np
 from scipy.special import softmax
 
@@ -71,7 +71,7 @@ class NodeData():
 class Tree():
     def __init__(self, board: Board):
         self.side = board.player_to_move
-        self.root = self.create_node('root', deepcopy(board))
+        self.root = self.create_node('root', copy(board))
 
     def get_node_value(self, node):
         return node.data.value(self.side)
@@ -81,6 +81,15 @@ class Tree():
                        for child in self.root.children))
 
         return child
+
+    def softmax_value_squared(self):
+        squared_values = [self.get_node_value(c) ** 2
+                          for c in self.root.children]
+        probabilties = softmax(squared_values)
+
+        idx = np.random.choice(range(len(squared_values)), p=probabilties)
+
+        return self.root.children[idx]
 
     def most_visited(self):
         _, child = max(((child.data.search_value.visit_count
@@ -114,6 +123,7 @@ class Tree():
         for c in self.root.children:
             if c.data.search_value is not None:
                 policy[c.name] = c.data.search_value.visit_count
+        self.normalise_policy(policy)
         return policy
 
     def normalise_policy(self, policy):
@@ -139,7 +149,7 @@ class Tree():
 
         if not node.children:
             for move in node.data.valid_moves:
-                new_board = deepcopy(node.data.board)
+                new_board = copy(node.data.board)
                 new_board.make_move(move)
                 child = self.create_node(move, new_board, parent=node)
 

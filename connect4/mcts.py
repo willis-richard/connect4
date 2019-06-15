@@ -83,7 +83,7 @@ class MCTS(BasePlayer):
         tree = search(self.config, board, self.evaluator)
 
         if board.age < self.config.num_sampling_moves:
-            child = tree.softmax_visit_count()
+            child = tree.softmax_value_squared()
         else:
             child = tree.best_move()
 

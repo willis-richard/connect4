@@ -27,7 +27,7 @@ class GridSearch(BasePlayer):
                  self.plies,
                  self.evaluator)
 
-        child = tree.select_best_move()
+        child = tree.best_move()
         board.make_move(child.name)
         return child.name, child.data.absolute_value, tree
 

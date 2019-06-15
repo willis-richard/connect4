@@ -1,7 +1,7 @@
 from connect4.board_c import Board
 from connect4.player import BasePlayer
 
-from copy import deepcopy
+from copy import copy
 from typing import List, Sequence
 
 
@@ -9,7 +9,7 @@ def training_game(player: BasePlayer):
     board = Board()
     game_data = GameData()
     while board.result is None:
-        board_copy = deepcopy(board)
+        board_copy = copy(board)
         move, value, tree = player.make_move(board)
         prior = tree.get_values_policy()
         game_data.add_move(board_copy, move, value, prior)
