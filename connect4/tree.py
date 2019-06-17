@@ -82,12 +82,12 @@ class Tree():
 
         return child
 
-    def softmax_value_squared(self):
-        squared_values = [self.get_node_value(c) ** 2
-                          for c in self.root.children]
-        probabilties = softmax(squared_values)
+    def softmax_value_fn(self, fn):
+        values = [fn(self.get_node_value(c))
+                  for c in self.root.children]
+        probabilities = values / np.sum(values)
 
-        idx = np.random.choice(range(len(squared_values)), p=probabilties)
+        idx = np.random.choice(range(len(values)), p=probabilities)
 
         return self.root.children[idx]
 

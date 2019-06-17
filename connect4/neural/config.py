@@ -6,7 +6,7 @@ class ModelConfig():
                  # Schedule for chess and shogi, Go starts at 2e-2 immediately.
                  initial_lr=0.01,
                  # These are in training cycles
-                 milestones=[int(50), int(100), int(200)],
+                 milestones=[int(50), int(150), int(350)],
                  gamma=0.1,
                  # read https://pytorch.org/docs/stable/optim.html about pre layer lr
                  # could have one for the body, and diff ones for each head
