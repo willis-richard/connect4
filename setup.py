@@ -1,4 +1,4 @@
-import setuptools
+from setuptools import setup, find_packages
 from os import path
 
 here = path.abspath(path.dirname(__file__))
@@ -6,9 +6,9 @@ here = path.abspath(path.dirname(__file__))
 with open(path.join(here, 'README.md'), 'r') as f:
     long_description = f.read()
 
-setuptools.setup(
+setup(
     name='connect4',
-    version='1.0.0',
+    version='1.0.4',
     author='Muff2n',
     description='A Reinforcement Learning agent plays connect4',
     long_description=long_description,
@@ -19,14 +19,16 @@ setuptools.setup(
       'License :: OSI Approved :: MIT License',
       'Operating System :: OS Independent',
     ],
-    packages=['connect4'],
+    packages=find_packages(exclude=['tests*']),
     python_requires='>=3.7',
     install_requires=[
+        'anytree',
         'matplotlib',
         'numpy',
         'pandas',
-        'pytorch',
-        'scipy'
+        'scipy',
+        'torch',
+        'visdom'
     ],
     extras_require={
         'test': ['coverage'],
@@ -34,9 +36,8 @@ setuptools.setup(
     package_data={
         'sample': ['misc/net.pth'],
     },
-    url='http://github.com/muff2n/connect4',
-    dependency_links=[
-        'https://github.com/c0fec0de/anytree/archive/master.zip',
-        'https://github.com/c0fec0de/facebookresearch/visdom/master.zip'
-    ]
+    entry_points={
+        'console_scripts' : ['connect4 = connect4:main']
+    },
+    url='http://github.com/muff2n/connect4'
 )

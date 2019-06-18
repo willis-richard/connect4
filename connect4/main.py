@@ -61,8 +61,7 @@ class Parser():
                             help='An AlphaZero config filepath')
         self.args = parser.parse_args(sys.argv[3:])
 
-
-if __name__ == "__main__":
+def main():
     try:
         set_start_method('spawn')
     except RuntimeError as e:
@@ -116,3 +115,6 @@ if __name__ == "__main__":
             config = AlphaZeroConfig()
 
         TrainingLoop(config).run()
+
+if __name__ == "__main__":
+    main()

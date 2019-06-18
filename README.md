@@ -36,4 +36,4 @@ I use the convention that a position is scored 1 if it is a win for the first pl
 # Training
 
 Here is an example training run:
-![alt text](./example_training.pdf)
+![alt text](./misc/example_training.pdf)
