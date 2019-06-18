@@ -9,7 +9,7 @@ from functools import partial
 from multiprocessing.connection import Connection
 from multiprocessing.pool import ThreadPool
 import os
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List, Tuple
 
 
 def game_pool(conn_list: List[Tuple[Connection, Connection]],
@@ -18,7 +18,7 @@ def game_pool(conn_list: List[Tuple[Connection, Connection]],
               n_games: int):
     assert n_threads == len(conn_list)
 
-    position_table = {}
+    position_table: Dict[Tuple, Tuple] = {}
     conn_deque = deque([c[0] for c in conn_list])
 
     evaluator = Evaluator(partial(evaluate_server_deque,

@@ -1,3 +1,4 @@
+from connect4.utils import Connect4Stats as info
 from connect4.utils import Result, Side
 
 from copy import copy, deepcopy
@@ -5,8 +6,10 @@ import numpy as np
 from typing import Set
 
 
-WIDTH = 7
-HEIGHT = 6
+WIDTH = info.width
+HEIGHT = info.height
+# my hash function converts to a u64
+assert WIDTH * HEIGHT < 64
 H1 = HEIGHT+1
 H2 = HEIGHT+2
 SIZE = HEIGHT*WIDTH

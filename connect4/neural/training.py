@@ -1,6 +1,4 @@
-from connect4.board_c import Board
 import connect4.evaluators as evl
-from connect4.grid_search import GridSearch
 from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
 from connect4.utils import Result
@@ -10,6 +8,9 @@ from connect4.neural.game_pool import game_pool
 from connect4.neural.inference_server import InferenceServer
 from connect4.neural.training_game import training_game
 
+from connect4.neural.pytorch.model import ModelWrapper
+from connect4.neural.pytorch.data import Connect4Dataset, TrainingDataStorage
+
 from functools import partial
 import matplotlib.pyplot as plt
 import os
@@ -17,13 +18,6 @@ import pandas as pd
 import time
 from torch.multiprocessing import Pipe, Pool
 from visdom import Visdom
-
-if True:
-    from connect4.neural.nn_pytorch import (Connect4Dataset,
-                                            ModelWrapper,
-                                            TrainingDataStorage)
-else:
-    from connect4.neural.nn_tf import ModelWrapper
 
 
 class TrainingLoop():

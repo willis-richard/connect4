@@ -26,7 +26,7 @@ class HumanPlayer(BasePlayer):
                 move = int(input("Enter " + self.name + " (" +
                                  Side.as_str(board.player_to_move) + "'s) move:"))
             except ValueError:
-                print("Try again dipshit")
+                print("Not a valid move. Try again:")
                 pass
         board.make_move(int(move))
         return move, None, None

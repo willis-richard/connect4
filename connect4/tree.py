@@ -1,4 +1,4 @@
-from connect4.board_c import Board
+from connect4.board import Board
 from connect4.utils import Connect4Stats as info, Side, value_to_side
 
 from anytree import Node
@@ -7,26 +7,16 @@ import numpy as np
 from scipy.special import softmax
 
 
-# Give Node an __eq__ operator -> will be the same if the boards are the same
-# def node_eq(self, other):
-#     return self.data.board == other.data.board
-
-
+# give anytree.Node a gt method so we can use them as an argument to max()
 def node_gt(self, other):
     return self.name > other.name
 
 
-# def node_hash(self):
-#     return hash(self.data.board)
-
-
-# Node.__eq__ = node_eq
 Node.__gt__ = node_gt
-# Node.__hash__ = node_hash
 
 
 class NodeData():
-    """Node data is a pair of a board and some evaluation data"""
+    """Node data is a combination of a board and some evaluation data"""
     def __init__(self,
                  board: Board):
         self.board = board
@@ -71,7 +61,7 @@ class NodeData():
 class Tree():
     def __init__(self, board: Board):
         self.side = board.player_to_move
-        self.root = self.create_node('root', copy(board))
+        self.root = self._create_node('root', copy(board))
 
     def get_node_value(self, node):
         return node.data.value(self.side)
@@ -82,7 +72,7 @@ class Tree():
 
         return child
 
-    def softmax_value_fn(self, fn):
+    def sample_value_fn(self, fn):
         values = [fn(self.get_node_value(c))
                   for c in self.root.children]
         probabilities = values / np.sum(values)
@@ -115,7 +105,7 @@ class Tree():
         policy = np.zeros((info.width,))
         for c in self.root.children:
             policy[c.name] = self.get_node_value(c)
-        self.normalise_policy(policy)
+        self._normalise_policy(policy)
         return policy
 
     def get_visit_count_policy(self):
@@ -123,23 +113,8 @@ class Tree():
         for c in self.root.children:
             if c.data.search_value is not None:
                 policy[c.name] = c.data.search_value.visit_count
-        self.normalise_policy(policy)
+        self._normalise_policy(policy)
         return policy
-
-    def normalise_policy(self, policy):
-        """Operates in-place"""
-        policy_sum = np.sum(policy)
-        if policy_sum == 0.0:
-            for c in self.root.children:
-                policy[c.name] = 1.0
-            policy /= len(self.root.children)
-        else:
-            policy /= policy_sum
-
-    def create_node(self, name, board, parent=None):
-        node_data = NodeData(board)
-
-        return Node(name, parent=parent, data=node_data)
 
     def expand_node(self,
                     node: Node,
@@ -151,7 +126,22 @@ class Tree():
             for move in node.data.valid_moves:
                 new_board = copy(node.data.board)
                 new_board.make_move(move)
-                child = self.create_node(move, new_board, parent=node)
+                child = self._create_node(move, new_board, parent=node)
 
         for child in node.children:
             self.expand_node(child, plies - 1)
+
+    def _create_node(self, name, board, parent=None):
+        node_data = NodeData(board)
+
+        return Node(name, parent=parent, data=node_data)
+
+    def _normalise_policy(self, policy):
+        """Operates in-place"""
+        policy_sum = np.sum(policy)
+        if policy_sum == 0.0:
+            for c in self.root.children:
+                policy[c.name] = 1.0
+            policy /= len(self.root.children)
+        else:
+            policy /= policy_sum

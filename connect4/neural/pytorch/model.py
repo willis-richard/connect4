@@ -1,57 +1,18 @@
-from connect4.board_c import Board
+from connect4.board import Board
 from connect4.utils import NetworkStats as net_info
 
 from connect4.neural.config import ModelConfig
 from connect4.neural.stats import CombinedStats, ValueStats
-from connect4.neural.storage import GameStorage
-from connect4.neural.training_game import GameData
 
-import numpy as np
+from connect4.neural.pytorch.data import Connect4Dataset
+
 import torch
 import torch.optim as optim
 import torch.nn as nn
-from torch.utils.data import ConcatDataset, DataLoader, Dataset
+from torch.utils.data import DataLoader
 from torch.optim.lr_scheduler import MultiStepLR
 
-from typing import (List,
-                    Optional,
-                    Sequence,
-                    Union)
-
-
-class Connect4Dataset(Dataset):
-    def __init__(self,
-                 boards: torch.FloatTensor,
-                 values: torch.FloatTensor,
-                 priors: torch.FloatTensor):
-        self.boards = boards
-        self.values = values
-        self.priors = priors
-
-    def save(self, filename):
-        data = {}
-        data['boards'] = self.boards
-        data['values'] = self.values
-        data['priors'] = self.priors
-
-        torch.save(data, filename)
-
-    @classmethod
-    def load(cls, filename):
-        data = torch.load(filename)
-        return cls(data['boards'], data['values'], data['priors'])
-
-    def __len__(self):
-        return len(self.boards)
-
-    def __getitem__(self, idx: int):
-        if self.priors is None:
-            return (self.boards[idx],
-                    self.values[idx])
-        else:
-            return (self.boards[idx],
-                    self.values[idx],
-                    self.priors[idx])
+from typing import List, Optional, Union
 
 
 # Input with N * channels * (6,7)
@@ -156,25 +117,31 @@ class PolicyHead(nn.Module):
 def build_value_net(filters=net_info.filters,
                     n_residual_layers=net_info.n_residuals,
                     value_head_fc_layers=net_info.n_fc_layers):
-    value_net = nn.Sequential(create_convolutional_layer(2, filters),
-                              nn.Sequential(*[ResidualLayer(filters) for _ in range(n_residual_layers)]),
-                              ValueHead(filters, value_head_fc_layers))
+    value_net = nn.Sequential(
+        create_convolutional_layer(2, filters),
+        nn.Sequential(*[ResidualLayer(filters)
+                        for _ in range(n_residual_layers)]),
+        ValueHead(filters, value_head_fc_layers))
     return value_net
 
 
 def build_policy_net(filters=net_info.filters,
                      n_residual_layers=net_info.n_residuals):
-    policy_net = nn.Sequential(create_convolutional_layer(2, filters),
-                               nn.Sequential(*[ResidualLayer(filters) for _ in range(n_residual_layers)]),
-                               PolicyHead(filters))
+    policy_net = nn.Sequential(
+        create_convolutional_layer(2, filters),
+        nn.Sequential(*[ResidualLayer(filters)
+                        for _ in range(n_residual_layers)]),
+        PolicyHead(filters))
     return policy_net
 
 
 class Net(nn.Module):
     def __init__(self):
         super(Net, self).__init__()
-        self.body = nn.Sequential(create_convolutional_layer(),
-                                  nn.Sequential(*[ResidualLayer() for _ in range(net_info.n_residuals)]))
+        self.body = nn.Sequential(
+            create_convolutional_layer(),
+            nn.Sequential(*[ResidualLayer()
+                            for _ in range(net_info.n_residuals)]))
         self.value_head = ValueHead()
         self.policy_head = PolicyHead()
 
@@ -215,70 +182,46 @@ class ModelWrapper():
 
         self.value_loss = nn.MSELoss()
         self.prior_loss = nn.BCELoss()
-        print("Constructed NN with {} parameters".format(sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
+        print("Constructed NN with {} parameters".format(
+            sum(p.numel() for p in self.net.parameters() if p.requires_grad)))
         self.net.eval()
 
     def __call__(self, input_: Union[Board, List[Board]]):
         if isinstance(input_, Board):
-            return self.call_board(input_)
+            return self._call_board(input_)
         elif isinstance(input_, list):
-            return self.call_list(input_)
+            return self._call_list(input_)
         else:
-            raise TypeError('ModelWrapper called with {}. It accepts either a Board nor a list(Board)'.format(type(input_)))
+            raise TypeError('ModelWrapper called with {}. It accepts either a '
+                            'Board nor a list(Board)'.format(type(input_)))
 
-    def call_board(self, board: Board):
-        board_tensor = torch.FloatTensor(board.to_array())
-        board_tensor = board_tensor.view(1, *board_tensor.size())
-        board_tensor = board_tensor.to(self.device)
-        value, prior = self.net(board_tensor)
-        try:
-            assert not torch.isnan(value).any()
-            assert not torch.isnan(prior).any()
-        except AssertionError:
-            print(board, value, prior)
-            assert False
-        value = value.cpu().view(-1).data.numpy()
-        prior = prior.cpu().view(-1).data.numpy()
-        return value, prior
+    def evaluate(self,
+                 data: Connect4Dataset,
+                 batch_size: int = 4096,
+                 shuffle: bool = True):
+        test_gen = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
+        return evaluate(test_gen,
+                        self.net,
+                        self.device,
+                        self.value_loss,
+                        self.prior_loss)
 
-    def call_list(self, board_list: List[Board]):
-        board_tensor = torch.FloatTensor(list(map(lambda x: x.to_array(),
-                                                  board_list)))
-        board_tensor = board_tensor.to(self.device)
-        values, priors = self.net(board_tensor)
-        try:
-            assert not torch.isnan(values).any()
-            assert not torch.isnan(priors).any()
-        except AssertionError:
-            print(board_tensor, values, priors)
-            assert False
-        values = values.cpu().data.numpy()
-        priors = priors.cpu().data.numpy()
-        return values, priors
+    def evaluate_value_only(self, data: Connect4Dataset):
+        # Note no prior here, 3rd arg unused
+        data = DataLoader(data, batch_size=4096, shuffle=True)
+        """Get an idea of how the initialisation is"""
+        stats = ValueStats()
 
-    def save(self, folder_path: str):
-        torch.save(
-            {
-                'net_state_dict': self.net.state_dict(),
-                # 'optimiser_state_dict': self.optimiser.state_dict()
-                'optimiser_state_dict': self.optimiser.state_dict(),
-                'scheduler_state_dict': self.scheduler.state_dict()
-            },
-            folder_path + '/net.pth')
-
-    def criterion(self, x_value, x_prior, y_value, y_prior):
-        assert x_value.shape == y_value.shape
-        assert x_prior.shape == y_prior.shape
-
-        value_loss = self.value_loss(x_value, y_value)
-        prior_loss = self.prior_loss(x_prior, y_prior)
-        # L2 regularization loss is added via the optimiser (setting a weight_decay value)
-
-        return value_loss, prior_loss
-
-    # FIXME: How is the optimiser going to work?
-    # https://www.datahubbs.com/two-headed-a2c-network-in-pytorch/
-    # l2 loss https://developers.google.com/machine-learning/crash-course/regularization-for-simplicity/l2-regularization
+        with torch.set_grad_enabled(False):
+            for board, value in data:
+                board, y_value = board.to(self.device), value.to(self.device)
+                x_value, _ = self.net(board)
+                loss = self.value_loss(x_value, y_value)
+                assert x_value.shape == y_value.shape
+                stats.update(x_value.cpu().numpy(),
+                             y_value.cpu().numpy(),
+                             loss.item())
+        return stats
 
     def train(self,
               data: Connect4Dataset,
@@ -301,10 +244,10 @@ class ModelWrapper():
                 # forward + backward + optimise
                 x_value, x_prior = self.net(board)
 
-                value_loss, prior_loss = self.criterion(x_value,
-                                                        x_prior,
-                                                        y_value,
-                                                        y_prior)
+                value_loss, prior_loss = self._criterion(x_value,
+                                                         x_prior,
+                                                         y_value,
+                                                         y_prior)
                 loss = value_loss + prior_loss
                 loss.backward()
                 self.optimiser.step()
@@ -322,33 +265,57 @@ class ModelWrapper():
         self.scheduler.step()
         self.net.eval()
 
-    def evaluate_value_only(self, data: Connect4Dataset):
-        # Note no prior here, 3rd arg unused
-        data = DataLoader(data, batch_size=4096, shuffle=True)
-        """Get an idea of how the initialisation is"""
-        stats = ValueStats()
+    def save(self, folder_path: str):
+        torch.save(
+            {
+                'net_state_dict': self.net.state_dict(),
+                # 'optimiser_state_dict': self.optimiser.state_dict()
+                'optimiser_state_dict': self.optimiser.state_dict(),
+                'scheduler_state_dict': self.scheduler.state_dict()
+            },
+            folder_path + '/net.pth')
 
-        with torch.set_grad_enabled(False):
-            for board, value in data:
-                board, y_value = board.to(self.device), value.to(self.device)
-                x_value, _ = self.net(board)
-                loss = self.value_loss(x_value, y_value)
-                assert x_value.shape == y_value.shape
-                stats.update(x_value.cpu().numpy(),
-                             y_value.cpu().numpy(),
-                             loss.item())
-        return stats
+    def _call_board(self, board: Board):
+        board_tensor = torch.FloatTensor(board.to_array())
+        board_tensor = board_tensor.view(1, *board_tensor.size())
+        board_tensor = board_tensor.to(self.device)
+        value, prior = self.net(board_tensor)
 
-    def evaluate(self,
-                 data: Connect4Dataset,
-                 batch_size: int = 4096,
-                 shuffle: bool = True):
-        test_gen = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
-        return evaluate(test_gen,
-                        self.net,
-                        self.device,
-                        self.value_loss,
-                        self.prior_loss)
+        try:
+            assert not torch.isnan(value).any()
+            assert not torch.isnan(prior).any()
+        except AssertionError:
+            print(board, value, prior)
+            assert False
+
+        value = value.cpu().view(-1).data.numpy()
+        prior = prior.cpu().view(-1).data.numpy()
+        return value, prior
+
+    def _call_list(self, board_list: List[Board]):
+        board_tensor = torch.FloatTensor(list(map(lambda x: x.to_array(),
+                                                  board_list)))
+        board_tensor = board_tensor.to(self.device)
+        values, priors = self.net(board_tensor)
+
+        try:
+            assert not torch.isnan(values).any()
+            assert not torch.isnan(priors).any()
+        except AssertionError:
+            print(board_tensor, values, priors)
+            assert False
+
+        return values.cpu().data.numpy(), priors.cpu().data.numpy()
+
+    def _criterion(self, x_value, x_prior, y_value, y_prior):
+        assert x_value.shape == y_value.shape
+        assert x_prior.shape == y_prior.shape
+
+        value_loss = self.value_loss(x_value, y_value)
+        prior_loss = self.prior_loss(x_prior, y_prior)
+        # L2 regularization loss is added via the optimiser (setting a weight_decay value)
+
+        return value_loss, prior_loss
 
 
 def weights_init(m):
@@ -385,60 +352,3 @@ def evaluate(train_gen, net, device, value_criterion, prior_criterion):
                          prior_loss)
 
     return stats
-
-
-class TrainingDataStorage(GameStorage):
-    def td_file_name(self, folder_path, gen):
-        return "{}/{}/data.pth".format(folder_path, gen)
-
-    def save(self,
-             games: List[GameData],
-             folder_path: str):
-        super().save(games, folder_path)
-
-        data = np.sum(list(map(lambda x: x.data, games)))
-        board_t, value_t, prior_t = native_to_pytorch(data.boards,
-                                                      data.values,
-                                                      data.priors,
-                                                      add_fliplr=True)
-
-        dataset = Connect4Dataset(board_t, value_t, prior_t)
-        dataset.save(folder_path + '/data.pth')
-
-    def get_dataset(self,
-                    base_path: str,
-                    gen: int):
-        n = min(20, int((gen + 1) / 2))
-        file_names = [self.td_file_name(base_path, i)
-                      for i in range(gen,
-                                     gen - n,
-                                     -1)]
-        return ConcatDataset([Connect4Dataset.load(f)
-                              for f in file_names])
-
-
-def native_to_pytorch(boards: List[Board],
-                      values: Sequence[float],
-                      priors: List[Sequence[float]] = None,
-                      to_move_channel: bool = True,
-                      add_fliplr: bool = False):
-    assert len(boards) == len(values)
-    if add_fliplr:
-        flip_boards = list(map(lambda x: x.create_fliplr(), boards))
-        boards.extend(flip_boards)
-        values = np.concatenate((values, values), axis=None)
-    boards = torch.FloatTensor(list(map(
-        lambda x: x.to_array(), boards)))
-    if not to_move_channel:
-        boards = boards[:, 1:]
-    values = torch.FloatTensor(values)
-    if priors is None:
-        priors = None
-    else:
-        if add_fliplr:
-            flip_priors = list(map(lambda x: np.flip(x), priors))
-            priors.extend(flip_priors)
-        assert len(boards) == len(priors)
-        priors = torch.FloatTensor(priors)
-
-    return boards, values, priors

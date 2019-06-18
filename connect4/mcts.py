@@ -1,17 +1,13 @@
-from connect4.board_c import Board
+from connect4.board import Board
 from connect4.evaluators import Evaluator
 from connect4.player import BasePlayer
 from connect4.tree import Tree
 from connect4.utils import Connect4Stats as info
-from connect4.utils import (same_side,
-                            Side,
-                            value_to_side,
-                            Result)
 
 from anytree import Node
 import math
 import numpy as np
-from typing import Callable, List, Optional, Set, Tuple
+from typing import Callable, List, Set, Tuple
 
 
 class MCTSConfig():
@@ -83,7 +79,7 @@ class MCTS(BasePlayer):
         tree = search(self.config, board, self.evaluator)
 
         if board.age < self.config.num_sampling_moves:
-            child = tree.softmax_value_fn(lambda x: x ** 2)
+            child = tree.sample_value_fn(lambda x: x ** 2)
         else:
             child = tree.best_move()
 

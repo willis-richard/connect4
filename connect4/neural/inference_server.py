@@ -1,4 +1,4 @@
-from connect4.board_c import Board, make_random_ips
+from connect4.board import Board, make_random_ips
 from connect4.utils import Connect4Stats as info
 
 from collections import deque

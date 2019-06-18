@@ -1,9 +1,8 @@
-from connect4.board_c import make_random_ips
 import connect4.evaluators as ev
 from connect4.grid_search import GridSearch
 from connect4.utils import Side
 
-from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
+from connect4.neural.pytorch.data import Connect4Dataset, native_to_pytorch
 
 from connect4.scripts.view_boards import read_8ply_data
 

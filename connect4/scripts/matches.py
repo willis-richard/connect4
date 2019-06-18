@@ -3,7 +3,7 @@ from connect4.match import Match
 from connect4.mcts import MCTS, MCTSConfig
 
 from connect4.neural.config import ModelConfig
-from connect4.neural.nn_pytorch import ModelWrapper
+from connect4.neural.pytorch.model import ModelWrapper
 
 from functools import partial
 import sys

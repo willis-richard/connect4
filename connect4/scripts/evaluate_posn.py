@@ -1,9 +1,10 @@
-from connect4.board_c import Board
+from connect4.board import Board
 import connect4.evaluators as ev
 from connect4.mcts import MCTS, MCTSConfig
 
 from connect4.neural.config import ModelConfig
-from connect4.neural.nn_pytorch import ModelWrapper
+
+from connect4.neural.pytorch.model import ModelWrapper
 
 import anytree
 from functools import partial

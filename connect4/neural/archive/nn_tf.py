@@ -1,4 +1,4 @@
-from connect4.board_c import Board
+from connect4.board import Board
 from connect4.utils import Connect4Stats as info
 from connect4.utils import NetworkStats as net_info
 

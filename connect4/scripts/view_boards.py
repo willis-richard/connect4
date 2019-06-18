@@ -1,6 +1,6 @@
-from connect4.board_c import Board
+from connect4.board import Board
 
-from connect4.neural.nn_pytorch import Connect4Dataset, native_to_pytorch
+from connect4.neural.pytorch.data import Connect4Dataset, native_to_pytorch
 
 import numpy as np
 import pickle

@@ -1,4 +1,4 @@
-from connect4.board_c import make_random_ips
+from connect4.board import make_random_ips
 from connect4.game import Game
 from connect4.player import BasePlayer
 
