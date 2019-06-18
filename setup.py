@@ -8,7 +8,7 @@ with open(path.join(here, 'README.md'), 'r') as f:
 
 setup(
     name='connect4',
-    version='1.0.4',
+    version='1.0.5',
     author='Muff2n',
     description='A Reinforcement Learning agent plays connect4',
     long_description=long_description,
@@ -19,7 +19,11 @@ setup(
       'License :: OSI Approved :: MIT License',
       'Operating System :: OS Independent',
     ],
-    packages=find_packages(exclude=['tests*']),
+    packages=find_packages(exclude=[
+        'tests*',
+        '*archive',
+        'connect4/scripts'
+    ]),
     python_requires='>=3.7',
     install_requires=[
         'anytree',
@@ -34,7 +38,7 @@ setup(
         'test': ['coverage'],
     },
     package_data={
-        'sample': ['misc/net.pth'],
+        'connect4': ['data/*'],
     },
     entry_points={
         'console_scripts' : ['connect4 = connect4:main']

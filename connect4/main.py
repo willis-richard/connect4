@@ -34,14 +34,17 @@ class Parser():
         getattr(self, self.mode.mode)()
 
     def game(self):
+        dirname = os.path.dirname(os.path.abspath(__file__))
         parser = argparse.ArgumentParser(description='Run a game between two human players.')
         parser.add_argument('-p', '--players', nargs=2,
                             help='the names of the two players')
         parser.add_argument('-n', '--net_filepath', type=str, required=False,
+                            default=dirname + '/data/example_net.pth',
                             help='filepath to a pytorch network')
         self.args = parser.parse_args(sys.argv[3:])
 
     def match(self):
+        dirname = os.path.dirname(os.path.abspath(__file__))
         parser = argparse.ArgumentParser(description='Run a match from different initial positions.')
         parser.add_argument('-a', '--agents', default=1, type=int,
                             help='how many processes to run')
@@ -52,6 +55,7 @@ class Parser():
         parser.add_argument('-d', '--display', default=False, type=bool,
                             help='display each position?')
         parser.add_argument('-n', '--net_filepath', type=str, required=False,
+                            default=dirname + '/data/example_net.pth',
                             help='filepath to a pytorch network')
         self.args = parser.parse_args(sys.argv[3:])
 
