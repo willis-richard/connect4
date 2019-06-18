@@ -18,4 +18,21 @@ Other useful resources are:
 Finally I should acknowledge the less glamarous but probably most imporant role that StackOverflow has played.
 
 # Usage
-There are three modes that 
+There are three modes that can be used:
+$ python main.py -m [mode]
+Where mode can be:
+game: to play a single game use (typically used to play human vs the AI)
+match: to play a match use (typically used to run a AI vs AI to confirm that the training is making it play better in head to head)
+training: to run the self-play training loops
+
+I have included a trained network in the base directory called 'net.pth'
+
+With the config left as is, my training run produced the following 8ply training loss:
+
+# Notes/Commentary
+
+I use the convention that a position is scored 1 if it is a win for the first player to move in a game of Connect4 ('player_o') and value 0 if the second player will win ('player_x'). Game tree nodes store this absolute position evaluation, but when querying the node for the value, it will return the relative value to the player querying it. i.e. if a position is won for the second player it will have value 0, and if the second player queries the value of this position, a value 1 - 0 = 1 will be returned.
+
+# Training
+
+[Here is an example training run](./example_training.py)
