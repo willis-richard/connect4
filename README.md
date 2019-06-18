@@ -35,4 +35,4 @@ I use the convention that a position is scored 1 if it is a win for the first pl
 
 # Training
 
-[Here is an example training run](./example_training.py)
+[Here is an example training run](./example_training.pdf)
