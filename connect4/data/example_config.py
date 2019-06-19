@@ -2,9 +2,12 @@ import os
 
 from connect4.neural.config import (AlphaZeroConfig,
                                     ModelConfig,
+                                    NetConfig,
                                     StorageConfig)
 
-config = AlphaZeroConfig(storage_config=StorageConfig(
+config = AlphaZeroConfig(model_config=ModelConfig(
+    net_config=NetConfig(filters=64, n_fc_layers=6, n_residuals=6)),
+                         storage_config=StorageConfig(
     save_dir='{}/Downloads/nn/new_dir15'.format(os.path.expanduser('~'))),
                          # game_processes=1,
                          # game_threads=1,

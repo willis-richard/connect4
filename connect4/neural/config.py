@@ -4,8 +4,21 @@ import os
 dirname = os.path.dirname(os.path.abspath(__file__))
 
 
+class NetConfig():
+    def __init__(self,
+                 channels=3,
+                 filters=32,
+                 n_fc_layers=4,
+                 n_residuals=3):
+        self.channels = channels
+        self.filters = filters
+        self.n_fc_layers = n_fc_layers
+        self.n_residuals = n_residuals
+
+
 class ModelConfig():
     def __init__(self,
+                 net_config=NetConfig(),
                  weight_decay=1e-4,
                  momentum=0.9,
                  initial_lr=0.01,
@@ -15,6 +28,7 @@ class ModelConfig():
                  batch_size=4096,
                  n_training_epochs=5,
                  use_gpu=True):
+        self.net_config = net_config
         self.weight_decay = weight_decay
         self.momentum = momentum
         self.initial_lr = initial_lr

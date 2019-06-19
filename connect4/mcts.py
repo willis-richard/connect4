@@ -131,17 +131,17 @@ def evaluate_node(tree: Tree, node: Node, evaluator):
         normalise(node.data.valid_moves, prior)
         node.data.position_value = PositionEvaluation(value, prior)
         node.data.search_value = SearchEvaluation()
+    node.data.search_value.add(value)
     return value
 
 
 def select_child(config: MCTSConfig,
                  tree: Tree,
                  node: Node):
-    _, idx = max((ucb_score(config, node, child), i)
-                 for i, child in enumerate(node.children))
+    _, child = max((ucb_score(config, node, c), c)
+                   for c in node.children)
 
-    # FIXME: overwrite comparison operators in Node class, then just return that child
-    return node.children[idx]
+    return child
 
 
 def ucb_score(config: MCTSConfig,
@@ -163,7 +163,6 @@ def ucb_score(config: MCTSConfig,
 
 def backpropagate(node: Node,
                   value: float):
-    node.data.search_value.add(value)
     while not node.is_root:
         node = node.parent
         node.data.search_value.add(value)

@@ -1,7 +1,7 @@
 # Intro
 Using reinforcement learning to train an agent to play Connect4 as well as it can. I use a recursive neural network as a value approximator which also outputs a policy of the likely best move in a position. This is combined with a Monte Carlo Marcov Chain tree search to plan the best move.
 
-This repo is a training project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism if and reader would like to educate me on 'things I could improve'.
+This repo is a self-project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism on absolutely anything from how I could have improved the Machine Learning, python programming, project layout, etc.
 
 # Installation
 $ pip install XXX

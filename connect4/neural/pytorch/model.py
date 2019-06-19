@@ -1,7 +1,7 @@
 from connect4.board import Board
-from connect4.utils import NetworkStats as net_info
+from connect4.utils import Connect4Stats as info
 
-from connect4.neural.config import ModelConfig
+from connect4.neural.config import ModelConfig, NetConfig
 from connect4.neural.stats import CombinedStats, ValueStats
 
 from connect4.neural.pytorch.data import Connect4Dataset
@@ -17,8 +17,8 @@ from typing import List, Optional, Union
 
 # Input with N * channels * (6,7)
 # Output with N * filters * (6,7)
-def create_convolutional_layer(in_channels=net_info.channels,
-                               out_channels=net_info.filters):
+def create_convolutional_layer(in_channels,
+                               out_channels):
     return nn.Sequential(nn.Conv2d(in_channels,
                                    out_channels,
                                    kernel_size=3,
@@ -34,7 +34,7 @@ def create_convolutional_layer(in_channels=net_info.channels,
 # Input with N * filters * (6,7)
 # Output with N * filters * (6,7)
 class ResidualLayer(nn.Module):
-    def __init__(self, filters=net_info.filters):
+    def __init__(self, filters):
         super(ResidualLayer, self).__init__()
         self.conv1 = nn.Conv2d(filters, filters, 3, padding=1, bias=False)
         self.conv2 = nn.Conv2d(filters, filters, 3, padding=1, bias=False)
@@ -59,15 +59,17 @@ class ResidualLayer(nn.Module):
 # Output with N * 1
 class ValueHead(nn.Module):
     def __init__(self,
-                 filters=net_info.filters,
-                 fc_layers=net_info.n_fc_layers):
+                 filters: int,
+                 fc_layers: int):
         super(ValueHead, self).__init__()
         self.conv1 = nn.Conv2d(filters, 1, 1)  # N*f*H*W -> N*1*H*W
         self.batch_norm = nn.BatchNorm2d(1)
         self.relu = nn.LeakyReLU()
         # in the linear we go from N*(H*W) -> N*(H*W)
-        self.fcN = nn.Sequential(*[nn.Linear(net_info.area, net_info.area) for _ in range(fc_layers)])
-        self.fc1 = nn.Linear(net_info.area, 1)  # N*(H*W) -> N*(1)
+        self.fcN = nn.Sequential(*[nn.Linear(info.area, info.area)
+                                   for _ in range(fc_layers)])
+        # N*(H*W) -> N*(1)
+        self.fc1 = nn.Linear(info.area, 1)
         self.tanh = torch.nn.Tanh()
         self.w1 = nn.Parameter(torch.tensor(1.0), requires_grad=False)
         self.w2 = nn.Parameter(torch.tensor(0.5), requires_grad=False)
@@ -92,12 +94,14 @@ class ValueHead(nn.Module):
 # Input with N * filters * (6,7)
 # Output with N * 7
 class PolicyHead(nn.Module):
-    def __init__(self, filters=net_info.filters):
+    def __init__(self, filters: int):
         super(PolicyHead, self).__init__()
-        self.conv1 = nn.Conv2d(filters, 2, 1)  # N * f * H * W -> N * 2 * H * W
+        # N * f * H * W -> N * 2 * H * W
+        self.conv1 = nn.Conv2d(filters, 2, 1)
         self.batch_norm = nn.BatchNorm2d(2)
         self.relu = nn.LeakyReLU()
-        self.fc1 = nn.Linear(2 * net_info.area, net_info.width)  # N * f * (2 * H * W) -> N * f * W
+        # N * f * (2 * H * W) -> N * f * W
+        self.fc1 = nn.Linear(2 * info.area, info.width)
         self.softmax = nn.Softmax(dim=1)
 
     def forward(self, x):
@@ -108,42 +112,20 @@ class PolicyHead(nn.Module):
         x = x.view(x.shape[0], 1, -1)
         x = self.fc1(x)
         # No idea why but if I had [[[ output then classifier bitched and wanted [[
-        x = x.view(-1, net_info.width)
+        x = x.view(-1, info.width)
         x = self.softmax(x)
         return x
 
 
-# Used in 8-ply testing
-def build_value_net(filters=net_info.filters,
-                    n_residual_layers=net_info.n_residuals,
-                    value_head_fc_layers=net_info.n_fc_layers):
-    value_net = nn.Sequential(
-        create_convolutional_layer(2, filters),
-        nn.Sequential(*[ResidualLayer(filters)
-                        for _ in range(n_residual_layers)]),
-        ValueHead(filters, value_head_fc_layers))
-    return value_net
-
-
-def build_policy_net(filters=net_info.filters,
-                     n_residual_layers=net_info.n_residuals):
-    policy_net = nn.Sequential(
-        create_convolutional_layer(2, filters),
-        nn.Sequential(*[ResidualLayer(filters)
-                        for _ in range(n_residual_layers)]),
-        PolicyHead(filters))
-    return policy_net
-
-
 class Net(nn.Module):
-    def __init__(self):
+    def __init__(self, config: NetConfig):
         super(Net, self).__init__()
         self.body = nn.Sequential(
-            create_convolutional_layer(),
-            nn.Sequential(*[ResidualLayer()
-                            for _ in range(net_info.n_residuals)]))
-        self.value_head = ValueHead()
-        self.policy_head = PolicyHead()
+            create_convolutional_layer(config.channels, config.filters),
+            nn.Sequential(*[ResidualLayer(config.filters)
+                            for _ in range(config.n_residuals)]))
+        self.value_head = ValueHead(config.filters, config.n_fc_layers)
+        self.policy_head = PolicyHead(config.filters)
 
     def forward(self, x):
         x = self.body(x)
@@ -157,7 +139,7 @@ class ModelWrapper():
                  config: ModelConfig,
                  file_name: Optional[str] = None):
         self.config = config
-        self.net = Net()
+        self.net = Net(config.net_config)
         if config.use_gpu and torch.cuda.is_available():
             self.device = torch.device("cuda:0")
             self.net.to(self.device)
