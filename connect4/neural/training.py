@@ -29,7 +29,7 @@ class TrainingLoop():
 
         # if there are existing dirs, load the latest
         subfolders = [f.name for f in os.scandir(self.save_dir) if f.is_dir()]
-        if subfolders:
+        if subfolders and len(subfolders) > 1:
             self.gen = max([int(n) for n in subfolders])
             try:
                 net_path = self.folder_path + '/net.pth'

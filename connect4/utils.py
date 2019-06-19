@@ -9,9 +9,9 @@ class Connect4Stats():
 
 class NetworkStats():
     channels = 3
-    filters = 32
-    n_fc_layers = 4
-    n_residuals = 3
+    filters = 64
+    n_fc_layers = 6
+    n_residuals = 6
     width = Connect4Stats.width
     area = Connect4Stats.height * Connect4Stats.width
 

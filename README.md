@@ -3,7 +3,25 @@ Using reinforcement learning to train an agent to play Connect4 as well as it ca
 
 This repo is a training project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism if and reader would like to educate me on 'things I could improve'.
 
-## Acknowledgements
+# Installation
+$ pip install XXX
+
+Alternatively checkout the repo and include the path to project base in your PYTHONPATH. If you checkout the repo you will also have all the misc scripts that I have used, in XXX/scripts. Be warned that these were Hacked (with a capital H) together. If you use this approach you will need to call the XXX/main.py script directly when running.
+
+# Usage
+$ XXX -m [mode] [mode options]
+
+There are two modes that can be used:
+To play a game vs the AI use
+$ XXX -m game [-n network_filepath]
+If a network file is not provided, a pre-trained one provided in 'XXX/data/example_net.pth' is used. If you change any of the network parapers specified in 'XXX/utils.py' you will need to train your own.
+
+To run a self-play training loop use:
+$ XXX -m training [-c config.py]
+
+Create a config for youself following the example of XXX/data/example_config.py. You will need to specify a working directory, everything else will use the default values found in XXX/neural/config.py
+
+# Acknowledgements
 This project is a re-implementation of Deepmind's paper [A general reinforcement learning algorithm that
 masters chess, shogi and Go through self-play](https://deepmind.com/documents/260/alphazero_preprint.pdf)
 
@@ -17,23 +35,21 @@ Other useful resources are:
 
 Finally I should acknowledge the less glamarous but probably most imporant role that StackOverflow has played.
 
-# Usage
-There are three modes that can be used:
-$ python main.py -m [mode]
-Where mode can be:
-game: to play a single game use (typically used to play human vs the AI)
-match: to play a match use (typically used to run a AI vs AI to confirm that the training is making it play better in head to head)
-training: to run the self-play training loops
-
-I have included a trained network in the base directory called 'example_net.pth'
 
 With the config left as is, my training run produced the following 8ply training loss:
 
-# Notes/Conventions
+# Conventions
+A position is scored 1 if it is a win for the first player to move in a game of Connect4 ('player_o') and value 0 if the second player will win ('player_x'). Game tree nodes store the absolute position evaluation, but when querying the node for the value, it will return the relative value to the player querying (i.e. a value of 1 means the player to move will win).
 
-I use the convention that a position is scored 1 if it is a win for the first player to move in a game of Connect4 ('player_o') and value 0 if the second player will win ('player_x'). Game tree nodes store this absolute position evaluation, but when querying the node for the value, it will return the relative value to the player querying it. i.e. if a position is won for the second player it will have value 0, and if the second player queries the value of this position, a value 1 - 0 = 1 will be returned.
+# Notes
+I differ from Deepmind's paper in the following ways:
+* My training is offline, it runs after a cycle of training games. All the games from the previous max (20, gen/2) generations are used.
+* I 'cheat' and augment my training data with positions reflected in the vertical axis, using the symmetrical nature of connect4.
+* I don't use parallel MCTS, relying instead on parallelising the gameplay.
+* I select moves based upon value, rather than visit count.
+** During the exploration moves at the start, I select proportional to the squared value of possible moves, rather than softmax of visit counts.
+* Lots of parameters are different from their suggested values (it is a different game afterall).
 
 # Training
-
-Here is an example training run:
-![alt text](./misc/example_training.pdf)
+Here is an example training run with the default parameters used:
+![alt text](./example_training.pdf)

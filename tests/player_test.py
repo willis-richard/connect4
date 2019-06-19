@@ -1,4 +1,4 @@
-from connect4.board_c import Board
+from connect4.board import Board
 import connect4.evaluators as evaluators
 from connect4.grid_search import GridSearch
 from connect4.mcts import MCTS, MCTSConfig

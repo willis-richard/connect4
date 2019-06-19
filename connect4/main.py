@@ -51,7 +51,7 @@ def main():
     parser = Parser()
     if parser.mode.mode == 'game':
         player_1 = HumanPlayer('User')
-        model = ModelWrapper(ModelConfig(),
+        model = ModelWrapper(ModelConfig(use_gpu=False),
                              file_name=parser.args.net_filepath)
 
         player_2 = MCTS('AI',
