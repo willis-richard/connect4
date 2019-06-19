@@ -1,7 +1,7 @@
-from connect4.board import Board
-import connect4.evaluators as evaluators
-from connect4.grid_search import GridSearch
-from connect4.mcts import MCTS, MCTSConfig
+from oinkoink.board import Board
+import oinkoink.evaluators as evaluators
+from oinkoink.grid_search import GridSearch
+from oinkoink.mcts import MCTS, MCTSConfig
 
 import anytree
 import pytest

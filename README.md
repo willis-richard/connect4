@@ -1,29 +1,43 @@
+<pre>
+ _________________
+< I like connect4 >
+ -----------------
+   \
+   \   _//| .-~~~-.
+     _/oo  }       }-@
+    ('')_  }       |
+     `--'| { }--{  }
+          //_/  /_/
+</pre>
+
+[Image origination](https://github.com/sckott/cowsay)
+
 # Intro
 Using reinforcement learning to train an agent to play Connect4 as well as it can. I use a recursive neural network as a value approximator which also outputs a policy of the likely best move in a position. This is combined with a Monte Carlo Marcov Chain tree search to plan the best move.
 
 This repo is a self-project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism on absolutely anything from how I could have improved the Machine Learning, python programming, project layout, etc.
 
 # Installation
-`pip install XXX`
+`pip install oinkoink`
 
-Alternatively checkout the repo and include the path to project base in your PYTHONPATH. If you checkout the repo you will also have all the misc scripts that I have used, in XXX/scripts. Be warned that these were Hacked (with a capital H) together. If you use this approach you will need to call the XXX/main.py script directly when running.
+Alternatively checkout the repo and include the path to project base in your PYTHONPATH. If you checkout the repo you will also have all the misc scripts that I have used, in oinkoink/scripts. Be warned that these were Hacked (with a capital H) together. If you use this approach you will need to call the oinkoink/main.py script directly when running.
 
 # Usage
-`XXX -m [mode] [mode options]`
+`oinkoink -m [mode] [mode options]`
 
 There are two modes that can be used:
 To play a game vs the AI use
 
-`XXX -m game [-n network_file -s simulations]`
+`oinkoink -m game [-n network_file -s simulations]`
 
 The default simulations is 800, this is the number of positions the AI will analyise before making a move.
-If a network file is not provided, a pre-trained one provided in 'XXX/data/example_net.pth' is used. If you change any of the network parapers specified in 'XXX/utils.py' you will need to train your own.
+If a network file is not provided, a pre-trained one provided in 'oinkoink/data/example_net.pth' is used. If you change any of the network parapers specified in 'oinkoink/utils.py' you will need to train your own.
 
 To run a self-play training loop use:
 
-`XXX -m training [-c config.py]`
+`oinkoink -m training [-c config.py]`
 
-It is strongly recommended to create a config for yourself following the example of XXX/data/example_config.py. It is especially important to specify a working directory, everything else can use the default values found in XXX/neural/config.py.
+It is strongly recommended to create a config for yourself following the example of oinkoink/data/example_config.py. It is especially important to specify a working directory, everything else can use the default values found in oinkoink/neural/config.py.
 
 Playing a game will run the network on the CPU - typically fast enough. The training loop will make use of a Cuda enabled GPU, and can use multiple processes.
 
@@ -56,10 +70,10 @@ I differ from Deepmind's paper in the following ways:
 User vs AI gameplay has not been optimised in any way; the point of this project is the training process. This functionality has been included for fun.
 
 # Training
-The evaluation datasets are found in 'XXX/data'. The 8ply file has all the positions from the YYY. I use the RMSE of the position values outputted from my model compared to the theoretical values.
+The evaluation datasets are found in 'oinkoink/data'. The 8ply file has all the positions from the UCI repo, converted into pytorch tensors. I use the RMSE of the position values outputted from my model compared to the theoretical values.
 
-Because the network also outputs move probabilities, I generated a 7ply dataset where I solve using the 8ply dataset, and label the 'weak' correct moves. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on this and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
+Because the network also outputs move probabilities, I generated a 7ply dataset where I solve for 'weak' winning moves using the 8ply dataset. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on these 7ply positions, and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
 
 Here are the results of an example training run with the default parameters used:
-<p align="center"><img width="50%" src="training\_8ply.png" /></p>
-<p align="center"><img width="50%" src="training\_7ply.png" /></p>
+<p align="center"><img width="50%" src="8ply.png" /></p>
+<p align="center"><img width="50%" src="7ply.png" /></p>

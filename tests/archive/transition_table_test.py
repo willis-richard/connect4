@@ -1,7 +1,7 @@
-from connect4.board import Board
-import connect4.evaluators as evaluators
-from connect4.grid_search import GridSearch
-# from connect4 import transition_table
+from oinkoink.board import Board
+import oinkoink.evaluators as evaluators
+from oinkoink.grid_search import GridSearch
+# from oinkoink import transition_table
 
 
 def disabled_test_transition_table():

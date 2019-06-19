@@ -1,5 +1,5 @@
-from connect4.board import Board
-from connect4.utils import Result
+from oinkoink.board import Board
+from oinkoink.utils import Result
 
 import pytest
 

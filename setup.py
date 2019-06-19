@@ -7,8 +7,8 @@ with open(path.join(here, 'README.md'), 'r') as f:
     long_description = f.read()
 
 setup(
-    name='connect4',
-    version='1.0.9',
+    name='oinkoink',
+    version='1.0.0',
     author='Muff2n',
     description='A Reinforcement Learning agent plays connect4',
     long_description=long_description,
@@ -21,7 +21,7 @@ setup(
     packages=find_packages(exclude=[
         'tests*',
         '*archive',
-        'connect4/scripts'
+        'oinkoink/scripts'
     ]),
     python_requires='>=3.7',
     install_requires=[
@@ -37,10 +37,10 @@ setup(
         'test': ['coverage'],
     },
     package_data={
-        'connect4': ['data/*'],
+        'oinkoink': ['data/*'],
     },
     entry_points={
-        'console_scripts' : ['connect4 = connect4:main']
+        'console_scripts' : ['oinkoink = oinkoink:main']
     },
     url='http://github.com/muff2n/connect4'
 )
