@@ -81,15 +81,18 @@ def native_to_pytorch(boards: List[Board],
                       to_move_channel: bool = True,
                       add_fliplr: bool = False):
     assert len(boards) == len(values)
+
     if add_fliplr:
         flip_boards = list(map(lambda x: x.create_fliplr(), boards))
         boards.extend(flip_boards)
         values = np.concatenate((values, values), axis=None)
     boards_t = torch.FloatTensor(list(map(
         lambda x: x.to_array(), boards)))
+
     if not to_move_channel:
         boards_t = boards_t[:, 1:]
     values_t = torch.FloatTensor(values)
+
     if priors is None:
         priors_t = None
     else:

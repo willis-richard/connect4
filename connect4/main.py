@@ -38,6 +38,9 @@ class Parser():
         parser.add_argument('-n', '--net_filepath', type=str, required=False,
                             default=dirname + '/data/example_net.pth',
                             help='filepath to a pytorch network')
+        parser.add_argument('-s', '--simulations', type=int, required=False,
+                            default=800,
+                            help='Number of positions the AI will evaluate each move')
         self.args = parser.parse_args(sys.argv[3:])
 
     def training(self):
@@ -55,7 +58,7 @@ def main():
                              file_name=parser.args.net_filepath)
 
         player_2 = MCTS('AI',
-                        MCTSConfig(simulations=800),
+                        MCTSConfig(simulations=parser.args.simulations),
                         ev.Evaluator(partial(ev.evaluate_nn,
                                              model=model)))
 

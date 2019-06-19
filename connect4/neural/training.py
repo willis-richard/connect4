@@ -78,26 +78,26 @@ class TrainingLoop():
     def run(self):
         while True:
             print("Loop: ", self.gen)
-            self.loop()
-            self.evaluate()
+            self._loop()
+            self._evaluate()
             if self.gen % self.config.n_eval == 0:
-                self.match()
+                self._match()
             self.gen += 1
 
-    def loop(self):
+    def _loop(self):
         os.makedirs(self.folder_path, exist_ok=True)
         start_t = time.time()
         print('Time now: {}'.format(time.asctime(time.localtime(start_t))))
-        self.generate_games()
+        self._generate_games()
         train_t = time.time()
-        self.train()
+        self._train()
         end_t = time.time()
         print('Generate games: {:.0f}s  training: {:.0f}s'.format(
             train_t - start_t,
             end_t - train_t))
 
-    def generate_games(self):
-        mcts_config = self.create_alpha_zero_config(training=True)
+    def _generate_games(self):
+        mcts_config = self._create_alpha_zero_config(training=True)
         games = []
 
         if self.config.game_processes == 1:
@@ -120,7 +120,6 @@ class TrainingLoop():
                                                 for item in sublist])
 
             with Pool(processes=self.config.game_processes) as pool:
-                # pool.map(
                 for game_batch in pool.imap_unordered(partial(
                         game_pool,
                         mcts_config=mcts_config,
@@ -145,7 +144,7 @@ class TrainingLoop():
             self.vis.text(self.data_storage.last_game_str(),
                           win=self.game_win)
 
-    def train(self):
+    def _train(self):
         training_data = self.data_storage.get_dataset(self.save_dir, self.gen)
 
         print("{} positions created for training".format(len(training_data)))
@@ -153,7 +152,7 @@ class TrainingLoop():
         self.model.train(training_data)
         self.model.save(self.folder_path)
 
-    def evaluate(self):
+    def _evaluate(self):
         ply8_data = Connect4Dataset.load(
             self.data_dir + '/connect4dataset_8ply.pth')
         value_stats = self.model.evaluate_value_only(ply8_data)
@@ -174,8 +173,8 @@ class TrainingLoop():
             self.vis.matplot(self.stats_8ply.plot(y=['Accuracy']).figure,
                              win=self.win_8ply)
 
-    def match(self):
-        az_config = self.create_alpha_zero_config(training=False)
+    def _match(self):
+        az_config = self._create_alpha_zero_config(training=False)
         evaluator = evl.Evaluator(partial(evl.evaluate_nn,
                                           model=self.model))
         alpha_zero = MCTS('AlphaZero',
@@ -207,7 +206,7 @@ class TrainingLoop():
             self.vis.matplot(self.match_results.plot(y=['return']).figure,
                              win=self.match_win)
 
-    def create_alpha_zero_config(self, training=False):
+    def _create_alpha_zero_config(self, training=False):
         if training:
             return MCTSConfig(self.config.simulations,
                               self.config.pb_c_base,

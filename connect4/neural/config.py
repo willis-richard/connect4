@@ -1,15 +1,17 @@
+import os
+
+
+dirname = os.path.dirname(os.path.abspath(__file__))
+
 
 class ModelConfig():
     def __init__(self,
                  weight_decay=1e-4,
                  momentum=0.9,
-                 # Schedule for chess and shogi, Go starts at 2e-2 immediately.
                  initial_lr=0.01,
-                 # These are in training cycles
+                 # These are in training generations
                  milestones=[int(150), int(350), int(750)],
                  gamma=0.1,
-                 # read https://pytorch.org/docs/stable/optim.html about pre layer lr
-                 # could have one for the body, and diff ones for each head
                  batch_size=4096,
                  n_training_epochs=5,
                  use_gpu=True):
@@ -25,10 +27,10 @@ class ModelConfig():
 
 class StorageConfig():
     def __init__(self,
-                 data_dir='/home/richard/data/connect4',
-                 save_dir='/home/richard/Downloads/nn/new_dir'):
-        self.data_dir = data_dir
+                 save_dir=os.path.expanduser('~'),
+                 data_dir='{}/../data'.format(dirname)):
         self.save_dir = save_dir
+        self.data_dir = data_dir
 
 
 class AlphaZeroConfig():
@@ -40,7 +42,8 @@ class AlphaZeroConfig():
                  simulations=800,
                  pb_c_base=19652,
                  pb_c_init=1.25,
-                 root_dirichlet_alpha=0.3, # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
+                 # 0.3 for chess, 0.03 for Go and 0.15 for shogi.
+                 root_dirichlet_alpha=0.3,
                  root_exploration_fraction=0.25,
                  num_sampling_moves=6,
                  n_eval=1,
