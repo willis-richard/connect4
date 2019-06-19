@@ -59,3 +59,5 @@ Because the network also outputs move probabilities, I generated a 7ply dataset 
 
 Here is an example training run with the default parameters used:
 ![8ply](./example_training.pdf)
+
+<p align="center"><img width="50%" src="example_training.png" /></p>
