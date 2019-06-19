@@ -4,21 +4,21 @@ Using reinforcement learning to train an agent to play Connect4 as well as it ca
 This repo is a self-project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism on absolutely anything from how I could have improved the Machine Learning, python programming, project layout, etc.
 
 # Installation
-$ pip install XXX
+`pip install XXX`
 
 Alternatively checkout the repo and include the path to project base in your PYTHONPATH. If you checkout the repo you will also have all the misc scripts that I have used, in XXX/scripts. Be warned that these were Hacked (with a capital H) together. If you use this approach you will need to call the XXX/main.py script directly when running.
 
 # Usage
-$ XXX -m [mode] [mode options]
+`XXX -m [mode] [mode options]`
 
 There are two modes that can be used:
 To play a game vs the AI use
-$ XXX -m game [-n network_file -s simulations]
+`XXX -m game [-n network_file -s simulations]`
 The default simulations is 800, this is the number of positions the AI will analyise before making a move.
 If a network file is not provided, a pre-trained one provided in 'XXX/data/example_net.pth' is used. If you change any of the network parapers specified in 'XXX/utils.py' you will need to train your own.
 
 To run a self-play training loop use:
-$ XXX -m training [-c config.py]
+`XXX -m training [-c config.py]`
 
 Create a config for youself following the example of XXX/data/example_config.py. You will need to specify a working directory, everything else will use the default values found in XXX/neural/config.py
 
@@ -58,6 +58,4 @@ The evaluation datasets are found in 'XXX/data'. The 8ply file has all the posit
 Because the network also outputs move probabilities, I generated a 7ply dataset where I solve using the 8ply dataset, and label the 'weak' correct moves. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on this and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
 
 Here is an example training run with the default parameters used:
-![8ply](./example_training.pdf)
-
 <p align="center"><img width="50%" src="example_training.png" /></p>
