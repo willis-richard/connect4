@@ -7,15 +7,6 @@ class Connect4Stats():
     area = 42
 
 
-class NetworkStats():
-    channels = 3
-    filters = 32
-    n_fc_layers = 4
-    n_residuals = 3
-    width = Connect4Stats.width
-    area = Connect4Stats.height * Connect4Stats.width
-
-
 class Side(IntEnum):
     o = 0
     x = 1

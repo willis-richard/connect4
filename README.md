@@ -13,14 +13,17 @@ Alternatively checkout the repo and include the path to project base in your PYT
 
 There are two modes that can be used:
 To play a game vs the AI use
+
 `XXX -m game [-n network_file -s simulations]`
+
 The default simulations is 800, this is the number of positions the AI will analyise before making a move.
 If a network file is not provided, a pre-trained one provided in 'XXX/data/example_net.pth' is used. If you change any of the network parapers specified in 'XXX/utils.py' you will need to train your own.
 
 To run a self-play training loop use:
+
 `XXX -m training [-c config.py]`
 
-Create a config for youself following the example of XXX/data/example_config.py. You will need to specify a working directory, everything else will use the default values found in XXX/neural/config.py
+It is strongly recommended to create a config for yourself following the example of XXX/data/example_config.py. It is especially important to specify a working directory, everything else can use the default values found in XXX/neural/config.py.
 
 Playing a game will run the network on the CPU - typically fast enough. The training loop will make use of a Cuda enabled GPU, and can use multiple processes.
 
@@ -43,12 +46,12 @@ A position is scored 1 if it is a win for the first player to move in a game of 
 
 # Notes
 I differ from Deepmind's paper in the following ways:
-* My training is offline, it runs after a cycle of training games. All the games from the previous max (20, gen/2) generations are used.
+* My training is synchronous, it runs after a generation of training games. All the games from the previous max (20, gen/2) generations are used.
 * I 'cheat' and augment my training data with positions reflected in the vertical axis, using the symmetrical nature of connect4.
-* I don't use parallel MCTS, relying instead on parallelising the gameplay.
+* I don't use parallel MCTS, relying instead on parallelising the game playing.
 * I select moves based upon value, rather than visit count.
 ** During the exploration moves at the start, I select proportional to the squared value of possible moves, rather than softmax of visit counts.
-* Lots of parameters are different from their suggested values (it is a different game afterall).
+* Lots of parameters are different from their suggested values (it is a different game after all).
 
 User vs AI gameplay has not been optimised in any way; the point of this project is the training process. This functionality has been included for fun.
 
@@ -57,5 +60,6 @@ The evaluation datasets are found in 'XXX/data'. The 8ply file has all the posit
 
 Because the network also outputs move probabilities, I generated a 7ply dataset where I solve using the 8ply dataset, and label the 'weak' correct moves. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on this and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
 
-Here is an example training run with the default parameters used:
-<p align="center"><img width="50%" src="example_training.png" /></p>
+Here are the results of an example training run with the default parameters used:
+<p align="center"><img width="50%" src="training\_8ply" /></p>
+<p align="center"><img width="50%" src="training\_7ply" /></p>
