@@ -61,5 +61,5 @@ The evaluation datasets are found in 'XXX/data'. The 8ply file has all the posit
 Because the network also outputs move probabilities, I generated a 7ply dataset where I solve using the 8ply dataset, and label the 'weak' correct moves. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on this and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
 
 Here are the results of an example training run with the default parameters used:
-<p align="center"><img width="50%" src="training\_8ply" /></p>
-<p align="center"><img width="50%" src="training\_7ply" /></p>
+<p align="center"><img width="50%" src="training\_8ply.png" /></p>
+<p align="center"><img width="50%" src="training\_7ply.png" /></p>

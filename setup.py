@@ -8,7 +8,7 @@ with open(path.join(here, 'README.md'), 'r') as f:
 
 setup(
     name='connect4',
-    version='1.0.8',
+    version='1.0.9',
     author='Muff2n',
     description='A Reinforcement Learning agent plays connect4',
     long_description=long_description,
@@ -16,8 +16,7 @@ setup(
     license='MIT',
     classifiers=[
       'Programming Language :: Python :: 3',
-      'License :: OSI Approved :: MIT License',
-      'Operating System :: Linux',
+      'License :: OSI Approved :: MIT License'
     ],
     packages=find_packages(exclude=[
         'tests*',
