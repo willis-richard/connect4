@@ -40,8 +40,13 @@ class Parser():
                             help='filepath to a pytorch network')
         parser.add_argument('-s', '--simulations', type=int, required=False,
                             default=800,
-                            help='Number of positions the AI will evaluate each move')
+                            help='Number of positions the AI will evaluate each move.'
+                            'Minimum value of 1')
         self.args = parser.parse_args(sys.argv[3:])
+        if not os.path.isfile(self.args.net_filepath):
+            raise FileNotFoundError('net_filepath incorrectly specified')
+        if self.args.simulations <= 0:
+            raise ValueError('Simlulations must be a positive integer')
 
     def training(self):
         parser = argparse.ArgumentParser(description='Run a training loop')
@@ -72,7 +77,7 @@ def main():
             if str(e) == 'context has already been set':
                 pass
 
-        spec = spec_from_file_location("module.name", parser.args.config)
+        spec = spec_from_file_location('module.name', parser.args.config)
         config = module_from_spec(spec)
         spec.loader.exec_module(config)
         config = config.config
@@ -80,5 +85,5 @@ def main():
         TrainingLoop(config).run()
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()

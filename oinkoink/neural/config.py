@@ -23,7 +23,7 @@ class ModelConfig():
                  momentum=0.9,
                  initial_lr=0.01,
                  # These are in training generations
-                 milestones=[int(150), int(350), int(750)],
+                 milestones=[int(100), int(300), int(600)],
                  gamma=0.1,
                  batch_size=4096,
                  n_training_epochs=5,

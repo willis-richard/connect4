@@ -2,7 +2,7 @@ from oinkoink.board import Board
 import oinkoink.evaluators as ev
 from oinkoink.mcts import MCTS, MCTSConfig
 
-from oinkoink.neural.config import ModelConfig
+from oinkoink.neural.config import ModelConfig, NetConfig
 
 from oinkoink.neural.pytorch.model import ModelWrapper
 
@@ -21,7 +21,7 @@ if __name__ == "__main__":
     x_pieces[np.where(array == b'x')] = 1
 
     board = Board.from_pieces(o_pieces, x_pieces)
-    model_config = ModelConfig()
+    model_config = ModelConfig(net_config=NetConfig(filters=64, n_fc_layers=6, n_residuals=6))
     model = ModelWrapper(model_config, file_name=sys.argv[2])
     value, prior = model(board)
     print('{}\nvalue {}, policy {}'.format(board, value, prior))

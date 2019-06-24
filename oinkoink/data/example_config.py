@@ -1,9 +1,9 @@
-import os
-
 from oinkoink.neural.config import (AlphaZeroConfig,
                                     ModelConfig,
                                     NetConfig,
                                     StorageConfig)
+
+import os
 
 config = AlphaZeroConfig(model_config=ModelConfig(
     net_config=NetConfig(filters=64, n_fc_layers=6, n_residuals=6)),

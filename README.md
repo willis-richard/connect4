@@ -18,12 +18,6 @@ Using reinforcement learning to train an agent to play Connect4 as well as it ca
 This repo is a self-project to learn about reinforcement learning. I hope that other people might also be able to learn from my work. I welcome constructive criticism on absolutely anything from how I could have improved the Machine Learning, python programming, project layout, etc.
 
 # Installation
-Right now it is on the testpip so use
-
-`pip install --index-url https://test.pypi.org/simple/ --extra-index-url https://pypi.org/simple oinkoink`
-
-Later it will be
-
 `pip install oinkoink`
 
 Alternatively checkout the repo and include the path to project base in your PYTHONPATH. If you checkout the repo you will also have all the misc scripts that I have used, in `oinkoink/scripts`. Be warned that these were Hacked (with a capital H) together. If you use this approach you will need to call the `oinkoink/main.py` script directly when running.
@@ -31,13 +25,12 @@ Alternatively checkout the repo and include the path to project base in your PYT
 # Usage
 `oinkoink -m [mode] [mode options]`
 
-There are two modes that can be used:
-To play a game vs the AI use
+There are two modes that can be used. To play a game vs the AI use:
 
 `oinkoink -m game [-n network_file -s simulations]`
 
 The default simulations is 800, this is the number of positions the AI will analyse before making a move.
-If a network file is not provided, a pre-trained one provided in `oinkoink/data/example_net.pth` is used. If you change any of the network parameters specified in `oinkoink/utils.py` you will need to train your own.
+If a network file is not provided, a pre-trained one provided in `oinkoink/data/example_net.pth` is used. If you change any of the network parameters specified in `oinkoink/neural/config.py:NetConfig` you will need to train your own.
 
 To run a self-play training loop use:
 
@@ -45,11 +38,11 @@ To run a self-play training loop use:
 
 It is strongly recommended to create a config for yourself following the example of `oinkoink/data/example_config.py`. It is especially important to specify a working directory, everything else can use the default values found in `oinkoink/neural/config.py`.
 
-Playing a game will run the network on the CPU - typically fast enough. The training loop will make use of a Cuda enabled GPU, and can use multiple processes.
+Playing a game will run the network on the CPU - typically fast enough. The training loop will make use of a Cuda enabled GPU, and can use multiple processes. A generation of training (game creation + training) takes ~50min using the default settings on my machine [Benchmarks](https://openbenchmarking.org/user/muff2n). The game generation is quite CPU intensive, it is not required to have an amazing GPU. Though you will need to scale down the number of processes/threads if your GPU runs into memory issues.
 
 # Acknowledgements
 This project is a re-implementation of Deepmind's paper [A general reinforcement learning algorithm that
-masters chess, shogi and Go through self-play](https://deepmind.com/documents/260/alphazero_preprint.pdf).
+masters chess, shogi and Go through self-play](https://deepmind.com/documents/260/alphazero_preprint.pdf). This is a personal project, so the code isn't commented, etc. as it would be for a group project, and having an understanding of that paper will make things much clearer for a reader.
 
 Another resource that has covered this that I found useful was [an Oracle blog on medium](https://medium.com/oracledevs/lessons-from-implementing-alphazero-7e36e9054191). This is what I used as a rough guide to follow in selecting Connect4 as a reasonable game, and a few of the changes.
 
