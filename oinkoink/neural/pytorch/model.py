@@ -118,7 +118,7 @@ class PolicyHead(nn.Module):
 
 
 class Net(nn.Module):
-    def __init__(self, config: NetConfig):
+    def __init__(self, config: NetConfig = NetConfig()):
         super(Net, self).__init__()
         self.body = nn.Sequential(
             create_convolutional_layer(config.channels, config.filters),
@@ -182,6 +182,7 @@ class ModelWrapper():
                  batch_size: int = 4096,
                  shuffle: bool = True):
         test_gen = DataLoader(data, batch_size=batch_size, shuffle=shuffle)
+
         return evaluate(test_gen,
                         self.net,
                         self.device,
@@ -189,21 +190,12 @@ class ModelWrapper():
                         self.prior_loss)
 
     def evaluate_value_only(self, data: Connect4Dataset):
-        # Note no prior here, 3rd arg unused
-        data = DataLoader(data, batch_size=4096, shuffle=True)
-        """Get an idea of how the initialisation is"""
-        stats = ValueStats()
+        test_gen = DataLoader(data, batch_size=4096, shuffle=True)
 
-        with torch.set_grad_enabled(False):
-            for board, value in data:
-                board, y_value = board.to(self.device), value.to(self.device)
-                x_value, _ = self.net(board)
-                loss = self.value_loss(x_value, y_value)
-                assert x_value.shape == y_value.shape
-                stats.update(x_value.cpu().numpy(),
-                             y_value.cpu().numpy(),
-                             loss.item())
-        return stats
+        return evaluate_value_only(test_gen,
+                                   self.net,
+                                   self.device,
+                                   self.value_loss)
 
     def train(self,
               data: Connect4Dataset,
@@ -312,11 +304,11 @@ def weights_init(m):
         nn.init.constant_(m.bias, 0)
 
 
-def evaluate(train_gen, net, device, value_criterion, prior_criterion):
+def evaluate(test_gen, net, device, value_criterion, prior_criterion):
     stats = CombinedStats()
 
     with torch.set_grad_enabled(False):
-        for board, value, prior in train_gen:
+        for board, value, prior in test_gen:
             board, value, prior = board.to(device), value.to(device), prior.to(device)
 
             value_output, prior_output = net(board)
@@ -333,4 +325,18 @@ def evaluate(train_gen, net, device, value_criterion, prior_criterion):
                          prior.cpu().numpy(),
                          prior_loss)
 
+    return stats
+
+def evaluate_value_only(test_gen, net, device, value_criterion):
+    stats = ValueStats()
+
+    with torch.set_grad_enabled(False):
+        for board, value in test_gen:
+            board, y_value = board.to(device), value.to(device)
+            x_value, _ = net(board)
+            loss = value_criterion(x_value, y_value)
+            assert x_value.shape == y_value.shape
+            stats.update(x_value.cpu().numpy(),
+                         y_value.cpu().numpy(),
+                         loss.item())
     return stats
