@@ -73,6 +73,18 @@ The evaluation datasets are found in `oinkoink/data`. The 8ply file has all the 
 
 Because the network also outputs move probabilities, I generated a 7ply dataset where I solve for 'weak' winning moves using the 8ply dataset. Weak because any move the leads to a theoretically winning position is counted as correct, even if it is not the fastest win available. The evaluation loop also tests on these 7ply positions, and as well as the RMSE of the values, it finds the Cross Entropy Loss of the network policy.
 
-Here are the results of an example training run with the default parameters used:
+Here are the results of an example training run with the default parameters from `oinkoink/neural/config.py` except where overridden by `oinkoink/data/example_config.py` and:
+* Learning Rate was 0.01 (5 training epochs) for 104 generations, then dropped to  0.001 (still 5 epochs per generation)
 <p align="center"><img width="50%" src="8ply.png" /></p>
 <p align="center"><img width="50%" src="7ply.png" /></p>
+
+And the results of different generations playing each other, from all 49 possible 2 ply positions, playing both first and second player in each position (98 games). The results represent Row vs Column in W-D-L and return (1 * W + 0.5 * D + 0 * L). The final column shows the average the return over all matches a generation played (5 in total):
+
+| Generation |            40 | 60            | 80            | 100           | 120           | Mean Return |
+|------------|---------------|---------------|---------------|---------------|---------------|-------------|
+|         20 | 19-11-16 0.25 | 16-5-77 0.19  | 19-9-70 0.24  | 14-4-80 0.16  | 5-6-87 0.08   |        0.18 |
+|         40 |               | 30-18-50 0.40 | 21-14-63 0.29 | 27-11-60 0.33 | 30-8-60 0.35  |        0.42 |
+|         60 |               |               | 27-17-54 0.36 | 34-14-50 0.42 | 32-12-54 0.39 |        0.52 |
+|         80 |               |               |               | 39-15-44 0.47 | 33-19-46 0.43 |        0.60 |
+|        100 |               |               |               |               | 34-16-48 0.43 |        0.61 |
+|        120 |               |               |               |               |               |        0.67 |
