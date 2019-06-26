@@ -70,7 +70,7 @@ User vs AI gameplay has not been optimised in any way; the point of this project
 
 # Verification of the neural network
 
-As a test, I trained the network on the evaluation set to see if it was capable of learning the positions. Results are in this [Jupyter notebook](./verify.html)
+As a test, I trained the network on the evaluation set to see if it was capable of learning the positions. Results are in this [Jupyter Notebook](oinkoink/scripts/verify.ipynb)
 
 # Training
 The evaluation datasets are found in `oinkoink/data`. The 8ply file has all the positions from the UCI repo, converted into pytorch tensors. I use the RMSE of the position values outputted from my model compared to the theoretical values.
