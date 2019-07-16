@@ -155,7 +155,7 @@ class ModelWrapper():
                                      milestones=config.milestones,
                                      gamma=config.gamma)
         if file_name is not None:
-            checkpoint = torch.load(file_name)
+            checkpoint = torch.load(file_name, self.device)
             self.net.load_state_dict(checkpoint['net_state_dict'])
             self.optimiser.load_state_dict(checkpoint['optimiser_state_dict'])
             self.scheduler.load_state_dict(checkpoint['scheduler_state_dict'])

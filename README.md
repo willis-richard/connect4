@@ -32,6 +32,8 @@ There are two modes that can be used. To play a game vs the AI use:
 The default simulations is 800, this is the number of positions the AI will analyse before making a move.
 If a network file is not provided, a pre-trained one provided in `oinkoink/data/example_net.pth` is used. If you change any of the network parameters specified in `oinkoink/neural/config.py:NetConfig` you will need to train your own.
 
+![Gameplay](connect4.png)
+
 To run a self-play training loop use:
 
 `oinkoink -m training [-c config.py]`

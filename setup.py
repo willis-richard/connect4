@@ -8,7 +8,7 @@ with open(path.join(here, 'README.md'), 'r') as f:
 
 setup(
     name='oinkoink',
-    version='1.0.0',
+    version='1.0.1',
     author='Muff2n',
     description='A Reinforcement Learning agent plays connect4',
     long_description=long_description,
